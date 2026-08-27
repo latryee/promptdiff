@@ -30,6 +30,9 @@ htmlcov/
 report.html
 report.md
 report.json
+regression-report.html
+regression-report.md
+regression-report.json
 promptdiff-report.html
 promptdiff-report.json
 promptdiff-report.md
