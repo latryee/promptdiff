@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -13,12 +13,6 @@ authors = [
     { name = "promptdiff team" }
 ]
 keywords = ["llm", "prompt-engineering", "testing", "regression", "diff", "eval", "cli", "ai-engineering"]
-
-[project.urls]
-Homepage = "https://github.com/latryee/promptdiff"
-Repository = "https://github.com/latryee/promptdiff"
-Issues = "https://github.com/latryee/promptdiff/issues"
-
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: Console",
@@ -40,6 +34,11 @@ dependencies = [
     "jinja2>=3.1.0",
     "pyyaml>=6.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/latryee/promptdiff"
+Repository = "https://github.com/latryee/promptdiff"
+Issues = "https://github.com/latryee/promptdiff/issues"
 
 [project.optional-dependencies]
 dev = [
