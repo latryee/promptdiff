@@ -1,0 +1,19 @@
+# promptdiff Project Configuration
+v1_prompt: examples/prompts/support_bot_v1.txt
+v2_prompt: examples/prompts/support_bot_v2.txt
+model: gpt-4o
+temperature: 0.0
+
+evaluators:
+  - json_validity
+  - latency
+  - cost
+  - similarity
+
+assertions:
+  - "cost_delta <= 15%"
+  - "latency_delta <= 25%"
+
+dataset: examples/testcases.jsonl
+concurrency: 4
+cache: true

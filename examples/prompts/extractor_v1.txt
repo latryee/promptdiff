@@ -1,0 +1,4 @@
+Extract support ticket information and output as JSON.
+Fields: category, sentiment, summary.
+
+Ticket: {{ticket_text}}

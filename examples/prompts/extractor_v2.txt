@@ -1,0 +1,4 @@
+Extract support ticket information and output as JSON adhering to schema.
+Fields required: category, sentiment, urgency, confidence, summary, action_required.
+
+Ticket: {{ticket_text}}

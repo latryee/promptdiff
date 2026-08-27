@@ -1,0 +1,3 @@
+{"id": "tc_billing", "description": "Billing inquiry on enterprise tier", "vars": {"query": "Where can I download my annual VAT invoice?", "tier": "Enterprise"}}
+{"id": "tc_api_auth", "description": "API authentication troubleshooting", "vars": {"query": "I am getting 401 Unauthorized with my bearer token.", "tier": "Pro"}}
+{"id": "tc_refund", "description": "Cancellation and refund request", "vars": {"query": "I would like to cancel my subscription and get a refund for this month.", "tier": "Starter"}}

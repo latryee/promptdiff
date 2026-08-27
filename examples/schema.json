@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SupportTicketExtraction",
+  "type": "object",
+  "properties": {
+    "category": {
+      "type": "string"
+    },
+    "sentiment": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "urgency": {
+      "type": "string"
+    },
+    "confidence": {
+      "type": "number"
+    },
+    "action_required": {
+      "type": "boolean"
+    }
+  },
+  "required": ["category", "sentiment", "summary"]
+}

@@ -1,0 +1,40 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Testing & coverage
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# promptdiff cache & reports
+.promptdiff_cache/
+*.promptdiff.sqlite
+report.html
+report.md
+report.json
+promptdiff-report.html
+promptdiff-report.json
+promptdiff-report.md
+
+# IDEs
+.vscode/
+.idea/
+*.swp

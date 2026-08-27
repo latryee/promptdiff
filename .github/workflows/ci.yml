@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test & Evaluate
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run unit & integration tests
+        run: |
+          pytest --cov=promptdiff --cov-report=xml --cov-report=term-missing
+
+      - name: Test promptdiff regression CLI (Mock mode)
+        run: |
+          python -m promptdiff.cli.app test examples/prompts/support_bot_v1.txt examples/prompts/support_bot_v2.txt \
+            --inputs examples/testcases.jsonl \
+            --eval "json_validity,latency,cost,similarity" \
+            --mock \
+            --export-markdown regression-report.md \
+            --export-html regression-report.html
+
+      - name: Upload regression test report artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regression-report-py${{ matrix.python-version }}
+          path: |
+            regression-report.md
+            regression-report.html
