@@ -7,12 +7,41 @@
 *Catch silent regressions, format breakages, latency spikes, and token inflation before pushing prompts to production.*
 
 [![CI](https://github.com/latryee/promptdiff/actions/workflows/ci.yml/badge.svg)](https://github.com/latryee/promptdiff/actions)
+[![GitHub Pages Demo](https://img.shields.io/badge/Live%20Demo-HTML%20Report-purple?style=flat&logo=html5)](https://latryee.github.io/promptdiff/)
 [![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](https://pydantic.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type Checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue)](http://mypy-lang.org/)
 
+<br/>
+
+<a href="https://latryee.github.io/promptdiff/">
+  <img src="assets/demo.png" alt="promptdiff Live Demo Banner" width="850" />
+</a>
+
+<br/>
+
+[👉 **Explore the Live Interactive HTML Report Demo**](https://latryee.github.io/promptdiff/)
+
 </div>
+
+---
+
+## 🚨 The Core Feature: CI/CD Regression Assertions (`--assert`)
+
+> **Block regressions before merging code.** When prompt engineers or backend developers tweak a system prompt, `promptdiff` enforces hard performance & accuracy boundaries in your CI/CD pipeline.
+
+```bash
+promptdiff test prompts/v1.txt prompts/v2.txt \
+  --inputs datasets/testcases.jsonl \
+  --model gpt-4o \
+  --assert "cost_delta <= 10%, latency_delta <= 15%, json_validity == 1.0"
+```
+
+| Exit Code | Condition | CI/CD Action |
+| :---: | :--- | :--- |
+| `0` | All assertions satisfied across test suite | ✅ **PR Checks Pass** — Safe to merge |
+| `1` | Cost spike, latency regression, or invalid JSON detected | ❌ **PR Checks Blocked** — Regression prevented |
 
 ---
 
@@ -25,14 +54,15 @@ When engineering LLM prompts, even small tweaks—such as changing a system rule
 - ⏱️ **Latency Degradation**: Unintended chain-of-thought increases time-to-first-token and overall p95 latency.
 - 📉 **Output Drift**: Key domain information or brand voice is dropped.
 
-Testing prompts manually in web playgrounds is slow, unrepeatable, and disconnected from CI/CD pipelines.
+Testing prompts manually in web playgrounds is slow, unrepeatable, and disconnected from software engineering workflows.
 
-## 🚀 The Solution
+---
 
-`promptdiff` is a developer-first command-line tool that treats **prompt engineering like software engineering**:
+## 🚀 Key Capabilities
+
 - **Side-by-Side Visual Diffing**: Terminal-native 2-column view (like `git diff`) highlighting exact word, line, and JSON key modifications.
 - **Multi-Dimensional Metrics**: Automated evaluation of `json_validity`, `latency_delta`, `token_cost`, `similarity`, and `regex_match`.
-- **CI/CD Regression Assertions**: Enforce hard thresholds (`--assert "cost_delta <= 10%, latency_delta <= 15%, json_validity == 1.0"`) with non-zero exit codes.
+- **CI/CD Hard Assertions**: Enforce `--assert` rules with non-zero exit codes for GitHub Actions / GitLab CI.
 - **Deterministic Disk Caching**: SQLite SHA-256 caching for $0 re-runs and instant iteration.
 - **Multi-Provider & Zero-Key Mock Mode**: Supports OpenAI, Anthropic Claude, Google Gemini, Ollama, and an offline deterministic `MockProvider`.
 - **Multi-Format Export**: Generates standalone interactive HTML reports, GitHub PR comment Markdown, and JSON.
@@ -85,12 +115,13 @@ Testing prompts manually in web playgrounds is slow, unrepeatable, and disconnec
 
 ### 1. Installation
 
-```bash
-pip install promptdiff
-```
+Install directly from GitHub or source:
 
-Or install from source in editable mode:
 ```bash
+# Direct install from GitHub
+pip install git+https://github.com/latryee/promptdiff.git
+
+# Or clone and install editable with dev dependencies
 git clone https://github.com/latryee/promptdiff.git
 cd promptdiff
 pip install -e ".[dev]"
@@ -128,19 +159,6 @@ promptdiff test prompts/v1.txt prompts/v2.txt \
   --model claude-3-5-sonnet-latest \
   --concurrency 8
 ```
-
-### CI/CD Regression Assertions
-
-Block pull requests if cost or latency regresses, or if JSON schema validity drops:
-
-```bash
-promptdiff test prompts/v1.txt prompts/v2.txt \
-  --inputs datasets/testcases.jsonl \
-  --model gpt-4o \
-  --assert "cost_delta <= 10%, latency_delta <= 15%, json_validity == 1.0" \
-  --export-markdown report.md
-```
-> *Exits with `exit code 0` if all assertions pass, or `exit code 1` with detailed failure logs if a regression is detected.*
 
 ### Model Pricing Lookup
 
@@ -226,7 +244,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install promptdiff
-        run: pip install promptdiff
+        run: pip install git+https://github.com/latryee/promptdiff.git
 
       - name: Run promptdiff Regression Suite
         env:
