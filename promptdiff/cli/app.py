@@ -34,21 +34,28 @@ from promptdiff.core.cache import DiskCache
 from promptdiff.core.config import load_dataset, load_prompt_file
 from promptdiff.core.models import PromptVersion
 from promptdiff.core.runner import ArenaRunner, PromptDiffRunner
+from promptdiff.evaluators.answer_relevance import AnswerRelevanceEvaluator
+from promptdiff.evaluators.faithfulness import FaithfulnessEvaluator
 from promptdiff.evaluators.llm_judge import LLMJudgeEvaluator
 from promptdiff.evaluators.registry import get_evaluators
 from promptdiff.generators.synthetic import SyntheticTestGenerator
 from promptdiff.optimizer.auto_prompt import PromptOptimizer
+from promptdiff.optimizer.tuner import PromptTuner
 from promptdiff.providers.registry import get_provider
 from promptdiff.reporters.html import generate_html_report
 from promptdiff.reporters.json_reporter import generate_json_report
 from promptdiff.reporters.markdown import generate_markdown_report
 from promptdiff.reporters.mlflow_reporter import log_to_mlflow
-from promptdiff.reporters.terminal import render_arena_terminal_report, render_terminal_report
+from promptdiff.reporters.terminal import (
+    render_arena_terminal_report,
+    render_terminal_report,
+    render_tuning_terminal_report,
+)
 from promptdiff.reporters.wandb_reporter import log_to_wandb
 
 app = typer.Typer(
     name="promptdiff",
-    help="⚡ Enterprise LLM Prompt & Model Regression Tester CLI with side-by-side visual diffs, LLM Judge, DSPy Optimizer & Streamlit Dashboard.",
+    help="⚡ Enterprise LLM Prompt & Model Regression Tester CLI with Textual TUI, Hyperparameter Tuning, Cost Forecasting & CI/CD PR Bot.",
     add_completion=False,
     no_args_is_help=True,
 )
@@ -80,6 +87,7 @@ def _run_test_suite(
     mlflow_experiment: str,
     wandb_project: str,
     rubric: str | None,
+    forecast: str | None,
 ) -> None:
     """Core test execution logic shared between `promptdiff test` and `promptdiff run`."""
     m1 = model_v1 or model
@@ -104,9 +112,6 @@ def _run_test_suite(
 
     p1 = get_provider(model_name=m1, force_mock=mock)
     p2 = get_provider(model_name=m2, force_mock=mock)
-
-    from promptdiff.evaluators.answer_relevance import AnswerRelevanceEvaluator
-    from promptdiff.evaluators.faithfulness import FaithfulnessEvaluator
 
     eval_list = get_evaluators([eval_metrics])
     for idx, ev in enumerate(eval_list):
@@ -147,7 +152,7 @@ def _run_test_suite(
 
         report = asyncio.run(runner.run(test_cases, progress_cb=on_step))
 
-    render_terminal_report(report, console=console)
+    render_terminal_report(report, console=console, forecast=forecast)
 
     if export_html:
         path = generate_html_report(report, export_html)
@@ -210,6 +215,7 @@ def test_cmd(
     mlflow_experiment: str = typer.Option("promptdiff-evals", "--mlflow-experiment", help="MLflow experiment name"),
     wandb_project: str = typer.Option("promptdiff", "--wandb-project", help="Weights & Biases project name"),
     rubric: str | None = typer.Option(None, "--rubric", help="Custom evaluation rubric for LLM Judge"),
+    forecast: str | None = typer.Option(None, "--forecast", "-f", help="Projected daily production request volume (e.g. '1M', '500k')"),
 ) -> None:
     """Run regression comparison between two prompt versions across test cases."""
     _run_test_suite(
@@ -235,6 +241,7 @@ def test_cmd(
         mlflow_experiment=mlflow_experiment,
         wandb_project=wandb_project,
         rubric=rubric,
+        forecast=forecast,
     )
 
 
@@ -267,6 +274,7 @@ def run_cmd(
     mlflow_experiment: str = typer.Option("promptdiff-evals", "--mlflow-experiment", help="MLflow experiment name"),
     wandb_project: str = typer.Option("promptdiff", "--wandb-project", help="W&B project name"),
     rubric: str | None = typer.Option(None, "--rubric", help="Custom evaluation rubric for LLM Judge"),
+    forecast: str | None = typer.Option(None, "--forecast", "-f", help="Projected daily production request volume (e.g. '1M', '500k')"),
 ) -> None:
     """Run regression comparison between prompt versions (alias for `promptdiff test`)."""
     _run_test_suite(
@@ -292,7 +300,74 @@ def run_cmd(
         mlflow_experiment=mlflow_experiment,
         wandb_project=wandb_project,
         rubric=rubric,
+        forecast=forecast,
     )
+
+
+@app.command(name="tune")
+def tune_cmd(
+    prompt: str = typer.Argument(..., help="Path to prompt template file or raw prompt string"),
+    inputs: str | None = typer.Option(None, "--inputs", "-i", help="Path to test dataset (.jsonl, .yaml, .csv, .json)"),
+    model: str = typer.Option("gpt-4o", "--model", "-m", help="Target LLM model"),
+    temperatures: str = typer.Option("0.0,0.3,0.7,1.0", "--temperatures", "-t", help="Comma-separated temperature grid points"),
+    top_ps: str = typer.Option("0.7,0.9,1.0", "--top-ps", "-p", help="Comma-separated top_p grid points"),
+    mock: bool = typer.Option(False, "--mock", help="Use deterministic mock execution"),
+    concurrency: int = typer.Option(6, "--concurrency", "-c", help="Concurrency limit for evaluation"),
+) -> None:
+    """Hyperparameter Grid Search: Optimize temperature & top_p to identify Pareto-optimal configurations."""
+    pv = load_prompt_file(prompt, version_name="tune_target", model=model)
+
+    try:
+        test_cases = load_dataset(inputs)
+    except Exception as e:
+        console.print(f"[bold red]Error loading dataset:[/bold red] {e}")
+        raise typer.Exit(code=1)
+
+    temp_list = [float(t.strip()) for t in temperatures.split(",") if t.strip()]
+    top_p_list = [float(p.strip()) for p in top_ps.split(",") if p.strip()]
+
+    tuner = PromptTuner(
+        prompt_version=pv,
+        test_cases=test_cases,
+        model_name=model,
+        temperatures=temp_list,
+        top_ps=top_p_list,
+        force_mock=mock,
+        concurrency=concurrency,
+    )
+
+    total_points = len(temp_list) * len(top_p_list)
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[bold cyan]{task.description}"),
+        BarColumn(bar_width=40, style="magenta", complete_style="green"),
+        TaskProgressColumn(),
+        TimeElapsedColumn(),
+        console=console,
+        transient=False,
+    ) as progress:
+        task = progress.add_task(f"Running grid search over {total_points} hyperparameter points...", total=total_points)
+
+        def on_step(current: int, total: int, msg: str) -> None:
+            progress.update(task, completed=current, description=f"[bold cyan]{msg}[/bold cyan]")
+
+        report = asyncio.run(tuner.tune(progress_cb=on_step))
+
+    render_tuning_terminal_report(report, console=console)
+
+
+@app.command(name="tui")
+def tui_cmd(
+    v1: str | None = typer.Argument(None, help="Optional initial path to baseline prompt (v1)"),
+    v2: str | None = typer.Argument(None, help="Optional initial path to candidate prompt (v2)"),
+    inputs: str | None = typer.Option(None, "--inputs", "-i", help="Path to test dataset (.jsonl)"),
+    model: str = typer.Option("gpt-4o", "--model", "-m", help="Target model identifier"),
+    mock: bool = typer.Option(True, "--mock/--live", help="Start in offline mock mode by default"),
+) -> None:
+    """Launch Interactive Split-Screen Terminal UI (TUI) Dashboard."""
+    from promptdiff.cli.tui import launch_tui
+    launch_tui(v1=v1, v2=v2, inputs=inputs, model=model, mock=mock)
 
 
 @app.command(name="optimize")
@@ -345,7 +420,6 @@ def optimize_cmd(
 
     saved_path = optimizer.save_optimized_prompt(result.optimized_prompt, output)
 
-    # Render summary table
     summary_table = Table(
         title="[bold yellow]🧠 Auto-Prompt Optimization Results (DSPy Style)[/bold yellow]",
         box=None,

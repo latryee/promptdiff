@@ -1,10 +1,14 @@
-"""Centralized Model Pricing Registry for LLM Token Cost Calculations.
+"""Centralized Model Pricing Registry and Cost Forecasting Engine.
 
 Provides cost per 1M tokens (USD) for OpenAI, Anthropic, Google Gemini, DeepSeek,
-Meta Llama, Mistral, and local/free providers.
+Meta Llama, Mistral, and local/free providers, plus production scale cost projection.
 """
 
+from __future__ import annotations
+
+import re
 from dataclasses import dataclass
+from typing import Union
 
 
 @dataclass(frozen=True)
@@ -22,6 +26,24 @@ class ModelPrice:
     @property
     def output_per_token(self) -> float:
         return self.output_per_million / 1_000_000.0
+
+
+@dataclass(frozen=True)
+class CostForecast:
+    """Production scale cost impact projection."""
+
+    daily_volume: int
+    monthly_volume: int
+    annual_volume: int
+    v1_avg_cost_per_req: float
+    v2_avg_cost_per_req: float
+    v1_monthly_cost: float
+    v2_monthly_cost: float
+    monthly_delta_cost: float
+    monthly_savings_usd: float
+    annual_savings_usd: float
+    cost_delta_pct: float
+    summary_text: str
 
 
 # Pricing Registry (Per 1 Million Tokens in USD)
@@ -76,7 +98,6 @@ MODEL_PRICING_TABLE: dict[str, ModelPrice] = {
     "local": ModelPrice(0.00, 0.00, "Local Self-Hosted LLM (Free)"),
 }
 
-# Generic Fallback Default Pricing (equivalent to standard mid-tier model)
 DEFAULT_PRICE = ModelPrice(1.00, 3.00, "Generic default pricing")
 
 
@@ -86,32 +107,21 @@ def normalize_model_name(model_name: str) -> str:
 
 
 def get_model_pricing(model_name: str) -> ModelPrice:
-    """Lookup model pricing from registry with fuzzy/prefix matching.
-
-    Args:
-        model_name: Name of the model (e.g., 'gpt-4o', 'claude-3-5-sonnet', 'gemini-1.5-pro')
-
-    Returns:
-        ModelPrice instance with per-million token rates.
-    """
+    """Lookup model pricing from registry with fuzzy/prefix matching."""
     clean_name = normalize_model_name(model_name)
 
-    # 1. Exact match
     if clean_name in MODEL_PRICING_TABLE:
         return MODEL_PRICING_TABLE[clean_name]
 
-    # 2. Strip vendor prefix (e.g. 'openai/gpt-4o' -> 'gpt-4o')
     if "/" in clean_name:
         vendor_stripped = clean_name.split("/")[-1]
         if vendor_stripped in MODEL_PRICING_TABLE:
             return MODEL_PRICING_TABLE[vendor_stripped]
 
-    # 3. Substring / Prefix matching
     for key, price in MODEL_PRICING_TABLE.items():
         if key in clean_name or clean_name in key:
             return price
 
-    # 4. Fallback for local models
     if "ollama" in clean_name or "local" in clean_name:
         return MODEL_PRICING_TABLE["ollama"]
 
@@ -123,18 +133,96 @@ def calculate_cost(
     prompt_tokens: int,
     completion_tokens: int,
 ) -> float:
-    """Calculate exact total cost in USD given model and token counts.
-
-    Args:
-        model_name: LLM model identifier.
-        prompt_tokens: Number of input tokens.
-        completion_tokens: Number of output/completion tokens.
-
-    Returns:
-        Cost in USD (rounded to 6 decimal places).
-    """
+    """Calculate exact total cost in USD given model and token counts."""
     pricing = get_model_pricing(model_name)
     input_cost = prompt_tokens * pricing.input_per_token
     output_cost = completion_tokens * pricing.output_per_token
     total = input_cost + output_cost
     return round(total, 6)
+
+
+def parse_volume_string(vol: Union[str, int, float]) -> int:
+    """Parse volume strings like '1M', '500k', '2.5M', '100000' into integer count."""
+    if isinstance(vol, (int, float)):
+        return max(1, int(vol))
+
+    cleaned = str(vol).strip().lower().replace(",", "")
+    match = re.match(r"^([0-9]+(?:\.[0-9]+)?)\s*([kmbt])?$", cleaned)
+    if not match:
+        try:
+            return max(1, int(float(cleaned)))
+        except ValueError:
+            return 100_000
+
+    num = float(match.group(1))
+    unit = match.group(2) or ""
+
+    multiplier = 1
+    if unit == "k":
+        multiplier = 1_000
+    elif unit == "m":
+        multiplier = 1_000_000
+    elif unit == "b":
+        multiplier = 1_000_000_000
+    elif unit == "t":
+        multiplier = 1_000_000_000_000
+
+    return max(1, int(num * multiplier))
+
+
+def calculate_forecast(
+    total_cost_v1: float,
+    total_cost_v2: float,
+    total_cases: int,
+    daily_volume: Union[str, int],
+) -> CostForecast:
+    """Calculate projected monthly and annual production cost impact."""
+    vol_daily = parse_volume_string(daily_volume)
+    cases = max(1, total_cases)
+
+    v1_avg = total_cost_v1 / cases
+    v2_avg = total_cost_v2 / cases
+
+    monthly_vol = vol_daily * 30
+    annual_vol = vol_daily * 365
+
+    v1_monthly = v1_avg * monthly_vol
+    v2_monthly = v2_avg * monthly_vol
+
+    monthly_delta = v2_monthly - v1_monthly
+    monthly_savings = -monthly_delta if monthly_delta < 0 else 0.0
+    annual_savings = monthly_savings * 12.0
+
+    delta_pct = (
+        ((v2_monthly - v1_monthly) / v1_monthly * 100.0)
+        if v1_monthly > 0
+        else 0.0
+    )
+
+    if monthly_delta < 0:
+        summary = (
+            f"Projected Savings: ${abs(monthly_delta):,.2f}/mo "
+            f"(${annual_savings:,.2f}/yr) at {vol_daily:,} reqs/day ({delta_pct:+.1f}%)"
+        )
+    elif monthly_delta > 0:
+        summary = (
+            f"Projected Cost Increase: +${monthly_delta:,.2f}/mo "
+            f"at {vol_daily:,} reqs/day ({delta_pct:+.1f}%)"
+        )
+    else:
+        summary = f"Zero Cost Variance at {vol_daily:,} reqs/day"
+
+    return CostForecast(
+        daily_volume=vol_daily,
+        monthly_volume=monthly_vol,
+        annual_volume=annual_vol,
+        v1_avg_cost_per_req=round(v1_avg, 6),
+        v2_avg_cost_per_req=round(v2_avg, 6),
+        v1_monthly_cost=round(v1_monthly, 2),
+        v2_monthly_cost=round(v2_monthly, 2),
+        monthly_delta_cost=round(monthly_delta, 2),
+        monthly_savings_usd=round(monthly_savings, 2),
+        annual_savings_usd=round(annual_savings, 2),
+        cost_delta_pct=round(delta_pct, 2),
+        summary_text=summary,
+    )

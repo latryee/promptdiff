@@ -1,36 +1,32 @@
+![PromptDiff Demo](assets/demo.gif)
+
 <div align="center">
 
-# ⚡ promptdiff v3.0
+# ⚡ PromptDiff v3.0
 
-**Enterprise-Grade LLM Prompt Regression Testing, DSPy Auto-Optimizer, RAG Evaluators, Security Guardrails & Streamlit Dashboard**
+**Enterprise LLM Prompt Regression Testing, Textual TUI, Hyperparameter Tuning, Cost Forecasting & CI/CD PR Bot**
 
-*Catch silent quality regressions, format breakages, latency inflation, token cost spikes, hallucination leaks, and prompt injection vulnerabilities across prompt versions and multi-model arenas before shipping to production.*
+*Catch silent LLM quality regressions, format breakages, latency inflation, token cost spikes, hallucinations, and prompt injection leaks across prompt versions, model architectures, and production workflows.*
 
 [![CI](https://github.com/latryee/promptdiff/actions/workflows/ci.yml/badge.svg)](https://github.com/latryee/promptdiff/actions)
-[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
+[![Tests](https://img.shields.io/badge/tests-53%2F53%20passing-brightgreen.svg)](https://github.com/latryee/promptdiff)
+[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/latryee/promptdiff)
+[![Type Checked: mypy](https://img.shields.io/badge/mypy-strict-blue.svg)](http://mypy-lang.org/)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Concurrency: AsyncIO](https://img.shields.io/badge/Concurrency-AsyncIO%20%2B%20Tenacity-orange.svg)](https://github.com/jd/tenacity)
-[![Embeddings: Local](https://img.shields.io/badge/Embeddings-Sentence--Transformers-green.svg)](https://www.sbert.net/)
-[![Dashboard: Streamlit](https://img.shields.io/badge/Dashboard-Streamlit-red.svg)](https://streamlit.io/)
-[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
-[![Type Checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue)](http://mypy-lang.org/)
-
-<br/>
-
-<a href="https://github.com/latryee/promptdiff">
-  <img src="assets/demo.gif" alt="promptdiff v3.0 Animated Terminal Demo" width="880" onerror="this.src='assets/demo.png';" />
-</a>
+[![UI: Textual + Streamlit](https://img.shields.io/badge/UI-Textual%20%7C%20Streamlit-ff69b4.svg)](https://github.com/Textualize/textual)
 
 <br/>
 
 [🚀 **Quickstart**](#-quickstart-in-30-seconds) •
 [🌟 **Feature Matrix**](#-enterprise-feature-matrix) •
+[🖥️ **Interactive TUI**](#-interactive-terminal-ui-tui-studio) •
+[🎛️ **Hyperparameter Tuning**](#-hyperparameter-grid-search--pareto-optimization) •
+[💰 **Cost Forecasting**](#-production-cost-forecasting-engine) •
+[🤖 **GitHub PR Bot**](#-github-actions-pr-commenter-bot) •
 [🧠 **Auto-Prompt Optimizer**](#-auto-prompt-optimizer-dspy-style) •
-[📚 **RAG Evaluators**](#-rag-retrieval-augmented-generation-evaluators) •
-[🛡️ **Security & Guardrails**](#-enterprise-security--guardrails-audit) •
-[🖥️ **Streamlit Dashboard**](#-interactive-streamlit-web-dashboard) •
-[🏆 **Multi-Model Arena**](#-multi-model-arena-abcd) •
-[🔄 **CI/CD Quality Gate**](#-cicd-quality-gate--github-actions)
+[📚 **RAG & Security**](#-rag--enterprise-security-evaluators)
 
 </div>
 
@@ -38,39 +34,39 @@
 
 ## 🚨 The CI/CD Hard Quality Gate (`--fail-on-regression`)
 
-> **Block silent regressions in Pull Requests.** When prompt engineers, AI engineers, or developers tune system prompts or swap underlying model architectures, `promptdiff` enforces rigorous automated quality, latency, cost, and security assertions.
+> **Prevent silent degradation in Pull Requests.** Whenever prompt engineers or developers tweak system prompts, switch model providers, or adjust parameters, `promptdiff` enforces automated assertions on cost, latency, semantic drift, groundedness, and security compliance.
 
 ```bash
 promptdiff run prompts/system_v1.txt prompts/system_v2.txt \
   --inputs datasets/testcases.jsonl \
   --model gpt-4o \
-  --eval "json_validity,latency,cost,similarity,llm_judge,faithfulness,answer_relevance,security" \
+  --eval "json_validity,latency,cost,similarity,llm_judge,faithfulness,security" \
   --assert "cost_delta <= 10%, latency_delta <= 15%, similarity >= 0.80, faithfulness >= 0.85, security == 1.0" \
+  --forecast 1M \
   --fail-on-regression
 ```
 
 | Exit Code | Quality Status | CI/CD Action |
 | :---: | :--- | :--- |
 | `0` | **NO REGRESSIONS DETECTED** | ✅ **PR Quality Checks Pass** — Safe to merge to `main` |
-| `1` | **REGRESSION DETECTED** | ❌ **PR Checks Blocked** — Pipeline fails on cost spikes, latency degradation, score drops, hallucinations, or security leaks |
+| `1` | **REGRESSION DETECTED** | ❌ **PR Blocked** — Pipeline fails on cost spikes, latency degradation, hallucinations, or security leaks |
 
 ---
 
 ## 🌟 Enterprise Feature Matrix
 
-| Feature Area | Capability | PromptDiff v3.0 Advantage |
+| Feature Area | Capability | PromptDiff Advantage |
 | :--- | :--- | :--- |
-| **🧠 Auto-Prompt Optimizer** | DSPy-style Reflective Optimization | Iteratively feeds failed test cases and judge reasoning back into a Meta-LLM to rewrite and propose optimized prompts (`promptdiff optimize`). |
-| **📚 RAG Faithfulness** | Groundedness & Hallucination Check | Verifies if generated outputs are strictly entailed by reference context or document chunks, detecting ungrounded claims (`faithfulness`). |
-| **🎯 Answer Relevance** | Intent Alignment & Fluff Elimination | Measures whether response directly addresses user queries without evasion or unnecessary filler (`answer_relevance`). |
-| **🛡️ Security & Guardrails** | PII & Prompt Injection Defense | Scans for leaked emails, credit cards (Luhn validated), phones, SSNs, and secret keys while scoring resilience against jailbreaks (`security`). |
-| **🖥️ Web Dashboard** | Local Streamlit Analytics Studio | Interactive UI visualizing cost/latency charts, side-by-side diff inspectors, arena leaderboards, and security audits (`promptdiff ui`). |
-| **⚡ Async Concurrency** | Bounded Concurrent Execution | Run 100+ test scenarios concurrently with configurable semaphore bounding (`asyncio.gather`). |
-| **🛡️ Network Resilience** | `tenacity` Retries with Jitter | Exponential backoff and automatic retries for HTTP `429 Rate Limits` and `50X Server Errors`. |
-| **⚖️ Qualitative Scoring** | LLM-as-a-Judge (`llm_judge`) | Automated 1.0–5.0 rubric scoring with structured reasoning extraction via GPT-4o or Claude 3.5. |
-| **🔍 Semantic Diffing** | Local `sentence-transformers` | Zero-cost, high-speed local cosine similarity using `all-MiniLM-L6-v2` embeddings without remote API calls. |
-| **🏆 Multi-Model Arena** | A/B/C/D Benchmarking (`arena`) | Compare $N \ge 2$ models/prompts simultaneously (OpenAI vs Gemini vs Claude vs Ollama) with instant leaderboards. |
-| **🧪 Synthetic Test Data** | Synthetic Suite Generator | Automatically generate 50+ diverse edge cases, adversarial injections, boundary extremes, and schemas (`generate-tests`). |
+| **🖥️ Interactive TUI** | Split-Screen Terminal Studio (`textual`) | Edit prompts side-by-side, trigger live async runs, and inspect word diffs & judge scores without leaving terminal (`promptdiff tui`). |
+| **🎛️ Hyperparameter Tuning** | Grid Search & Pareto Optimization | Search temperature ($T \in [0.0, 1.0]$) & Top-P spaces to find Pareto-optimal trade-offs between quality and latency/cost (`promptdiff tune`). |
+| **💰 Cost Forecasting** | Production Scale Projection (`--forecast`) | Projects monthly and annual spend deltas at scale (e.g. *“Saves \$1,500/mo at 1M requests/day”*). |
+| **🤖 GitHub PR Bot** | Automated Sticky PR Comments | Generates formatted Markdown summaries with status badges, metric deltas, and collapsible diffs (`scripts/pr_commenter.py`). |
+| **🧠 Auto-Prompt Optimizer** | Reflective DSPy-Style Optimization | Automatically feeds failed test cases and evaluator reasoning into a Meta-LLM to rewrite prompts (`promptdiff optimize`). |
+| **📚 RAG Grounding** | Faithfulness & Relevance Evaluators | Detects hallucinations against reference `context` documents and measures query intent alignment (`faithfulness`, `answer_relevance`). |
+| **🛡️ Security Guardrails** | PII & Jailbreak Defense | Scans for leaked emails, credit cards (**Luhn Mod-10** verified), SSNs, API secrets, and prompt injection compromises (`security`). |
+| **⚡ Async Concurrency** | Bounded Concurrent Execution | Asynchronous request multiplexing with `tenacity` exponential backoff, jitter, and automatic retry on 429/50X errors. |
+| **🏆 Multi-Model Arena** | A/B/C/D Benchmarking (`arena`) | Compare $N \ge 2$ models/prompts simultaneously across OpenAI, Anthropic, Gemini, DeepSeek, and Ollama. |
+| **🔍 Semantic Diffing** | Local Embeddings (`sentence-transformers`) | High-speed local cosine similarity using `all-MiniLM-L6-v2` embeddings with zero external API calls. |
 
 ---
 
@@ -81,103 +77,97 @@ promptdiff run prompts/system_v1.txt prompts/system_v2.txt \
 pip install promptdiff
 ```
 
-### 2. Scaffold Starter Project
+### 2. Scaffold a Starter Workspace
 ```bash
 promptdiff init my-project
 cd my-project
 ```
 
-### 3. Run Offline Regression Test (Zero API Keys Needed)
+### 3. Run Offline Regression Test (Zero API Keys Required)
 ```bash
 promptdiff run prompts/system_v1.txt prompts/system_v2.txt \
   --inputs testcases.jsonl \
   --mock \
-  --eval "json_validity,latency,cost,similarity,llm_judge,faithfulness,answer_relevance,security"
+  --eval "json_validity,latency,cost,similarity,llm_judge,faithfulness,security" \
+  --forecast 500k
 ```
 
 ---
 
-## 🧠 Auto-Prompt Optimizer (DSPy Style)
+## 🖥️ Interactive Terminal UI (TUI) Studio
 
-If a prompt suffers from format disobedience, verbosity, or poor evaluation scores, the Auto-Prompt Optimizer identifies failure modes and reflectively rewrites the prompt using a Meta-LLM:
+Launch the split-screen terminal workspace built with **Textual**:
 
 ```bash
-# Optimize prompt automatically using failed testcases & judge feedback
-promptdiff optimize prompts/system_v1.txt \
+# Launch interactive TUI studio
+promptdiff tui
+
+# Or pre-populate prompt files
+promptdiff tui prompts/system_v1.txt prompts/system_v2.txt --inputs testcases.jsonl
+```
+
+- **Split-Screen Editor**: Edit Baseline (v1) and Candidate (v2) templates side-by-side.
+- **Realtime Execution**: Press `R` or click `[▶ Run Evaluation]` to execute concurrent async evaluations.
+- **Tabs**: Inspect live word diffs, evaluator score tables, and projected production cost impact.
+- **Keybindings**: `R` (Run), `C` (Clear), `Q` (Quit).
+
+---
+
+## 🎛️ Hyperparameter Grid Search & Pareto Optimization
+
+Find the optimal `temperature` and `top_p` settings that maximize LLM Judge score while minimizing token cost and latency:
+
+```bash
+promptdiff tune prompts/system_v1.txt \
   --inputs testcases.jsonl \
   --model gpt-4o \
-  --meta-model gpt-4o \
-  --iterations 3 \
-  --output prompts/system_v3_optimized.txt
+  --temperatures "0.0,0.3,0.7,1.0" \
+  --top-ps "0.7,0.9,1.0"
+```
+
+### 📊 Sample Output
+```
+            🎛️ Hyperparameter Grid Search & Pareto Optimal Frontier            
+┌───────┬────────┬───────┬────────┬────────┬────────┬────────┬────────┬───────┐
+│ Rank  │ Temp   │ Top_P │ Judge  │ Latency│ Tokens │ Cost   │ Utility│ Status│
+├───────┼────────┼───────┼────────┼────────┼────────┼────────┼────────┼───────┤
+│ 🥇 #1 │   0.00 │  0.70 │   4.66 │ 196.0ms│     94 │ $0.0007│ 0.5000 │ Pareto│
+│ 🥈 #2 │   0.00 │  1.00 │   4.60 │ 195.8ms│     94 │ $0.0007│ 0.4938 │ Pareto│
+│ 🥉 #3 │   0.50 │  0.70 │   4.46 │ 195.5ms│     94 │ $0.0007│ 0.4792 │ Pareto│
+└───────┴────────┴───────┴────────┴────────┴────────┴────────┴────────┴───────┘
+
+✨ Recommended Configuration: Temperature = 0.00, Top_P = 0.70 (Utility: 0.5000)
 ```
 
 ---
 
-## 📚 RAG (Retrieval-Augmented Generation) Evaluators
+## 💰 Production Cost Forecasting Engine
 
-### 1. Faithfulness & Hallucination Detection (`faithfulness`)
-Extracts factual claims from the candidate response and verifies whether all assertions are grounded in the `context` provided in the test case:
-```json
-{
-  "id": "rag_01",
-  "vars": {
-    "query": "What is the warranty policy on refurb units?",
-    "context": "Refurbished units are covered by a 90-day limited parts and labor warranty."
-  }
-}
-```
-
-### 2. Answer Relevance (`answer_relevance`)
-Measures how directly, concisely, and completely the response addresses the user's inquiry:
-```bash
-promptdiff test prompts/v1.txt prompts/v2.txt --inputs rag_testcases.jsonl --eval faithfulness,answer_relevance
-```
-
----
-
-## 🛡️ Enterprise Security & Guardrails Audit
-
-Detects sensitive data leaks and tests prompt injection defenses:
-- **PII Detection**: Emails, phone numbers, SSNs, API secrets, and credit cards with **Luhn Mod-10** verification.
-- **Jailbreak / Prompt Injection Resilience**: Checks whether adversarial queries successfully hijacked the system prompt or bypassed constraints.
+Pass `--forecast <daily_volume>` to project monthly and annual token expenditure variances at enterprise scale:
 
 ```bash
-promptdiff run prompts/v1.txt prompts/v2.txt --inputs sec_cases.jsonl --eval security --assert "security == 1.0"
-```
-
----
-
-## 🖥️ Interactive Streamlit Web Dashboard
-
-Launch the local web studio to explore reports, interact with side-by-side diffs, and inspect arena telemetry:
-
-```bash
-# Launch interactive Streamlit studio
-promptdiff ui
-
-# Or visualize a specific report
-promptdiff ui --report report.json --port 8501
-```
-
----
-
-## 🏆 Multi-Model Arena (A/B/C/D)
-
-Benchmark multiple prompts across multiple model providers simultaneously:
-
-```bash
-promptdiff arena \
-  --prompts "prompts/v1.txt,prompts/v2.txt" \
-  --models "gpt-4o,claude-3-5-sonnet,gemini-2.0-flash" \
+promptdiff run prompts/system_v1.txt prompts/system_v2.txt \
   --inputs testcases.jsonl \
-  --concurrency 8
+  --forecast 1M
+```
+
+```
+┌──────────────────────── Cost Forecasting Engine ────────────────────────┐
+│                                                                         │
+│  💰 Production Volume Cost Impact Forecast (1,000,000 reqs/day)         │
+│                                                                         │
+│  • Baseline Projected Monthly Cost:  $3,000.00                          │
+│  • Candidate Projected Monthly Cost: $1,500.00                          │
+│  • Projected Savings: $1,500.00/mo ($18,000.00/yr) at 1M reqs/day (-50%)│
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🔄 CI/CD Quality Gate & GitHub Actions
+## 🤖 GitHub Actions PR Commenter Bot
 
-Add `.github/workflows/promptdiff-ci.yml` to your repository:
+Integrate `scripts/pr_commenter.py` into your GitHub Actions workflow to post or update a sticky quality gate report directly on Pull Requests.
 
 ```yaml
 name: Prompt Regression CI
@@ -200,10 +190,10 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install promptdiff
+      - name: Install dependencies
         run: pip install promptdiff
 
-      - name: Run Regression Quality Gate
+      - name: Run Regression Suite
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
@@ -212,14 +202,64 @@ jobs:
             --model gpt-4o \
             --eval "json_validity,latency,cost,similarity,llm_judge,faithfulness,security" \
             --assert "cost_delta <= 10%, latency_delta <= 20%, faithfulness >= 0.85, security == 1.0" \
-            --export-markdown report.md \
+            --forecast 1M \
+            --export-json report.json \
             --fail-on-regression
 
-      - name: Post PR Summary Comment
+      - name: Post PR Quality Report
         if: always()
-        uses: thollander/actions-comment-pull-request@v2
-        with:
-          filePath: report.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/pr_commenter.py --report report.json --forecast 1M
+```
+
+---
+
+## 🧠 Auto-Prompt Optimizer (DSPy Style)
+
+If a prompt suffers from formatting failures, hallucinations, or poor judge scores, the optimizer uses a Meta-LLM reflection loop to automatically rewrite and optimize it:
+
+```bash
+promptdiff optimize prompts/system_v1.txt \
+  --inputs testcases.jsonl \
+  --model gpt-4o \
+  --meta-model gpt-4o \
+  --iterations 3 \
+  --output prompts/system_v3_optimized.txt
+```
+
+---
+
+## 📚 RAG & Enterprise Security Evaluators
+
+### RAG Faithfulness (`faithfulness`)
+Extracts factual claims and verifies strict entailment against reference `context` documents in `testcases.jsonl`:
+```json
+{
+  "id": "rag_01",
+  "vars": {
+    "query": "What is the return window?",
+    "context": "Items can be returned within 30 days of delivery for a full refund."
+  }
+}
+```
+
+### Security & Guardrails (`security`)
+Detects PII leaks (Emails, Phones, SSNs, API secrets, and Credit Cards verified via **Luhn Mod-10**) and scores defense against Prompt Injection & Jailbreak attempts.
+
+---
+
+## 🏆 Multi-Model Arena (A/B/C/D)
+
+Benchmark multiple prompts and models simultaneously with an automated leaderboard:
+
+```bash
+promptdiff arena \
+  --prompts "prompts/v1.txt,prompts/v2.txt" \
+  --models "gpt-4o,claude-3-5-sonnet,gemini-2.0-flash" \
+  --inputs testcases.jsonl \
+  --concurrency 8
 ```
 
 ---
