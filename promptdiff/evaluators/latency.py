@@ -24,10 +24,7 @@ class LatencyEvaluator(BaseEvaluator):
         delta_ms = v2_ms - v1_ms
         delta_pct = (delta_ms / v1_ms * 100.0) if v1_ms > 0 else 0.0
 
-        # Sign formatting
-        sign = "+" if delta_ms > 0 else ""
         pct_sign = "+" if delta_pct > 0 else ""
-
         message = f"{v1_ms:.1f}ms → {v2_ms:.1f}ms ({pct_sign}{delta_pct:.1f}%)"
 
         return EvaluatorScore(

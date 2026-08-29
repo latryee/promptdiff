@@ -4,18 +4,18 @@ from __future__ import annotations
 
 import difflib
 import re
-from typing import List, Tuple
+
 from promptdiff.core.models import DiffChunk
 
 
-def compute_word_diff(text1: str, text2: str) -> List[DiffChunk]:
+def compute_word_diff(text1: str, text2: str) -> list[DiffChunk]:
     """Compute word/token level diff chunks between two texts."""
     # Tokenize preserving whitespaces & punctuation
     words1 = re.findall(r"\S+|\s+", text1)
     words2 = re.findall(r"\S+|\s+", text2)
 
     matcher = difflib.SequenceMatcher(None, words1, words2)
-    chunks: List[DiffChunk] = []
+    chunks: list[DiffChunk] = []
 
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
         sub1 = "".join(words1[i1:i2])
@@ -33,7 +33,7 @@ def compute_word_diff(text1: str, text2: str) -> List[DiffChunk]:
     return chunks
 
 
-def compute_line_diff(text1: str, text2: str) -> List[Tuple[str, str, str]]:
+def compute_line_diff(text1: str, text2: str) -> list[tuple[str, str, str]]:
     """Compute line-by-line diff with tags (' ', '+', '-', '?')."""
     lines1 = text1.splitlines(keepends=True)
     lines2 = text2.splitlines(keepends=True)

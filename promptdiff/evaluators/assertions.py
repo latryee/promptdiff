@@ -7,16 +7,16 @@ and computes pass/fail regression verdicts with exit codes.
 from __future__ import annotations
 
 import re
-from typing import List, Optional, Tuple
+from typing import Literal
+
 from promptdiff.core.models import (
     AssertionRule,
     ComparisonResult,
-    DiffReport,
     RegressionVerdict,
 )
 
 
-def parse_assertion_string(expr: str) -> Optional[AssertionRule]:
+def parse_assertion_string(expr: str) -> AssertionRule | None:
     """Parse string expression into structured AssertionRule.
 
     Examples:
@@ -48,9 +48,9 @@ def parse_assertion_string(expr: str) -> Optional[AssertionRule]:
     )
 
 
-def parse_assertion_list(assertion_inputs: List[str]) -> List[AssertionRule]:
+def parse_assertion_list(assertion_inputs: list[str]) -> list[AssertionRule]:
     """Parse comma-separated or list of assertion strings."""
-    rules: List[AssertionRule] = []
+    rules: list[AssertionRule] = []
     for item in assertion_inputs:
         for sub_expr in item.split(","):
             sub_clean = sub_expr.strip()
@@ -62,11 +62,11 @@ def parse_assertion_list(assertion_inputs: List[str]) -> List[AssertionRule]:
 
 
 def evaluate_assertions(
-    comparisons: List[ComparisonResult],
-    assertion_rules: List[AssertionRule],
+    comparisons: list[ComparisonResult],
+    assertion_rules: list[AssertionRule],
 ) -> RegressionVerdict:
     """Evaluate all comparison results against assertion rules and build verdict."""
-    failed: List[str] = []
+    failed: list[str] = []
 
     # Calculate aggregate totals
     total_cost_v1 = sum(c.v1_result.cost_usd for c in comparisons)
@@ -126,11 +126,11 @@ def evaluate_assertions(
                         )
 
     passed = len(failed) == 0
-    status = "PASSED" if passed else "REGRESSION_DETECTED"
+    verdict_status: Literal["PASSED", "REGRESSION_DETECTED", "ERROR"] = "PASSED" if passed else "REGRESSION_DETECTED"
 
     return RegressionVerdict(
         passed=passed,
-        status=status,
+        status=verdict_status,
         failed_assertions=failed,
         total_cost_v1=round(total_cost_v1, 6),
         total_cost_v2=round(total_cost_v2, 6),

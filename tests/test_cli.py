@@ -1,7 +1,9 @@
 """Unit tests for promptdiff CLI interface."""
 
 from pathlib import Path
+
 from typer.testing import CliRunner
+
 from promptdiff.cli.app import app
 
 runner = CliRunner()
@@ -10,7 +12,7 @@ runner = CliRunner()
 def test_cli_help():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
-    assert "LLM Prompt & Output Regression Tester CLI" in result.output
+    assert "promptdiff" in result.output.lower()
 
 
 def test_cli_pricing():

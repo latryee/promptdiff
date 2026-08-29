@@ -5,7 +5,6 @@ Meta Llama, Mistral, and local/free providers.
 """
 
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
 
 
 @dataclass(frozen=True)
@@ -26,7 +25,7 @@ class ModelPrice:
 
 
 # Pricing Registry (Per 1 Million Tokens in USD)
-MODEL_PRICING_TABLE: Dict[str, ModelPrice] = {
+MODEL_PRICING_TABLE: dict[str, ModelPrice] = {
     # OpenAI Models
     "gpt-4o": ModelPrice(2.50, 10.00, "OpenAI GPT-4o flagship multimodal"),
     "gpt-4o-2024-08-06": ModelPrice(2.50, 10.00, "OpenAI GPT-4o checkpoint"),

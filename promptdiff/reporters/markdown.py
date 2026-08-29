@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
+
 from promptdiff.core.models import DiffReport
 
 
@@ -12,20 +14,20 @@ def generate_markdown_report(report: DiffReport, output_path: Optional[str] = No
     status_icon = "✅ **PASSED**" if v.passed else "❌ **REGRESSION DETECTED**"
 
     lines = [
-        f"## ⚡ promptdiff Regression Report",
-        f"",
+        "## ⚡ promptdiff Regression Report",
+        "",
         f"**Comparison**: `{report.v1_name}` ➔ `{report.v2_name}`  ",
         f"**Status**: {status_icon}  ",
         f"**Timestamp**: `{report.timestamp}`  ",
-        f"",
-        f"### 📊 Key Performance Metrics",
-        f"",
-        f"| Metric | v1 Baseline | v2 Candidate | Delta / Impact |",
-        f"| :--- | :--- | :--- | :--- |",
+        "",
+        "### 📊 Key Performance Metrics",
+        "",
+        "| Metric | v1 Baseline | v2 Candidate | Delta / Impact |",
+        "| :--- | :--- | :--- | :--- |",
         f"| **Total Token Cost** | `${v.total_cost_v1:.6f}` | `${v.total_cost_v2:.6f}` | `{v.cost_delta_pct:+.1f}%` |",
         f"| **Avg Latency** | `{v.avg_latency_v1:.1f}ms` | `{v.avg_latency_v2:.1f}ms` | `{v.latency_delta_pct:+.1f}%` |",
         f"| **Test Cases** | `{report.total_cases}` total | `{report.aggregate_stats.get('passed_cases', report.total_cases)}` passed | `{report.total_cases - report.aggregate_stats.get('passed_cases', report.total_cases)}` regressions |",
-        f"",
+        "",
     ]
 
     if not v.passed:
@@ -44,7 +46,7 @@ def generate_markdown_report(report: DiffReport, output_path: Optional[str] = No
         tc = comp.test_case
         json_s = comp.scores.get("json_validity")
         json_txt = f"{json_s.v2_score:.1f}" if json_s else "-"
-        
+
         sim_s = comp.scores.get("similarity")
         sim_txt = f"{sim_s.v2_score * 100:.1f}%" if sim_s else "-"
 

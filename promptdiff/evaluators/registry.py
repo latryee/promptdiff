@@ -1,17 +1,20 @@
-"""Evaluator Registry & Factory Resolution."""
+"""Evaluator Registry & Factory Resolution for promptdiff v3.0."""
 
 from __future__ import annotations
 
-from typing import Dict, List, Type
+from promptdiff.evaluators.answer_relevance import AnswerRelevanceEvaluator
 from promptdiff.evaluators.base import BaseEvaluator
 from promptdiff.evaluators.cost import CostEvaluator
+from promptdiff.evaluators.faithfulness import FaithfulnessEvaluator
 from promptdiff.evaluators.json_validity import JsonValidityEvaluator
 from promptdiff.evaluators.latency import LatencyEvaluator
 from promptdiff.evaluators.length_drift import LengthDriftEvaluator
+from promptdiff.evaluators.llm_judge import LLMJudgeEvaluator
 from promptdiff.evaluators.regex_match import RegexMatchEvaluator
+from promptdiff.evaluators.security import SecurityEvaluator
 from promptdiff.evaluators.similarity import SimilarityEvaluator
 
-EVALUATOR_MAP: Dict[str, Type[BaseEvaluator]] = {
+EVALUATOR_MAP: dict[str, type[BaseEvaluator]] = {
     "json_validity": JsonValidityEvaluator,
     "json": JsonValidityEvaluator,
     "latency": LatencyEvaluator,
@@ -24,15 +27,27 @@ EVALUATOR_MAP: Dict[str, Type[BaseEvaluator]] = {
     "regex": RegexMatchEvaluator,
     "length_drift": LengthDriftEvaluator,
     "length": LengthDriftEvaluator,
+    "llm_judge": LLMJudgeEvaluator,
+    "judge": LLMJudgeEvaluator,
+    "llm_as_a_judge": LLMJudgeEvaluator,
+    "faithfulness": FaithfulnessEvaluator,
+    "rag_faithfulness": FaithfulnessEvaluator,
+    "groundedness": FaithfulnessEvaluator,
+    "answer_relevance": AnswerRelevanceEvaluator,
+    "relevance": AnswerRelevanceEvaluator,
+    "query_relevance": AnswerRelevanceEvaluator,
+    "security": SecurityEvaluator,
+    "guardrails": SecurityEvaluator,
+    "safety": SecurityEvaluator,
 }
 
 
-def get_evaluators(evaluator_names: List[str]) -> List[BaseEvaluator]:
+def get_evaluators(evaluator_names: list[str]) -> list[BaseEvaluator]:
     """Resolve evaluator names into instantiated BaseEvaluator objects.
 
-    Supports comma-separated strings (e.g. 'json_validity,latency,cost').
+    Supports comma-separated strings (e.g. 'json_validity,latency,cost,similarity,llm_judge,faithfulness,security').
     """
-    instances: List[BaseEvaluator] = []
+    instances: list[BaseEvaluator] = []
     seen = set()
 
     for item in evaluator_names:
@@ -46,7 +61,6 @@ def get_evaluators(evaluator_names: List[str]) -> List[BaseEvaluator]:
                 instances.append(evaluator_cls())
                 seen.add(clean_name)
 
-    # Always ensure baseline metrics if nothing specified
     if not instances:
         return [
             JsonValidityEvaluator(),

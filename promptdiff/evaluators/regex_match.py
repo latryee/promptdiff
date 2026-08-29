@@ -6,7 +6,7 @@ Checks whether model outputs match specific structural regex patterns or expecte
 from __future__ import annotations
 
 import re
-from typing import Optional
+
 from promptdiff.core.models import EvaluatorScore, RunResult, TestCase
 from promptdiff.evaluators.base import BaseEvaluator
 
@@ -17,7 +17,7 @@ class RegexMatchEvaluator(BaseEvaluator):
     name: str = "regex_match"
     description: str = "Checks output structure compliance against regex patterns"
 
-    def __init__(self, pattern: Optional[str] = None):
+    def __init__(self, pattern: str | None = None):
         self.pattern = pattern
 
     def evaluate(

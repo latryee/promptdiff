@@ -1,7 +1,7 @@
 """Unit tests for Config and Dataset Loaders."""
 
 from pathlib import Path
-import pytest
+
 from promptdiff.core.config import (
     load_dataset,
     load_project_config,

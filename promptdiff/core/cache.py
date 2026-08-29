@@ -10,14 +10,14 @@ import hashlib
 import json
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, Optional
+
 from promptdiff.core.models import RunResult
 
 
 class DiskCache:
     """Persistent SQLite-backed cache for prompt runs."""
 
-    def __init__(self, cache_dir: Optional[Path] = None, enabled: bool = True):
+    def __init__(self, cache_dir: Path | None = None, enabled: bool = True):
         self.enabled = enabled
         if cache_dir is None:
             self.cache_dir = Path.cwd() / ".promptdiff_cache"
@@ -46,10 +46,10 @@ class DiskCache:
     @staticmethod
     def compute_key(
         prompt_text: str,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
         model: str = "gpt-4o",
         temperature: float = 0.0,
-        max_tokens: Optional[int] = 2048,
+        max_tokens: int | None = 2048,
     ) -> str:
         """Compute SHA-256 hash for deterministic execution parameters."""
         raw_key = json.dumps(
@@ -64,7 +64,7 @@ class DiskCache:
         )
         return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
 
-    def get(self, hash_key: str) -> Optional[RunResult]:
+    def get(self, hash_key: str) -> RunResult | None:
         """Retrieve cached result if available and valid."""
         if not self.enabled:
             return None

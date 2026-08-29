@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+
 from promptdiff.core.models import EvaluatorScore, RunResult, TestCase
 
 
@@ -19,5 +20,14 @@ class BaseEvaluator(ABC):
         v2_result: RunResult,
         test_case: TestCase,
     ) -> EvaluatorScore:
-        """Evaluate and compare v1 vs v2 results."""
+        """Evaluate and compare v1 vs v2 results synchronously."""
         raise NotImplementedError
+
+    async def async_evaluate(
+        self,
+        v1_result: RunResult,
+        v2_result: RunResult,
+        test_case: TestCase,
+    ) -> EvaluatorScore:
+        """Evaluate and compare v1 vs v2 results asynchronously."""
+        return self.evaluate(v1_result, v2_result, test_case)

@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import html
-import json
 from pathlib import Path
-from typing import List
-from promptdiff.core.models import ComparisonResult, DiffChunk, DiffReport
+
+from promptdiff.core.models import DiffChunk, DiffReport
 
 
 def _chunk_to_html(chunk: DiffChunk, side: str) -> str:
@@ -58,8 +57,6 @@ def generate_html_report(report: DiffReport, output_path: str) -> str:
 
         card_filter_class = "case-passed" if all_passed else "case-failed"
 
-        vars_str = json.dumps(tc.vars, indent=2) if tc.vars else "{}"
-
         card = f"""
         <div class="test-card {card_filter_class} bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6 shadow-xl">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
@@ -70,7 +67,7 @@ def generate_html_report(report: DiffReport, output_path: str) -> str:
                     </h3>
                 </div>
                 <div class="text-xs text-slate-400 font-mono">
-                    v1: {comp.v1_result.latency_ms:.0f}ms (${comp.v1_result.cost_usd:.5f}) &rarr; 
+                    v1: {comp.v1_result.latency_ms:.0f}ms (${comp.v1_result.cost_usd:.5f}) &rarr;
                     v2: {comp.v2_result.latency_ms:.0f}ms (${comp.v2_result.cost_usd:.5f})
                 </div>
             </div>
@@ -143,7 +140,7 @@ def generate_html_report(report: DiffReport, output_path: str) -> str:
                     Comparing <span class="text-cyan-400 font-semibold">{html.escape(report.v1_name)}</span> &rarr; <span class="text-fuchsia-400 font-semibold">{html.escape(report.v2_name)}</span> &bull; {report.timestamp}
                 </p>
             </div>
-            
+
             <div class="flex items-center gap-3">
                 <div class="px-4 py-2 rounded-lg border font-semibold text-xs flex items-center gap-2 {status_bg}">
                     <span class="text-sm font-bold">{status_icon}</span>
@@ -214,7 +211,7 @@ def generate_html_report(report: DiffReport, output_path: str) -> str:
         function filterCases(type) {{
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('bg-indigo-600', 'text-white'));
             event.target.classList.add('bg-indigo-600', 'text-white');
-            
+
             const cards = document.querySelectorAll('.test-card');
             cards.forEach(card => {{
                 if (type === 'all') {{

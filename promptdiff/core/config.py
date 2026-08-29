@@ -8,22 +8,24 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 import yaml
 from pydantic import BaseModel, Field
+
 from promptdiff.core.models import PromptVersion, TestCase
 
 
 class ProjectConfig(BaseModel):
     """Configuration structure loaded from promptdiff.yaml."""
 
-    v1_prompt: Optional[str] = None
-    v2_prompt: Optional[str] = None
+    v1_prompt: str | None = None
+    v2_prompt: str | None = None
     model: str = "gpt-4o"
     temperature: float = 0.0
-    evaluators: List[str] = Field(default_factory=lambda: ["json_validity", "latency", "cost", "similarity"])
-    assertions: List[str] = Field(default_factory=list)
-    dataset: Optional[str] = None
+    evaluators: list[str] = Field(default_factory=lambda: ["json_validity", "latency", "cost", "similarity"])
+    assertions: list[str] = Field(default_factory=list)
+    dataset: str | None = None
     concurrency: int = 4
     cache: bool = True
 
@@ -60,7 +62,7 @@ def load_prompt_file(file_path: str, version_name: str = "v1", model: str = "gpt
         )
 
 
-def load_dataset(dataset_path: Optional[str]) -> List[TestCase]:
+def load_dataset(dataset_path: str | None) -> list[TestCase]:
     """Load test cases from JSONL, JSON, YAML, or CSV files.
 
     Args:
@@ -77,10 +79,10 @@ def load_dataset(dataset_path: Optional[str]) -> List[TestCase]:
         raise FileNotFoundError(f"Dataset file not found: {dataset_path}")
 
     suffix = path.suffix.lower()
-    test_cases: List[TestCase] = []
+    test_cases: list[TestCase] = []
 
     if suffix in [".jsonl", ".ndjson"]:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             for i, line in enumerate(f):
                 line = line.strip()
                 if not line:
@@ -89,7 +91,7 @@ def load_dataset(dataset_path: Optional[str]) -> List[TestCase]:
                 test_cases.append(_parse_testcase_dict(data, f"case_{i+1}"))
 
     elif suffix == ".json":
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             raw_data = json.load(f)
             if isinstance(raw_data, list):
                 for i, item in enumerate(raw_data):
@@ -98,18 +100,19 @@ def load_dataset(dataset_path: Optional[str]) -> List[TestCase]:
                 test_cases.append(_parse_testcase_dict(raw_data, "case_1"))
 
     elif suffix in [".yaml", ".yml"]:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             raw_data = yaml.safe_load(f)
             if isinstance(raw_data, list):
                 for i, item in enumerate(raw_data):
                     test_cases.append(_parse_testcase_dict(item, f"case_{i+1}"))
             elif isinstance(raw_data, dict):
                 cases = raw_data.get("testcases", raw_data.get("tests", [raw_data]))
-                for i, item in enumerate(cases):
-                    test_cases.append(_parse_testcase_dict(item, f"case_{i+1}"))
+                if isinstance(cases, list):
+                    for i, item in enumerate(cases):
+                        test_cases.append(_parse_testcase_dict(item, f"case_{i+1}"))
 
     elif suffix == ".csv":
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for i, row in enumerate(reader):
                 test_cases.append(TestCase(
@@ -124,7 +127,7 @@ def load_dataset(dataset_path: Optional[str]) -> List[TestCase]:
     return test_cases
 
 
-def _parse_testcase_dict(data: Dict[str, Any], default_id: str) -> TestCase:
+def _parse_testcase_dict(data: dict[str, Any], default_id: str) -> TestCase:
     """Helper to convert dictionary structure into TestCase object."""
     tc_id = data.get("id", default_id)
     description = data.get("description", "")
@@ -151,11 +154,11 @@ def _parse_testcase_dict(data: Dict[str, Any], default_id: str) -> TestCase:
     )
 
 
-def load_project_config(config_path: Optional[str] = None) -> ProjectConfig:
+def load_project_config(config_path: str | None = None) -> ProjectConfig:
     """Load configuration from promptdiff.yaml or defaults."""
     target = Path(config_path) if config_path else Path("promptdiff.yaml")
     if target.is_file():
-        with open(target, "r", encoding="utf-8") as f:
+        with open(target, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
             return ProjectConfig.model_validate(data)
     return ProjectConfig()

@@ -1,0 +1,3 @@
+{"id": "tc_1", "description": "Password reset inquiry", "vars": {"query": "How do I reset my password?", "context": "Password resets are in Settings > Security."}}
+{"id": "tc_2", "description": "Refund request", "vars": {"query": "I want a refund for my order #1234.", "context": "Refunds are processed within 30 days."}}
+{"id": "tc_3", "description": "API rate limits", "vars": {"query": "What are the rate limits on Tier 2?", "context": "Tier 2 rate limit is 1,000 RPM."}}

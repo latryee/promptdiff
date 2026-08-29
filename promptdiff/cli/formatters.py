@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Dict
-from rich.box import ROUNDED, SIMPLE
+from rich.box import ROUNDED
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
-from promptdiff.pricing import MODEL_PRICING_TABLE, ModelPrice
+
+from promptdiff.pricing import MODEL_PRICING_TABLE
 
 console = Console()
 

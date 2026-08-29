@@ -24,7 +24,6 @@ class CostEvaluator(BaseEvaluator):
         delta = v2_cost - v1_cost
         delta_pct = (delta / v1_cost * 100.0) if v1_cost > 0 else 0.0
 
-        sign = "+" if delta > 0 else ""
         pct_sign = "+" if delta_pct > 0 else ""
 
         message = f"${v1_cost:.6f} → ${v2_cost:.6f} ({pct_sign}{delta_pct:.1f}%)"

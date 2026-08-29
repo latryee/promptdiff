@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 
-def compute_json_diff(obj1: Any, obj2: Any, path: str = "$") -> Dict[str, Any]:
+def compute_json_diff(obj1: Any, obj2: Any, path: str = "$") -> dict[str, Any]:
     """Recursively compute structural differences between two JSON objects."""
-    diff: Dict[str, Any] = {
+    diff: dict[str, Any] = {
         "added": {},
         "removed": {},
         "changed": {},

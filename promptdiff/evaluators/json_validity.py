@@ -7,12 +7,13 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
+
 from promptdiff.core.models import EvaluatorScore, RunResult, TestCase
 from promptdiff.evaluators.base import BaseEvaluator
 
 
-def extract_json(text: str) -> Tuple[Optional[Any], Optional[str]]:
+def extract_json(text: str) -> tuple[Any | None, str | None]:
     """Extract and parse JSON from raw text or markdown code block."""
     text_clean = text.strip()
 
@@ -55,7 +56,7 @@ def extract_json(text: str) -> Tuple[Optional[Any], Optional[str]]:
     return None, f"Invalid JSON: {direct_err}"
 
 
-def validate_schema(data: Any, schema: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+def validate_schema(data: Any, schema: dict[str, Any]) -> tuple[bool, str | None]:
     """Lightweight built-in JSON Schema validator without heavy third-party deps."""
     if not isinstance(data, dict):
         return False, f"Expected object, got {type(data).__name__}"
@@ -66,7 +67,7 @@ def validate_schema(data: Any, schema: Dict[str, Any]) -> Tuple[bool, Optional[s
             return False, f"Missing required field: '{field}'"
 
     properties = schema.get("properties", {})
-    type_map = {
+    type_map: dict[str, type | tuple[type, ...]] = {
         "string": str,
         "number": (int, float),
         "integer": int,

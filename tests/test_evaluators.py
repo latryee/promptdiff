@@ -2,11 +2,12 @@
 
 from promptdiff.core.models import RunResult, TestCase
 from promptdiff.evaluators.cost import CostEvaluator
-from promptdiff.evaluators.json_validity import JsonValidityEvaluator, extract_json, validate_schema
+from promptdiff.evaluators.json_validity import JsonValidityEvaluator, validate_schema
 from promptdiff.evaluators.latency import LatencyEvaluator
-from promptdiff.evaluators.length_drift import LengthDriftEvaluator
 from promptdiff.evaluators.regex_match import RegexMatchEvaluator
-from promptdiff.evaluators.similarity import SimilarityEvaluator, jaccard_similarity, sequence_similarity
+from promptdiff.evaluators.similarity import (
+    SimilarityEvaluator,
+)
 
 
 def create_run(output: str, latency_ms: float, cost_usd: float, tokens: int = 50) -> RunResult:

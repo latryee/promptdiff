@@ -28,9 +28,7 @@ class LengthDriftEvaluator(BaseEvaluator):
         v2_tok = v2_result.completion_tokens
         delta_tok = v2_tok - v1_tok
 
-        sign = "+" if delta_chars > 0 else ""
         pct_sign = "+" if delta_pct > 0 else ""
-
         message = f"{v1_tok} tok ({v1_len} char) → {v2_tok} tok ({v2_len} char) [{pct_sign}{delta_pct:.1f}%]"
 
         return EvaluatorScore(

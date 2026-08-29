@@ -1,4 +1,4 @@
-"""Domain Models and Type Definitions for promptdiff.
+"""Domain Models and Type Definitions for promptdiff v2.0.
 
 Structured with strict Pydantic v2 validation and typed schemas.
 """
@@ -8,7 +8,8 @@ from __future__ import annotations
 import re
 import time
 import uuid
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -19,10 +20,10 @@ class TestCase(BaseModel):
 
     id: str = Field(default_factory=lambda: f"test_{uuid.uuid4().hex[:6]}")
     description: str = ""
-    vars: Dict[str, Any] = Field(default_factory=dict)
-    expected_output: Optional[str] = None
-    schema_definition: Optional[Dict[str, Any]] = Field(default=None, alias="schema")
-    tags: List[str] = Field(default_factory=list)
+    vars: dict[str, Any] = Field(default_factory=dict)
+    expected_output: str | None = None
+    schema_definition: dict[str, Any] | None = Field(default=None, alias="schema")
+    tags: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -31,14 +32,14 @@ class PromptVersion(BaseModel):
     """Represents a prompt template version with execution metadata."""
 
     name: str = "v1"
-    path: Optional[str] = None
+    path: str | None = None
     template: str
     model: str = "gpt-4o"
     temperature: float = 0.0
-    system_prompt: Optional[str] = None
-    max_tokens: Optional[int] = 2048
+    system_prompt: str | None = None
+    max_tokens: int | None = 2048
 
-    def render(self, variables: Dict[str, Any]) -> str:
+    def render(self, variables: dict[str, Any]) -> str:
         """Render prompt template with variable substitution.
 
         Supports {{var_name}}, {var_name}, and Jinja2-style syntax.
@@ -66,7 +67,7 @@ class RunResult(BaseModel):
     cost_usd: float
     model: str
     cached: bool = False
-    error: Optional[str] = None
+    error: str | None = None
     timestamp: float = Field(default_factory=time.time)
 
 
@@ -76,11 +77,11 @@ class EvaluatorScore(BaseModel):
     name: str
     v1_score: Any
     v2_score: Any
-    delta: Optional[float] = None
-    delta_pct: Optional[float] = None
+    delta: float | None = None
+    delta_pct: float | None = None
     passed: bool = True
     message: str = ""
-    details: Dict[str, Any] = Field(default_factory=dict)
+    details: dict[str, Any] = Field(default_factory=dict)
 
 
 class DiffChunk(BaseModel):
@@ -97,10 +98,19 @@ class ComparisonResult(BaseModel):
     test_case: TestCase
     v1_result: RunResult
     v2_result: RunResult
-    scores: Dict[str, EvaluatorScore] = Field(default_factory=dict)
-    text_diff: List[DiffChunk] = Field(default_factory=list)
-    json_diff: Optional[Dict[str, Any]] = None
+    scores: dict[str, EvaluatorScore] = Field(default_factory=dict)
+    text_diff: list[DiffChunk] = Field(default_factory=list)
+    json_diff: dict[str, Any] | None = None
     is_json: bool = False
+
+
+class MultiComparisonResult(BaseModel):
+    """Comparison across N arbitrary prompt/model variants."""
+
+    test_case: TestCase
+    results: dict[str, RunResult] = Field(default_factory=dict)
+    scores: dict[str, dict[str, EvaluatorScore]] = Field(default_factory=dict)
+    pairwise_diffs: dict[str, list[DiffChunk]] = Field(default_factory=dict)
 
 
 class AssertionRule(BaseModel):
@@ -136,14 +146,14 @@ class RegressionVerdict(BaseModel):
 
     passed: bool = True
     status: Literal["PASSED", "REGRESSION_DETECTED", "ERROR"] = "PASSED"
-    failed_assertions: List[str] = Field(default_factory=list)
+    failed_assertions: list[str] = Field(default_factory=list)
     total_cost_v1: float = 0.0
     total_cost_v2: float = 0.0
     cost_delta_pct: float = 0.0
     avg_latency_v1: float = 0.0
     avg_latency_v2: float = 0.0
     latency_delta_pct: float = 0.0
-    summary_metrics: Dict[str, Any] = Field(default_factory=dict)
+    summary_metrics: dict[str, Any] = Field(default_factory=dict)
 
 
 class DiffReport(BaseModel):
@@ -155,8 +165,32 @@ class DiffReport(BaseModel):
     v2_name: str
     model_v1: str
     model_v2: str
-    comparisons: List[ComparisonResult]
+    comparisons: list[ComparisonResult]
     verdict: RegressionVerdict
-    evaluators: List[str]
+    evaluators: list[str]
     total_cases: int
-    aggregate_stats: Dict[str, Any] = Field(default_factory=dict)
+    aggregate_stats: dict[str, Any] = Field(default_factory=dict)
+
+
+class ArenaModelSummary(BaseModel):
+    """Aggregate metrics for a single model/prompt in the Arena."""
+
+    name: str
+    model: str
+    total_cost: float
+    avg_latency_ms: float
+    avg_tokens: float
+    avg_eval_scores: dict[str, float] = Field(default_factory=dict)
+    rank: int = 1
+
+
+class ArenaReport(BaseModel):
+    """Leaderboard report across N competing models/prompts."""
+
+    run_id: str = Field(default_factory=lambda: f"arena_{uuid.uuid4().hex[:8]}")
+    timestamp: str = ""
+    variants: list[str]
+    models: dict[str, str]
+    total_cases: int
+    leaderboard: list[ArenaModelSummary]
+    comparisons: list[MultiComparisonResult]

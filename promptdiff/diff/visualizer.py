@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
 from rich.columns import Columns
-from rich.console import Console, Group, RenderableType
+from rich.console import Group, RenderableType
 from rich.panel import Panel
-from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
+
 from promptdiff.core.models import ComparisonResult, DiffChunk
 
 
-def render_diff_text(chunks: List[DiffChunk], side: str = "v2") -> Text:
+def render_diff_text(chunks: list[DiffChunk], side: str = "v2") -> Text:
     """Render highlighted Rich Text from diff chunks."""
     result = Text()
     for chunk in chunks:

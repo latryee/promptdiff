@@ -2,6 +2,9 @@
 
 import json
 from pathlib import Path
+
+from rich.console import Console
+
 from promptdiff.core.models import (
     ComparisonResult,
     DiffChunk,
@@ -15,7 +18,6 @@ from promptdiff.reporters.html import generate_html_report
 from promptdiff.reporters.json_reporter import generate_json_report
 from promptdiff.reporters.markdown import generate_markdown_report
 from promptdiff.reporters.terminal import render_terminal_report
-from rich.console import Console
 
 
 def sample_report() -> DiffReport:

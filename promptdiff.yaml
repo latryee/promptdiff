@@ -1,0 +1,15 @@
+v1_prompt: prompts/system_v1.txt
+v2_prompt: prompts/system_v2.txt
+model: gpt-4o
+evaluators:
+  - json_validity
+  - latency
+  - cost
+  - similarity
+  - llm_judge
+  - faithfulness
+  - security
+assertions:
+  - "cost_delta <= 15%"
+  - "latency_delta <= 20%"
+dataset: testcases.jsonl

@@ -1,18 +1,56 @@
-"""Semantic & Textual Similarity Evaluator.
+"""Semantic & Embedding Cosine Similarity Evaluator.
 
-Measures output preservation vs drift using SequenceMatcher and Token Jaccard similarity.
+Measures output semantic preservation vs drift using local sentence-transformers (e.g. all-MiniLM-L6-v2)
+for zero-cost, high-speed semantic cosine similarity, with graceful token-similarity fallback.
 """
 
 from __future__ import annotations
 
 import difflib
+import logging
 import re
-from typing import Set
+from typing import Any
+
+import numpy as np
+
 from promptdiff.core.models import EvaluatorScore, RunResult, TestCase
 from promptdiff.evaluators.base import BaseEvaluator
 
+logger = logging.getLogger("promptdiff.evaluators.similarity")
 
-def tokenize(text: str) -> Set[str]:
+# Global singleton cache for local embedding model
+_EMBEDDING_MODEL: Any | None = None
+_EMBEDDING_MODEL_LOADED: bool = False
+
+
+def _get_embedding_model(model_name: str = "all-MiniLM-L6-v2") -> Any | None:
+    """Lazy-load sentence-transformers model instance."""
+    global _EMBEDDING_MODEL, _EMBEDDING_MODEL_LOADED
+    if _EMBEDDING_MODEL_LOADED:
+        return _EMBEDDING_MODEL
+
+    try:
+        from sentence_transformers import SentenceTransformer
+        _EMBEDDING_MODEL = SentenceTransformer(model_name)
+        _EMBEDDING_MODEL_LOADED = True
+        return _EMBEDDING_MODEL
+    except Exception as e:
+        logger.debug(f"sentence-transformers not available or failed to load: {e}")
+        _EMBEDDING_MODEL = None
+        _EMBEDDING_MODEL_LOADED = True
+        return None
+
+
+def cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
+    """Compute cosine similarity between two numpy vectors."""
+    norm_a = np.linalg.norm(vec_a)
+    norm_b = np.linalg.norm(vec_b)
+    if norm_a == 0 or norm_b == 0:
+        return 0.0
+    return float(np.dot(vec_a, vec_b) / (norm_a * norm_b))
+
+
+def tokenize(text: str) -> set[str]:
     """Tokenize string into lowercase alphanumeric words."""
     return set(re.findall(r"\w+", text.lower()))
 
@@ -39,10 +77,14 @@ def sequence_similarity(s1: str, s2: str) -> float:
 
 
 class SimilarityEvaluator(BaseEvaluator):
-    """Measures textual and semantic preservation between prompt versions."""
+    """Measures semantic and textual preservation between prompt versions."""
 
     name: str = "similarity"
-    description: str = "Measures output similarity ratio (1.0 = Identical, 0.0 = Completely Different)"
+    description: str = "Measures semantic cosine similarity (1.0 = Identical, 0.0 = Dissimilar) using sentence-transformers"
+
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2", threshold: float = 0.50):
+        self.model_name = model_name
+        self.threshold = threshold
 
     def evaluate(
         self,
@@ -53,26 +95,65 @@ class SimilarityEvaluator(BaseEvaluator):
         out1 = v1_result.output
         out2 = v2_result.output
 
+        if not out1 and not out2:
+            return EvaluatorScore(
+                name=self.name,
+                v1_score=1.0,
+                v2_score=1.0,
+                delta=0.0,
+                delta_pct=0.0,
+                passed=True,
+                message="100.0% Match (Empty outputs)",
+                details={"method": "exact", "similarity": 1.0},
+            )
+
+        model = _get_embedding_model(self.model_name)
+
+        if model is not None:
+            try:
+                embeddings = model.encode([out1, out2])
+                sim = cosine_similarity(embeddings[0], embeddings[1])
+                method = f"sentence-transformers ({self.model_name})"
+                passed = sim >= self.threshold
+                delta = sim - 1.0
+                message = f"{sim * 100:.1f}% Semantic Cosine Sim ({method})"
+
+                return EvaluatorScore(
+                    name=self.name,
+                    v1_score=1.0,
+                    v2_score=round(sim, 3),
+                    delta=round(delta, 3),
+                    delta_pct=round(delta * 100, 1),
+                    passed=passed,
+                    message=message,
+                    details={
+                        "method": method,
+                        "cosine_similarity": round(sim, 4),
+                        "model": self.model_name,
+                    },
+                )
+            except Exception as e:
+                logger.debug(f"Embedding computation failed, falling back to difflib: {e}")
+
+        # Fallback to composite sequence & jaccard similarity
         seq_sim = sequence_similarity(out1, out2)
         jaccard_sim = jaccard_similarity(out1, out2)
-
-        # Weighted composite score: 60% sequence, 40% jaccard
         composite = 0.6 * seq_sim + 0.4 * jaccard_sim
 
-        delta = composite - 1.0  # Deviation from baseline (1.0)
-        passed = composite >= 0.50
-
-        message = f"{composite * 100:.1f}% Match (Seq: {seq_sim * 100:.1f}%, Jaccard: {jaccard_sim * 100:.1f}%)"
+        delta = composite - 1.0
+        passed = composite >= self.threshold
+        message = f"{composite * 100:.1f}% Textual Match (Seq: {seq_sim * 100:.1f}%, Jaccard: {jaccard_sim * 100:.1f}%)"
 
         return EvaluatorScore(
             name=self.name,
-            v1_score=1.0,  # Baseline
+            v1_score=1.0,
             v2_score=round(composite, 3),
             delta=round(delta, 3),
             delta_pct=round(delta * 100, 1),
             passed=passed,
             message=message,
             details={
+                "method": "textual_difflib_fallback",
                 "sequence_similarity": round(seq_sim, 4),
                 "jaccard_similarity": round(jaccard_sim, 4),
                 "composite_score": round(composite, 4),

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Optional
+from typing import Any
+
 from promptdiff.providers.anthropic_provider import AnthropicProvider
 from promptdiff.providers.base import BaseLLMProvider
 from promptdiff.providers.gemini_provider import GeminiProvider
@@ -15,8 +16,8 @@ from promptdiff.providers.openai_provider import OpenAIProvider
 def get_provider(
     model_name: str = "gpt-4o",
     force_mock: bool = False,
-    api_key: Optional[str] = None,
-    base_url: Optional[str] = None,
+    api_key: str | None = None,
+    base_url: str | None = None,
     **kwargs: Any,
 ) -> BaseLLMProvider:
     """Resolve and return appropriate BaseLLMProvider instance.

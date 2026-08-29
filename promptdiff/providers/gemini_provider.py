@@ -1,4 +1,4 @@
-"""Google Gemini API Provider.
+"""Google Gemini API Provider with Async Resilience.
 
 Supports Gemini 2.0 Flash, Gemini 1.5 Pro, and Gemini 1.5 Flash.
 """
@@ -7,18 +7,20 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Any
+
 import httpx
-from promptdiff.providers.base import BaseLLMProvider, ProviderResponse
+
+from promptdiff.providers.base import BaseLLMProvider, ProviderResponse, execute_with_resilience
 
 
 class GeminiProvider(BaseLLMProvider):
-    """Google Gemini REST API Provider."""
+    """Google Gemini REST API Provider with exponential retry handling."""
 
     def __init__(
         self,
         model_name: str = "gemini-2.0-flash",
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         timeout: float = 60.0,
         **kwargs: Any,
     ):
@@ -26,12 +28,23 @@ class GeminiProvider(BaseLLMProvider):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY", "")
         self.timeout = timeout
 
+    async def _call_api(
+        self,
+        url: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Direct HTTP post to Gemini generateContent endpoint."""
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(url, json=payload)
+            response.raise_for_status()
+            return response.json()  # type: ignore[no-any-return]
+
     async def generate(
         self,
         prompt: str,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
         temperature: float = 0.0,
-        max_tokens: Optional[int] = 2048,
+        max_tokens: int | None = 2048,
     ) -> ProviderResponse:
         if not self.api_key:
             raise ValueError(
@@ -46,7 +59,7 @@ class GeminiProvider(BaseLLMProvider):
         url = f"https://generativelanguage.googleapis.com/v1beta/{endpoint_model}:generateContent?key={self.api_key}"
 
         contents = [{"role": "user", "parts": [{"text": prompt}]}]
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "contents": contents,
             "generationConfig": {
                 "temperature": temperature,
@@ -58,11 +71,11 @@ class GeminiProvider(BaseLLMProvider):
             payload["systemInstruction"] = {"parts": [{"text": system_prompt}]}
 
         start_time = time.perf_counter()
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.post(url, json=payload)
-            response.raise_for_status()
-            data = response.json()
-
+        data = await execute_with_resilience(
+            self._call_api,
+            url=url,
+            payload=payload,
+        )
         latency_ms = (time.perf_counter() - start_time) * 1000.0
 
         candidates = data.get("candidates", [])
@@ -72,8 +85,8 @@ class GeminiProvider(BaseLLMProvider):
             output = "".join(p.get("text", "") for p in parts)
 
         usage_meta = data.get("usageMetadata", {})
-        prompt_tokens = usage_meta.get("promptTokenCount", len(prompt) // 4)
-        completion_tokens = usage_meta.get("candidatesTokenCount", len(output) // 4)
+        prompt_tokens = usage_meta.get("promptTokenCount", max(1, len(prompt) // 4))
+        completion_tokens = usage_meta.get("candidatesTokenCount", max(1, len(output) // 4))
         total_tokens = usage_meta.get("totalTokenCount", prompt_tokens + completion_tokens)
 
         return ProviderResponse(

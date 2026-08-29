@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Optional
+
 from promptdiff.core.models import DiffReport
 
 
-def generate_json_report(report: DiffReport, output_path: Optional[str] = None) -> str:
+def generate_json_report(report: DiffReport, output_path: str | None = None) -> str:
     """Serialize DiffReport to formatted JSON."""
     raw_dict = report.model_dump()
     json_str = json.dumps(raw_dict, indent=2)
