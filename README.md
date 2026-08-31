@@ -2,14 +2,14 @@
 
 <div align="center">
 
-# ⚡ PromptDiff v3.3 (Enterprise LLMOps Suite)
+# ⚡ PromptDiff v3.4 (Ultimate AI Engineering & LLMOps OS)
 
-**The All-in-One LLM Prompt & Model Regression Testing, Shadow Traffic Replay, Red-Teaming, Cascading Router & Pytest Framework**
+**The World's Most Advanced LLM Prompt & Model Regression Testing, Shadow Replay, Swarm Council, JIT Compiler, Prefix Caching & Pytest Framework**
 
-*Catch silent LLM quality regressions, format breakages, latency inflation, token cost spikes, hallucinations, agent loop traps, and prompt injection leaks across prompt versions, model architectures, and production workflows.*
+*Catch silent LLM quality regressions, format breakages, streaming latency spikes, token cost inflation, hallucinations, agent loop traps, and prompt injection leaks across prompt versions, model architectures, and production workflows.*
 
 [![CI](https://github.com/latryee/promptdiff/actions/workflows/ci.yml/badge.svg)](https://github.com/latryee/promptdiff/actions)
-[![Tests](https://img.shields.io/badge/tests-81%2F81%20passing-brightgreen.svg)](https://github.com/latryee/promptdiff)
+[![Tests](https://img.shields.io/badge/tests-91%2F91%20passing-brightgreen.svg)](https://github.com/latryee/promptdiff)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/latryee/promptdiff)
 [![Pytest Plugin](https://img.shields.io/badge/pytest--plugin-enabled-blueviolet.svg)](https://docs.pytest.org/)
 [![Red-Teaming](https://img.shields.io/badge/Red--Teaming-20%2B%20vectors-red.svg)](https://github.com/latryee/promptdiff)
@@ -22,18 +22,17 @@
 <br/>
 
 [🚀 **Quickstart**](#-quickstart-in-30-seconds) •
-[🌟 **Complete 16-Feature Matrix**](#-complete-16-feature-enterprise-matrix) •
-[🕵️ **Shadow Replay**](#-production-shadow-traffic-replay-promptdiff-shadow) •
-[🔀 **Model Cascading**](#-smart-model-cascading--router-optimizer) •
-[🛡️ **Red-Teaming Fuzzer**](#-adversarial-red-teaming--jailbreak-fuzzer-promptdiff-fuzz) •
-[⚡ **Prefix Caching Sim**](#-prompt-prefix-caching-simulator-promptdiff-cache-sim) •
-[🧪 **Dataset Mutator**](#-synthetic-dataset-mutator--stress-testing-promptdiff-mutate) •
-[📜 **Git History Tracker**](#-git-version-history-regression-tracker-promptdiff-history) •
-[🧩 **Pytest Plugin**](#-pytest-promptdiff-native-plugin) •
-[📉 **Token Compressor**](#-prompt-token-compressor--shrinker-promptdiff-shrink) •
-[🖥️ **Interactive TUI**](#-interactive-terminal-ui-tui-studio) •
-[🎛️ **Hyperparameter Tuning**](#-hyperparameter-grid-search--pareto-optimization) •
-[🌐 **HTML Bundle**](#-zero-dependency-interactive-html-bundle---export-bundle) •
+[🌟 **Full 26-Feature Matrix**](#-full-26-feature-enterprise-matrix) •
+[🏛️ **Council of Judges**](#-llm-council-of-judges--consensus-evaluator) •
+[⚡ **Streaming TTFT Profiler**](#-streaming-ttft--inter-token-latency-profiler) •
+[🚨 **Health Daemon**](#-real-time-semantic-drift-watch-daemon) •
+[🔏 **Prompt Watermarking**](#-cryptographic-prompt-watermarking--ip-leak-detector) •
+[📉 **Edge Quantization**](#-local-edge-quantization-parity-benchmark) •
+[🧩 **Property Testing**](#-hypothesis-style-property-based-invariant-testing) •
+[⚖️ **Regulatory Compliance**](#-eu-ai-act--hipaa-regulatory-compliance-auditor) •
+[🔄 **Self-Correction Benchmark**](#-autonomous-self-correction-reflection-loop) •
+[📓 **Jupyter Export**](#-jupyter-notebook--google-colab-exporter) •
+[⚡ **Prompt JIT Compiler**](#-prompt-jit-compiler--ast-minifier) •
 [🐍 **Python SDK**](#-python-sdk--programmatic-api)
 
 </div>
@@ -48,8 +47,8 @@
 promptdiff run prompts/system_v1.txt prompts/system_v2.txt \
   --inputs datasets/testcases.jsonl \
   --model gpt-4o \
-  --eval "json_validity,latency,cost,similarity,llm_judge,faithfulness,security,fairness,citation" \
-  --assert "cost_delta <= 10%, latency_delta <= 15%, similarity >= 0.80, faithfulness >= 0.85, security == 1.0, fairness >= 0.80" \
+  --eval "json_validity,latency,cost,similarity,council,faithfulness,security,fairness,citation" \
+  --assert "cost_delta <= 10%, latency_delta <= 15%, similarity >= 0.80, faithfulness >= 0.85, security == 1.0" \
   --forecast 1M \
   --export-bundle report.html \
   --fail-on-regression
@@ -62,26 +61,36 @@ promptdiff run prompts/system_v1.txt prompts/system_v2.txt \
 
 ---
 
-## 🌟 Complete 16-Feature Enterprise Matrix
+## 🌟 Full 26-Feature Enterprise Matrix
 
-| # | Enterprise Feature | Capability & Command | PromptDiff Production Advantage |
+| # | Enterprise Module | CLI / SDK Capability | Production LLMOps Advantage |
 | :---: | :--- | :--- | :--- |
-| **1** | **🕵️ Shadow Traffic Replay** | `promptdiff shadow` / `replay` | Replays real-world production logs (Langfuse, Helicone, Datadog) with automated PII sanitization. |
-| **2** | **🔀 Model Cascading Router** | `promptdiff cascade` | Finds confidence threshold between cheap (Tier 1) and frontier (Tier 2) LLMs to save 70% cost. |
-| **3** | **🚦 A/B/n Canary Rollout** | `promptdiff canary` | Generates LaunchDarkly, Statsig, GrowthBook, and OpenFeature feature flag JSON configurations. |
-| **4** | **💰 SLA & Budget Breaker** | `promptdiff budget` / `sla` | Simulates high concurrency loads and enforces strict p95/p99 latency ceilings and per-case budgets. |
-| **5** | **⚖️ AI Fairness & Bias Auditor** | `promptdiff fairness` | Counterfactual demographic perturbation testing (swapping names/gender) to ensure zero decision bias. |
-| **6** | **🛡️ Hallucination Citation** | `promptdiff cite` | Pinpoints sentence-level ungrounded hallucinations against source reference documents with character diffs. |
-| **7** | **🪡 Needle in a Haystack** | `promptdiff haystack` | Benchmarks context degradation across 2k to 128k tokens to detect "Lost in the Middle" attention fading. |
-| **8** | **🎭 Persona Stress Tester** | `promptdiff personas` | Multiplies test cases across 15+ human personas (Angry, Non-Native, Senior, Slang, Corporate) to test tone. |
-| **9** | **⚡ Dynamic Few-Shot Indexer** | `promptdiff exemplars` | Local vector indexer comparing static few-shot lists vs dynamic top-k exemplar retrieval. |
-| **10** | **🎯 Schema Auto-Repair** | `promptdiff schema-repair` | Benchmarks JSON schema compliance and auto-repairability with Outlines/Instructor heuristics. |
-| **11** | **🔍 Token Saliency Map** | `promptdiff saliency` | Maps token-level output influence to identify dead-weight prompt instructions and boilerplate fluff. |
-| **12** | **🔄 Fine-Tuning Distiller** | `promptdiff distill` | Automatically synthesizes top-scoring prompt pairs into ChatML / OpenAI JSONL training sets for LoRA. |
-| **13** | **🧬 Mutation Test Quality** | `promptdiff mutation-score` | Injects deliberate faults into prompts to verify that your `testcases.jsonl` actually catches broken prompts. |
-| **14** | **🖼️ Multi-Modal Vision Diff** | `promptdiff vision` | Evaluates vision prompt iterations (GPT-4o Vision, Claude Vision) on images, charts, and OCR accuracy. |
-| **15** | **🌐 Web API & Playground** | `promptdiff serve` / `web` | FastAPI live server providing REST endpoints and browser-based real-time prompt playground. |
-| **16** | **💻 VS Code & Cursor LSP** | `promptdiff lsp` | Language Server Protocol bridge providing in-editor CodeLens token costs and missing variable diagnostics. |
+| **1** | **🏛️ Council of Judges** | `promptdiff.council()` | Multi-LLM consensus (GPT-4o, Claude 3.5, Gemini 2.0 Flash) using majority voting to eliminate judge bias. |
+| **2** | **⚡ Streaming TTFT Profiler** | `promptdiff.profile_stream()` | Profiles Time-To-First-Token (TTFT), tokens-per-second (TPS), and inter-token jitter variance. |
+| **3** | **🚨 Real-Time Health Daemon** | `promptdiff.watch_daemon` | Intercepts live production traffic and fires Slack/PagerDuty webhooks when semantic drift occurs. |
+| **4** | **🔏 Prompt Watermarking** | `promptdiff.watermark()` | Injects invisible zero-entropy cryptographic watermarks into prompts to detect IP theft. |
+| **5** | **📉 Edge Quantization Benchmark** | `promptdiff.edge_quant()` | Maps accuracy vs speed trade-offs across FP16, Q8_0, Q5_K_M, and Q4_K_M local Ollama/vLLM models. |
+| **6** | **🧩 Property-Based Invariant Fuzzer** | `promptdiff.property_test()` | Generates thousands of boundary variable permutations to verify mathematical invariants. |
+| **7** | **⚖️ Regulatory Legal Auditor** | `promptdiff.compliance_audit()` | Scans prompts against EU AI Act (Art 52), HIPAA, GDPR, and SOC2 compliance matrices. |
+| **8** | **🔄 Reflection Loop Benchmark** | `promptdiff.reflex_benchmark()` | Benchmarks 2-step self-correction critique loops to measure if quality gains justify 2x latency. |
+| **9** | **📓 Jupyter & Colab Exporter** | `promptdiff.export_notebook()` | Generates interactive `.ipynb` notebooks with embedded Plotly charts for data science stakeholders. |
+| **10** | **⚡ Prompt JIT Compiler** | `promptdiff.compile_prompt()` | AST template parser minifying whitespace, normalizing tags, and eliminating dead conditional branches. |
+| **11** | **🕵️ Shadow Traffic Replayer** | `promptdiff.shadow_replay()` | Replays production logs against candidate prompts with automated PII scrubbing (emails, cards, SSNs). |
+| **12** | **🔀 Smart Model Cascading** | `promptdiff.cascade()` | Routes simple queries to cheap LLMs (`gpt-4o-mini`) and hard queries to frontier LLMs (`gpt-4o`). |
+| **13** | **🚦 A/B/n Canary Rollout** | `promptdiff.canary()` | Exports LaunchDarkly, Statsig, GrowthBook, and OpenFeature feature flag JSON configurations. |
+| **14** | **💰 SLA & Budget Simulator** | `promptdiff.sla_stress()` | Simulates high concurrency loads and enforces strict p95/p99 latency ceilings and per-request budgets. |
+| **15** | **⚖️ AI Fairness & Bias Auditor** | `promptdiff.fairness` | Counterfactual demographic perturbation testing to guarantee zero demographic bias. |
+| **16** | **🛡️ Hallucination Citation Pointer** | `promptdiff.cite` | Pinpoints sentence-level ungrounded hallucinations against source reference documents. |
+| **17** | **🪡 Needle in a Haystack** | `promptdiff.haystack` | Benchmarks context degradation across 2k to 128k tokens to detect "Lost in the Middle" attention fading. |
+| **18** | **🎭 Persona Stress Tester** | `promptdiff.personas()` | Multiplies test cases across 15+ human personas (Angry, Non-Native, Senior, Slang, Corporate). |
+| **19** | **⚡ Dynamic Few-Shot Indexer** | `promptdiff.exemplars()` | Local vector indexer comparing static few-shot lists vs dynamic top-k exemplar retrieval. |
+| **20** | **🎯 Schema Auto-Repair** | `promptdiff.schema_repair` | Benchmarks JSON schema compliance and auto-repairability with Outlines/Instructor heuristics. |
+| **21** | **🔍 Token Saliency Map** | `promptdiff.saliency()` | Maps token-level output influence to identify dead-weight prompt instructions and boilerplate fluff. |
+| **22** | **🔄 Fine-Tuning Distiller** | `promptdiff.distill()` | Automatically synthesizes top-scoring prompt pairs into ChatML / OpenAI JSONL training sets for LoRA. |
+| **23** | **🧬 Mutation Test Quality** | `promptdiff.mutation_score()` | Injects deliberate faults into prompts to verify that your `testcases.jsonl` catches broken prompts. |
+| **24** | **🖼️ Multi-Modal Vision Diff** | `promptdiff.vision` | Evaluates vision prompt iterations (GPT-4o Vision, Claude Vision) on images, charts, and OCR. |
+| **25** | **🌐 Web API & Playground** | `promptdiff serve` | FastAPI live server providing REST endpoints and browser-based real-time prompt playground. |
+| **26** | **💻 VS Code & Cursor LSP** | `promptdiff lsp` | Language Server Protocol bridge providing in-editor CodeLens token costs and missing variable diagnostics. |
 
 ---
 
@@ -96,176 +105,86 @@ cd my-project
 promptdiff run prompts/system_v1.txt prompts/system_v2.txt \
   --inputs testcases.jsonl \
   --mock \
-  --eval "json_validity,latency,cost,similarity,llm_judge,faithfulness,security,fairness" \
+  --eval "json_validity,latency,cost,similarity,council,faithfulness,security,fairness" \
   --forecast 1M \
   --export-bundle report.html
 ```
 
 ---
 
-## 🕵️ Production Shadow Traffic Replay (`promptdiff shadow`)
+## 🏛️ LLM Council of Judges & Consensus Evaluator
 
-Replay actual production logs against candidate prompts with automated PII scrubbing (emails, cards, SSNs, phone numbers):
+Eliminate single-model evaluation bias with multi-model majority voting:
 
 ```python
 import promptdiff
 
-# Replay production logs safely
-replay_rep = promptdiff.shadow_replay(
-    candidate_prompt="prompts/support_v2.txt",
-    log_path="production_logs.jsonl",
+# Run Council consensus evaluation
+score = promptdiff.council(
+    v1="prompts/support_v1.txt",
+    v2="prompts/support_v2.txt",
+    test_case=test_case,
+    judges=["gpt-4o", "claude-3-5-sonnet", "gemini-2.0-flash"],
     mock=True,
 )
-print(f"Sanitized {replay_rep.pii_records_sanitized} PII items. Divergence: {replay_rep.divergence_score}")
+print(score.message)
+# "Council Consensus (3 judges): V2_SUPERIOR (v1=4.00, v2=4.80, var=0.007)"
 ```
 
 ---
 
-## 🔀 Smart Model Cascading & Router Optimizer
+## ⚡ Streaming TTFT & Inter-Token Latency Profiler
 
-Optimize multi-tier routing (GPT-4o-mini $\rightarrow$ GPT-4o fallback):
-
-```python
-cascade_rep = promptdiff.cascade(
-    prompt="You are a customer support agent: {{query}}",
-    dataset="testcases.jsonl",
-    tier1_model="gpt-4o-mini",
-    tier2_model="gpt-4o",
-)
-print(f"Tier 1 Route Rate: {cascade_rep.tier1_route_pct}% | Monthly Savings: ${cascade_rep.projected_monthly_savings_usd:,.2f}")
-```
-
----
-
-## 🛡️ Adversarial Red-Teaming & Jailbreak Fuzzer (`promptdiff fuzz`)
-
-Bombard system prompts with 20+ adversarial attack payloads:
-
-```bash
-promptdiff fuzz prompts/system_v1.txt --model gpt-4o
-```
-
----
-
-## ⚡ Prompt Prefix Caching Simulator (`promptdiff cache-sim`)
-
-Optimize prompt structure to leverage Anthropic, OpenAI, and Gemini prompt caching:
-
-```bash
-promptdiff cache-sim prompts/system_v1.txt --model claude-3-5-sonnet --volume 1M
-```
-
----
-
-## 🧪 Synthetic Dataset Mutator & Stress Testing (`promptdiff mutate`)
-
-Multiply seed test cases into high-entropy adversarial test suites:
-
-```bash
-promptdiff mutate testcases.jsonl --output mutated_testcases.jsonl --multiplier 5
-```
-
----
-
-## 📜 Git Version History Regression Tracker (`promptdiff history`)
-
-Benchmark prompt template evolution across Git commit revisions:
-
-```bash
-promptdiff history prompts/system_v1.txt --inputs testcases.jsonl --commits 4
-```
-
----
-
-## 🧩 Pytest-PromptDiff (Native Plugin)
-
-Incorporate prompt regression testing into your standard `pytest` workflow:
-
-```python
-# tests/test_prompts.py
-import pytest
-
-def test_support_bot_prompt_regression(promptdiff_eval):
-    report = promptdiff_eval(
-        v1="prompts/support_v1.txt",
-        v2="prompts/support_v2.txt",
-        dataset="testcases.jsonl",
-        model="gpt-4o",
-        eval_metrics="json_validity,similarity,llm_judge,security,fairness",
-        assert_rules=["cost_delta <= 10%", "similarity >= 0.80", "security == 1.0"],
-    )
-    assert report.verdict.passed, f"Regressions detected: {report.verdict.failed_assertions}"
-```
-
----
-
-## 📉 Prompt Token Compressor & Shrinker (`promptdiff shrink`)
-
-Reduce token overhead without sacrificing formatting fidelity or LLM Judge quality:
-
-```bash
-promptdiff shrink prompts/system_v1.txt \
-  --inputs testcases.jsonl \
-  --target-reduction 0.30 \
-  --output prompts/system_shrunk.txt
-```
-
----
-
-## 🖥️ Interactive Terminal UI (TUI) Studio
-
-Launch the split-screen terminal workspace built with **Textual**:
-
-```bash
-promptdiff tui prompts/system_v1.txt prompts/system_v2.txt --inputs testcases.jsonl
-```
-
----
-
-## 🎛️ Hyperparameter Grid Search & Pareto Optimization
-
-```bash
-promptdiff tune prompts/system_v1.txt \
-  --inputs testcases.jsonl \
-  --model gpt-4o \
-  --temperatures "0.0,0.3,0.7,1.0" \
-  --top-ps "0.7,0.9,1.0"
-```
-
----
-
-## 🌐 Zero-Dependency Interactive HTML Bundle (`--export-bundle`)
-
-Export a single-file `.html` report with embedded search filter, side-by-side diff viewers, and statistical significance analysis:
-
-```bash
-promptdiff run prompts/v1.txt prompts/v2.txt --inputs testcases.jsonl --export-bundle standalone.html
-```
-
----
-
-## 🐍 Python SDK & Programmatic API
+Measure Time-To-First-Token and token streaming throughput:
 
 ```python
 import promptdiff
 
-# 1. Compare prompts
+profile = promptdiff.profile_stream("prompts/v2.txt", query="Summarize quarterly earnings")
+print(f"TTFT: {profile.time_to_first_token_ms}ms | Speed: {profile.tokens_per_second} tokens/sec")
+```
+
+---
+
+## 🔏 Cryptographic Prompt Watermarking & IP Leak Detector
+
+Protect your proprietary system prompts from competitor exfiltration:
+
+```python
+import promptdiff
+
+# 1. Inject zero-width invisible watermark into prompt
+watermarked_prompt = promptdiff.watermark("You are an expert financial bot...", secret_key="corp-secret")
+
+# 2. Inspect suspect leaked text from logs or competitors
+inspection = promptdiff.inspect_watermark(watermarked_prompt)
+print(f"Watermarked: {inspection.is_watermarked} (Confidence: {inspection.confidence_pct}%)")
+```
+
+---
+
+## 📓 Jupyter Notebook & Google Colab Exporter
+
+Export regression experiments into interactive `.ipynb` files with embedded Plotly charts:
+
+```python
+import promptdiff
+
 report = promptdiff.compare("prompts/v1.txt", "prompts/v2.txt", dataset="testcases.jsonl")
+notebook_path = promptdiff.export_notebook(report, output_path="reports/experiment_1.ipynb")
+```
 
-# 2. Red-teaming fuzzer
-fuzz_rep = promptdiff.fuzz("prompts/v1.txt")
+---
 
-# 3. Model cascading router
-cascade_rep = promptdiff.cascade("prompts/v1.txt", dataset="testcases.jsonl")
+## ⚡ Prompt JIT Compiler & AST Minifier
 
-# 4. Generate Canary rollout config
-canary_cfg = promptdiff.canary(report, flag_name="support_prompt_v2")
+Compile complex prompt templates into token-dense Intermediate Representation:
 
-# 5. Extract Fine-Tuning dataset
-train_path, count = promptdiff.distill(report, output="lora_train.jsonl")
+```python
+import promptdiff
 
-# 6. Test suite mutation quality score
-mut_score = promptdiff.mutation_score("prompts/v1.txt", dataset="testcases.jsonl")
+result = promptdiff.compile_prompt("prompts/heavy_system_prompt.jinja2")
+print(f"Saved {result.tokens_saved} tokens ({result.compression_pct}% reduction).")
 ```
 
 ---

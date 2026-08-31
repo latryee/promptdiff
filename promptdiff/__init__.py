@@ -1,6 +1,6 @@
 """promptdiff: Enterprise-grade LLM Prompt & Model Regression Testing Framework."""
 
-__version__ = "3.0.0"
+__version__ = "3.4.0"
 __author__ = "promptdiff team"
 
 from promptdiff.core.models import (
@@ -19,20 +19,30 @@ from promptdiff.sdk import (
     canary,
     cascade,
     compare,
+    compile_prompt,
+    compliance_audit,
+    council,
     distill,
+    edge_quant,
     export_bundle,
+    export_notebook,
     fuzz,
     history,
+    inspect_watermark,
     lsp_diagnostics,
     mutate,
     mutation_score,
     optimize,
     personas,
+    profile_stream,
+    property_test,
+    reflex_benchmark,
     saliency,
     shadow_replay,
     shrink,
     sla_stress,
     tune,
+    watermark,
 )
 
 __all__ = [
@@ -63,5 +73,15 @@ __all__ = [
     "distill",
     "mutation_score",
     "lsp_diagnostics",
+    "council",
+    "profile_stream",
+    "watermark",
+    "inspect_watermark",
+    "edge_quant",
+    "property_test",
+    "compliance_audit",
+    "reflex_benchmark",
+    "export_notebook",
+    "compile_prompt",
     "__version__",
 ]

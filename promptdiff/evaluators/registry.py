@@ -6,6 +6,7 @@ from promptdiff.evaluators.answer_relevance import AnswerRelevanceEvaluator
 from promptdiff.evaluators.base import BaseEvaluator
 from promptdiff.evaluators.citation import CitationEvaluator
 from promptdiff.evaluators.cost import CostEvaluator
+from promptdiff.evaluators.council import CouncilOfJudgesEvaluator
 from promptdiff.evaluators.fairness import FairnessEvaluator
 from promptdiff.evaluators.faithfulness import FaithfulnessEvaluator
 from promptdiff.evaluators.json_validity import JsonValidityEvaluator
@@ -53,6 +54,9 @@ EVALUATOR_MAP: dict[str, type[BaseEvaluator]] = {
     "cite": CitationEvaluator,
     "schema_repair": SchemaRepairEvaluator,
     "vision": VisionDiffEvaluator,
+    "council": CouncilOfJudgesEvaluator,
+    "swarm_judge": CouncilOfJudgesEvaluator,
+    "council_judge": CouncilOfJudgesEvaluator,
 }
 
 
