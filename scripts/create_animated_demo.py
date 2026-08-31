@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -25,8 +26,7 @@ def create_demo_gif() -> None:
         durations: list[int] = []
 
         # Dark terminal background
-        bg_color = (15, 23, 42, 255) # Slate 900
-        bar_color = (30, 41, 59, 255)
+        bg_color = (15, 23, 42, 255)  # Slate 900
 
         # Frame 1: Terminal with prompt
         f1 = Image.new("RGBA", (width, height), bg_color)
@@ -39,11 +39,9 @@ def create_demo_gif() -> None:
         try:
             font = ImageFont.truetype("arial.ttf", 22)
             font_code = ImageFont.truetype("consolas.ttf", 20)
-            font_title = ImageFont.truetype("consolas.ttf", 24)
         except Exception:
             font = ImageFont.load_default()
             font_code = font
-            font_title = font
 
         draw.text((100, 14), "promptdiff - zsh", fill=(148, 163, 184, 255), font=font)
         draw.text((30, 80), "$ promptdiff run prompts/system_v1.txt prompts/system_v2.txt --inputs testcases.jsonl --forecast 1M", fill=(56, 189, 248, 255), font=font_code)

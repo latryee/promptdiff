@@ -1,0 +1,2 @@
+Answer the user query politely and provide contact info.
+Query: {{query}}

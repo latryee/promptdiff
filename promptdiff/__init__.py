@@ -1,10 +1,10 @@
 """promptdiff: Enterprise-grade LLM Prompt & Model Regression Testing Framework.
 
-A developer-first CLI for detecting silent regressions, format breakages,
-cost spikes, latency inflation, and output drift across LLM prompt iterations.
+A developer-first framework and CLI for detecting silent regressions, format breakages,
+cost spikes, latency inflation, output drift, and security leaks across LLM prompt iterations.
 """
 
-__version__ = "2.0.0"
+__version__ = "3.0.0"
 __author__ = "promptdiff team"
 
 from promptdiff.core.models import (
@@ -17,6 +17,13 @@ from promptdiff.core.models import (
     RunResult,
     TestCase,
 )
+from promptdiff.sdk import (
+    async_compare,
+    compare,
+    optimize,
+    shrink,
+    tune,
+)
 
 __all__ = [
     "ArenaReport",
@@ -27,5 +34,10 @@ __all__ = [
     "RegressionVerdict",
     "RunResult",
     "TestCase",
+    "async_compare",
+    "compare",
+    "optimize",
+    "tune",
+    "shrink",
     "__version__",
 ]

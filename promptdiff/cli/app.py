@@ -38,14 +38,17 @@ from promptdiff.evaluators.answer_relevance import AnswerRelevanceEvaluator
 from promptdiff.evaluators.faithfulness import FaithfulnessEvaluator
 from promptdiff.evaluators.llm_judge import LLMJudgeEvaluator
 from promptdiff.evaluators.registry import get_evaluators
+from promptdiff.evaluators.trajectory import TrajectoryEvaluator
 from promptdiff.generators.synthetic import SyntheticTestGenerator
 from promptdiff.optimizer.auto_prompt import PromptOptimizer
+from promptdiff.optimizer.compressor import PromptCompressor
 from promptdiff.optimizer.tuner import PromptTuner
 from promptdiff.providers.registry import get_provider
 from promptdiff.reporters.html import generate_html_report
 from promptdiff.reporters.json_reporter import generate_json_report
 from promptdiff.reporters.markdown import generate_markdown_report
 from promptdiff.reporters.mlflow_reporter import log_to_mlflow
+from promptdiff.reporters.otel_reporter import export_to_langfuse, export_to_opentelemetry
 from promptdiff.reporters.terminal import (
     render_arena_terminal_report,
     render_terminal_report,
@@ -84,6 +87,8 @@ def _run_test_suite(
     fail_on_regression: bool,
     mlflow: bool,
     wandb: bool,
+    otel: bool,
+    langfuse: bool,
     mlflow_experiment: str,
     wandb_project: str,
     rubric: str | None,
@@ -121,6 +126,8 @@ def _run_test_suite(
             eval_list[idx] = FaithfulnessEvaluator(model_name=m2, force_mock=mock)
         elif isinstance(ev, AnswerRelevanceEvaluator):
             eval_list[idx] = AnswerRelevanceEvaluator(model_name=m2, force_mock=mock)
+        elif isinstance(ev, TrajectoryEvaluator):
+            eval_list[idx] = TrajectoryEvaluator(model_name=m2, force_mock=mock)
 
     cache = DiskCache(enabled=cache_enabled)
 
@@ -176,6 +183,14 @@ def _run_test_suite(
         if ok:
             console.print(f"[bold green][+] Telemetry logged to Weights & Biases project:[/bold green] [cyan]{wandb_project}[/cyan]")
 
+    if otel:
+        export_to_opentelemetry(report)
+        console.print("[bold green][+] OpenTelemetry traces exported successfully.[/bold green]")
+
+    if langfuse:
+        export_to_langfuse(report)
+        console.print("[bold green][+] Langfuse telemetry exported successfully.[/bold green]")
+
     if fail_on_regression and not report.verdict.passed:
         console.print("[bold red][!] CI/CD Quality Gate: Regression threshold violated. Exiting with code 1.[/bold red]")
         raise typer.Exit(code=1)
@@ -212,6 +227,8 @@ def test_cmd(
     fail_on_regression: bool = typer.Option(True, "--fail-on-regression/--no-fail-on-regression", help="Exit with code 1 if regressions detected"),
     mlflow: bool = typer.Option(False, "--mlflow", help="Log metrics, parameters, and artifacts to MLflow"),
     wandb: bool = typer.Option(False, "--wandb", help="Log metrics and comparison tables to Weights & Biases"),
+    otel: bool = typer.Option(False, "--otel", help="Export traces to OpenTelemetry OTLP endpoint"),
+    langfuse: bool = typer.Option(False, "--langfuse", help="Export events and metrics to Langfuse"),
     mlflow_experiment: str = typer.Option("promptdiff-evals", "--mlflow-experiment", help="MLflow experiment name"),
     wandb_project: str = typer.Option("promptdiff", "--wandb-project", help="Weights & Biases project name"),
     rubric: str | None = typer.Option(None, "--rubric", help="Custom evaluation rubric for LLM Judge"),
@@ -238,6 +255,8 @@ def test_cmd(
         fail_on_regression=fail_on_regression,
         mlflow=mlflow,
         wandb=wandb,
+        otel=otel,
+        langfuse=langfuse,
         mlflow_experiment=mlflow_experiment,
         wandb_project=wandb_project,
         rubric=rubric,
@@ -271,6 +290,8 @@ def run_cmd(
     fail_on_regression: bool = typer.Option(True, "--fail-on-regression/--no-fail-on-regression", help="Exit code 1 on regression"),
     mlflow: bool = typer.Option(False, "--mlflow", help="Log to MLflow"),
     wandb: bool = typer.Option(False, "--wandb", help="Log to WandB"),
+    otel: bool = typer.Option(False, "--otel", help="Export traces to OpenTelemetry OTLP endpoint"),
+    langfuse: bool = typer.Option(False, "--langfuse", help="Export events and metrics to Langfuse"),
     mlflow_experiment: str = typer.Option("promptdiff-evals", "--mlflow-experiment", help="MLflow experiment name"),
     wandb_project: str = typer.Option("promptdiff", "--wandb-project", help="W&B project name"),
     rubric: str | None = typer.Option(None, "--rubric", help="Custom evaluation rubric for LLM Judge"),
@@ -297,11 +318,103 @@ def run_cmd(
         fail_on_regression=fail_on_regression,
         mlflow=mlflow,
         wandb=wandb,
+        otel=otel,
+        langfuse=langfuse,
         mlflow_experiment=mlflow_experiment,
         wandb_project=wandb_project,
         rubric=rubric,
         forecast=forecast,
     )
+
+
+@app.command(name="shrink")
+def shrink_cmd(
+    prompt: str = typer.Argument(..., help="Path to prompt template file to compress"),
+    inputs: str | None = typer.Option(None, "--inputs", "-i", help="Path to test dataset (.jsonl)"),
+    output: str = typer.Option("prompts/system_shrunk.txt", "--output", "-o", help="Target compressed prompt output path"),
+    target_reduction: float = typer.Option(0.30, "--target-reduction", "-r", help="Target token reduction ratio (e.g. 0.30 for 30%)"),
+    model: str = typer.Option("gpt-4o", "--model", "-m", help="Target LLM model"),
+    mock: bool = typer.Option(False, "--mock", help="Use deterministic mock compression"),
+) -> None:
+    """Prompt Token Compressor: Prune redundant tokens & fluff while preserving 100% quality."""
+    prompt_obj = load_prompt_file(prompt, version_name="original", model=model)
+
+    try:
+        test_cases = load_dataset(inputs)
+    except Exception as e:
+        console.print(f"[bold red]Error loading dataset:[/bold red] {e}")
+        raise typer.Exit(code=1)
+
+    compressor = PromptCompressor(
+        prompt_version=prompt_obj,
+        test_cases=test_cases,
+        model_name=model,
+        target_reduction=target_reduction,
+        force_mock=mock,
+    )
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[bold cyan]{task.description}"),
+        BarColumn(bar_width=40, style="green", complete_style="bold green"),
+        TaskProgressColumn(),
+        TimeElapsedColumn(),
+        console=console,
+        transient=False,
+    ) as progress:
+        task = progress.add_task("Compressing prompt tokens...", total=3)
+
+        def on_step(curr: int, tot: int, msg: str) -> None:
+            progress.update(task, completed=curr, description=f"[bold cyan]{msg}[/bold cyan]")
+
+        result = asyncio.run(compressor.compress(progress_cb=on_step))
+
+    saved_path = compressor.save(result.compressed_prompt, output)
+
+    table = Table(
+        title="[bold green]📉 Prompt Token Compression & Quality Report[/bold green]",
+        box=None,
+        show_header=True,
+        header_style="bold cyan",
+    )
+    table.add_column("Metric", style="bold white")
+    table.add_column("Original Prompt", style="cyan")
+    table.add_column("Compressed Prompt", style="green")
+    table.add_column("Impact / Savings", style="bold green")
+
+    table.add_row(
+        "Estimated Tokens",
+        f"{result.original_tokens} tokens",
+        f"{result.compressed_tokens} tokens",
+        f"-{result.token_reduction_pct:.1f}% ({result.tokens_saved} tokens saved)",
+    )
+    table.add_row(
+        "LLM Judge Quality",
+        f"{result.original_judge_score:.2f} / 5.0",
+        f"{result.compressed_judge_score:.2f} / 5.0",
+        f"{result.quality_retained_pct:.1f}% Quality Retained",
+    )
+    table.add_row(
+        "Projected Monthly Spend",
+        "-",
+        "-",
+        f"+${result.projected_monthly_savings_usd:,.2f}/mo (at 100k reqs/day)",
+    )
+
+    console.print()
+    console.print(table)
+
+    panel = Panel(
+        f"[bold green]✨ Compressed Prompt Saved to:[/bold green] [cyan]{saved_path}[/cyan]\n\n"
+        f"[bold white]Compressed Template Preview:[/bold white]\n"
+        f"[dim]{result.compressed_prompt[:250]}...[/dim]",
+        title="[bold cyan]Token Compression Complete[/bold cyan]",
+        border_style="green",
+        padding=(1, 2),
+    )
+    console.print()
+    console.print(panel)
+    console.print()
 
 
 @app.command(name="tune")

@@ -61,6 +61,9 @@ mlops = [
 [project.scripts]
 promptdiff = "promptdiff.cli.app:main"
 
+[project.entry-points.pytest11]
+promptdiff = "promptdiff.pytest_plugin"
+
 [tool.setuptools.packages.find]
 include = ["promptdiff*"]
 

@@ -13,6 +13,7 @@ from promptdiff.evaluators.llm_judge import LLMJudgeEvaluator
 from promptdiff.evaluators.regex_match import RegexMatchEvaluator
 from promptdiff.evaluators.security import SecurityEvaluator
 from promptdiff.evaluators.similarity import SimilarityEvaluator
+from promptdiff.evaluators.trajectory import TrajectoryEvaluator
 
 EVALUATOR_MAP: dict[str, type[BaseEvaluator]] = {
     "json_validity": JsonValidityEvaluator,
@@ -39,6 +40,9 @@ EVALUATOR_MAP: dict[str, type[BaseEvaluator]] = {
     "security": SecurityEvaluator,
     "guardrails": SecurityEvaluator,
     "safety": SecurityEvaluator,
+    "trajectory": TrajectoryEvaluator,
+    "agent_trajectory": TrajectoryEvaluator,
+    "tool_use": TrajectoryEvaluator,
 }
 
 
