@@ -13,9 +13,9 @@ from promptdiff.providers.registry import get_provider
 
 DEFAULT_RUBRIC = """
 You are an expert AI evaluation judge assessing the quality, accuracy, correctness, conciseness,
-and instruction adherence of LLM candidate responses.
+and instruction adherence of two candidate LLM responses: Baseline (v1) and Candidate (v2).
 
-Score the candidate output on a strict scale from 1.0 to 5.0 using the following criteria:
+Score BOTH responses independently on a strict scale from 1.0 to 5.0 using the following criteria:
 - 5.0 (Exceptional): Perfect instruction following, exact schema adherence, concise, zero fluff, fully accurate.
 - 4.0 (Good): Follows all core instructions, high accuracy, minor stylistic or non-critical formatting differences.
 - 3.0 (Acceptable): Mostly correct but includes slight verbosity, minor hallucinations, or weak formatting.
@@ -23,8 +23,10 @@ Score the candidate output on a strict scale from 1.0 to 5.0 using the following
 - 1.0 (Critical Failure): Completely off-topic, toxic, empty, or severe prompt injection failure.
 
 Format your response EXACTLY as follows:
-[REASONING] <1-2 sentences of specific technical justification>
-[SCORE] <number between 1.0 and 5.0>
+[REASONING] <1-2 sentences of comparative technical justification>
+[V1_SCORE] <number between 1.0 and 5.0 for Baseline (v1)>
+[V2_SCORE] <number between 1.0 and 5.0 for Candidate (v2)>
+[PREFERENCE] <V1, V2, or TIE>
 """
 
 
@@ -68,38 +70,57 @@ Expected Target / Output:
 --- CANDIDATE RESPONSE (v2) ---
 {v2_out}
 
-Evaluate the CANDIDATE RESPONSE (v2) compared to the baseline (v1) and expected criteria.
-Provide [REASONING] followed by [SCORE].
+Evaluate and compare BOTH the BASELINE RESPONSE (v1) and the CANDIDATE RESPONSE (v2) against the expected criteria.
+Provide [REASONING], [V1_SCORE], [V2_SCORE], and [PREFERENCE].
 """
 
-    def _parse_judge_output(self, output: str) -> tuple[float, str]:
-        """Extract score and reasoning from judge model output."""
-        reasoning = "Evaluation completed."
-        score = 4.0
+    def _parse_judge_output(self, output: str) -> tuple[float, float, str, str]:
+        """Extract v1_score, v2_score, reasoning, and preference from judge model output."""
+        reasoning = "Comparative evaluation completed."
+        preference = "TIE"
+        v1_score = 3.5
+        v2_score = 3.5
 
-        # Try to parse [REASONING] and [SCORE]
-        reason_match = re.search(r"\[REASONING\]\s*(.*?)(?=\[SCORE\]|$)", output, re.DOTALL | re.IGNORECASE)
+        # 1. Parse [REASONING]
+        reason_match = re.search(
+            r"\[REASONING\]\s*(.*?)(?=\[V1_SCORE\]|\[V2_SCORE\]|\[SCORE\]|\[PREFERENCE\]|$)",
+            output,
+            re.DOTALL | re.IGNORECASE,
+        )
         if reason_match:
             reasoning = reason_match.group(1).strip()
 
-        score_match = re.search(r"\[SCORE\]\s*([0-5](?:\.[0-9]+)?)", output, re.IGNORECASE)
-        if score_match:
+        # 2. Parse [V1_SCORE]
+        v1_match = re.search(r"\[V1_SCORE\]\s*([0-5](?:\.[0-9]+)?)", output, re.IGNORECASE)
+        if v1_match:
             try:
-                score = float(score_match.group(1))
+                v1_score = float(v1_match.group(1))
             except ValueError:
-                score = 3.5
-        else:
-            # Fallback regex search for any "score: X" pattern
-            alt_score = re.search(r"(?:score|rating):\s*([0-5](?:\.[0-9]+)?)", output, re.IGNORECASE)
-            if alt_score:
-                try:
-                    score = float(alt_score.group(1))
-                except ValueError:
-                    score = 3.5
+                v1_score = 3.5
 
-        # Clamp between 1.0 and 5.0
-        score = max(1.0, min(5.0, score))
-        return score, reasoning
+        # 3. Parse [V2_SCORE] or legacy [SCORE]
+        v2_match = re.search(r"\[V2_SCORE\]\s*([0-5](?:\.[0-9]+)?)", output, re.IGNORECASE)
+        if v2_match:
+            try:
+                v2_score = float(v2_match.group(1))
+            except ValueError:
+                v2_score = 3.5
+        else:
+            single_match = re.search(r"\[SCORE\]\s*([0-5](?:\.[0-9]+)?)", output, re.IGNORECASE)
+            if single_match:
+                try:
+                    v2_score = float(single_match.group(1))
+                except ValueError:
+                    v2_score = 3.5
+
+        # 4. Parse [PREFERENCE]
+        pref_match = re.search(r"\[PREFERENCE\]\s*(V1|V2|TIE)", output, re.IGNORECASE)
+        if pref_match:
+            preference = pref_match.group(1).upper()
+
+        v1_score = max(1.0, min(5.0, v1_score))
+        v2_score = max(1.0, min(5.0, v2_score))
+        return v1_score, v2_score, reasoning, preference
 
     async def async_evaluate(
         self,
@@ -107,20 +128,24 @@ Provide [REASONING] followed by [SCORE].
         v2_result: RunResult,
         test_case: TestCase,
     ) -> EvaluatorScore:
-        """Run judge evaluation asynchronously."""
+        """Run comparative judge evaluation asynchronously."""
         v1_out = v1_result.output
         v2_out = v2_result.output
 
         if not v2_out.strip() and v2_result.error:
             return EvaluatorScore(
                 name=self.name,
-                v1_score=5.0,
+                v1_score=4.0,
                 v2_score=1.0,
-                delta=-4.0,
-                delta_pct=-80.0,
+                delta=-3.0,
+                delta_pct=-75.0,
                 passed=False,
-                message=f"Judge: 1.0/5.0 (Candidate produced error: {v2_result.error})",
-                details={"reasoning": f"Execution error: {v2_result.error}", "judge_model": self.model_name},
+                message=f"Judge: v1=4.0 -> v2=1.0/5.0 (Candidate error: {v2_result.error})",
+                details={
+                    "reasoning": f"Candidate error: {v2_result.error}",
+                    "preference": "V1",
+                    "judge_model": self.model_name,
+                },
             )
 
         prompt = self._build_judge_prompt(test_case, v1_out, v2_out)
@@ -131,22 +156,23 @@ Provide [REASONING] followed by [SCORE].
                 temperature=0.0,
                 max_tokens=512,
             )
-            v2_score, reasoning = self._parse_judge_output(resp.output)
+            v1_score, v2_score, reasoning, preference = self._parse_judge_output(resp.output)
         except Exception as e:
             # Fallback if judge API fails
-            v2_score = 4.0
+            v1_score = 3.5
+            v2_score = 3.5
             reasoning = f"Judge evaluation fallback: {e}"
+            preference = "TIE"
 
-        v1_score = 4.0  # Baseline expectation
         delta = v2_score - v1_score
-        delta_pct = (delta / v1_score) * 100.0
-        passed = v2_score >= self.pass_threshold
+        delta_pct = (delta / v1_score * 100.0) if v1_score > 0 else 0.0
+        passed = (v2_score >= self.pass_threshold) and (delta >= -0.5)
 
-        msg = f"Judge: {v2_score:.1f}/5.0 (Pass >= {self.pass_threshold:.1f}) - {reasoning[:60]}..."
+        msg = f"Judge: v1={v1_score:.1f} -> v2={v2_score:.1f}/5.0 (Pref: {preference}) - {reasoning[:45]}..."
 
         return EvaluatorScore(
             name=self.name,
-            v1_score=v1_score,
+            v1_score=round(v1_score, 2),
             v2_score=round(v2_score, 2),
             delta=round(delta, 2),
             delta_pct=round(delta_pct, 1),
@@ -154,6 +180,7 @@ Provide [REASONING] followed by [SCORE].
             message=msg,
             details={
                 "reasoning": reasoning,
+                "preference": preference,
                 "judge_model": self.model_name,
                 "pass_threshold": self.pass_threshold,
             },

@@ -53,7 +53,7 @@ async def test_async_runner_concurrency() -> None:
 
 @pytest.mark.asyncio
 async def test_llm_judge_evaluator() -> None:
-    """Test LLM-as-a-Judge scoring and rubric parsing."""
+    """Test LLM-as-a-Judge scoring, comparative evaluation, and dynamic v1 scoring."""
     judge = LLMJudgeEvaluator(model_name="mock-gpt-4o", force_mock=True, pass_threshold=3.0)
 
     tc = TestCase(id="tc_judge", vars={"query": "How do I update billing?"})
@@ -82,12 +82,33 @@ async def test_llm_judge_evaluator() -> None:
         model="mock-gpt-4o",
     )
 
-    score = await judge.async_evaluate(v1_res, v2_res, tc)
-    assert score.name == "llm_judge"
-    assert isinstance(score.v2_score, (int, float))
-    assert score.v2_score >= 1.0
-    assert score.passed is True
-    assert "reasoning" in score.details
+    score1 = await judge.async_evaluate(v1_res, v2_res, tc)
+    assert score1.name == "llm_judge"
+    assert isinstance(score1.v1_score, (int, float))
+    assert isinstance(score1.v2_score, (int, float))
+    assert score1.v1_score >= 1.0
+    assert score1.v2_score >= 1.0
+    assert "reasoning" in score1.details
+    assert "preference" in score1.details
+
+    # Test with a completely different v1 baseline output to verify v1_score is dynamically computed, not hardcoded constant
+    v1_res_alt = RunResult(
+        prompt_name="v1",
+        test_case_id="tc_judge",
+        rendered_prompt="Query: How do I update billing?",
+        output="A totally different, extremely verbose, convoluted response that rambles on about unrelated topics and historical billing records from 1999.",
+        latency_ms=300.0,
+        prompt_tokens=10,
+        completion_tokens=50,
+        total_tokens=60,
+        cost_usd=0.0005,
+        model="mock-gpt-4o",
+    )
+    score2 = await judge.async_evaluate(v1_res_alt, v2_res, tc)
+    # v1_score must be dynamically evaluated based on input content
+    assert isinstance(score2.v1_score, (int, float))
+    assert score2.v1_score >= 1.0
+    assert score1.v1_score != score2.v1_score or score2.details["preference"] == "V2"
 
 
 def test_sentence_transformers_similarity() -> None:

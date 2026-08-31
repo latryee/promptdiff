@@ -71,6 +71,9 @@ app = typer.Typer(
 cache_app = typer.Typer(name="cache", help="Manage deterministic prompt execution cache.")
 app.add_typer(cache_app)
 
+recipe_app = typer.Typer(name="recipe", help="Curated evaluation recipes and domain starter packs.")
+app.add_typer(recipe_app)
+
 
 def _run_test_suite(
     v1: str,
@@ -342,7 +345,7 @@ def fuzz_cmd(
     model: str = typer.Option("gpt-4o", "--model", "-m", help="Target LLM model"),
     mock: bool = typer.Option(False, "--mock", help="Use deterministic mock red-teaming execution"),
 ) -> None:
-    """Autonomous Adversarial Red-Teaming & Jailbreak Fuzzer (20+ injection vectors)."""
+    """Autonomous Adversarial Red-Teaming & Jailbreak Fuzzer (20 distinct attack vectors)."""
     prompt_obj = load_prompt_file(prompt, version_name="fuzz_target", model=model)
     fuzzer = JailbreakFuzzer(prompt_version=prompt_obj, model_name=model, force_mock=mock)
 
@@ -1017,6 +1020,25 @@ def cache_stats_cmd() -> None:
     cache = DiskCache(enabled=True)
     count = cache.count()
     console.print(f"[bold cyan]Prompt Cache Entries:[/bold cyan] [bold yellow]{count}[/bold yellow]")
+
+
+@recipe_app.command(name="list")
+def recipe_list_cmd() -> None:
+    """List all available curated evaluation recipes."""
+    from promptdiff.cli.recipes import list_recipes
+
+    list_recipes()
+
+
+@recipe_app.command(name="pull")
+def recipe_pull_cmd(
+    name: str = typer.Argument(..., help="Recipe identifier (e.g. 'rag-qa', 'json-extractor', 'sql-gen', 'security-guard')"),
+    target_dir: str = typer.Option(".", "--target-dir", "-d", help="Directory to scaffold recipe files"),
+) -> None:
+    """Pull a curated evaluation recipe starter kit into your project."""
+    from promptdiff.cli.recipes import pull_recipe
+
+    pull_recipe(name=name, target_dir=target_dir)
 
 
 def main() -> int:

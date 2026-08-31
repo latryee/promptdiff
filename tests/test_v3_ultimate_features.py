@@ -61,7 +61,7 @@ def test_dataset_mutator() -> None:
 
 @pytest.mark.asyncio
 async def test_jailbreak_fuzzer() -> None:
-    """Test adversarial jailbreak red-teaming fuzzer."""
+    """Test adversarial jailbreak red-teaming fuzzer with 20 distinct attack vectors."""
     pv = PromptVersion(
         name="secure_system_prompt",
         template="You are a secure customer support assistant. Help with query: {{query}}",
@@ -74,8 +74,10 @@ async def test_jailbreak_fuzzer() -> None:
         force_mock=True,
     )
 
+    assert len(fuzzer.payloads) == 20
+
     report = await fuzzer.run_fuzz()
-    assert report.total_attacks > 0
+    assert report.total_attacks == 20
     assert report.resilience_score_pct >= 0.0
     assert len(report.recommendations) > 0
 

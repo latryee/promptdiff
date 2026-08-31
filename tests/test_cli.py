@@ -107,3 +107,18 @@ def test_cli_cache_commands():
     assert res1.exit_code == 0
     res2 = runner.invoke(app, ["cache", "clear"])
     assert res2.exit_code == 0
+
+
+def test_cli_recipes(tmp_path: Path):
+    res_list = runner.invoke(app, ["recipe", "list"])
+    assert res_list.exit_code == 0
+    assert "rag-qa" in res_list.output
+    assert "json-extractor" in res_list.output
+
+    target = tmp_path / "pulled_recipe"
+    res_pull = runner.invoke(app, ["recipe", "pull", "rag-qa", "--target-dir", str(target)])
+    assert res_pull.exit_code == 0
+    assert (target / "prompts" / "rag-qa_v1.txt").exists()
+    assert (target / "prompts" / "rag-qa_v2.txt").exists()
+    assert (target / "rag-qa_testcases.jsonl").exists()
+    assert (target / "promptdiff-rag-qa.yaml").exists()

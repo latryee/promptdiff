@@ -64,8 +64,12 @@ def test_watch_health_daemon() -> None:
 
 
 def test_prompt_watermark() -> None:
-    """Test cryptographic and zero-width prompt watermarking."""
-    wm = PromptWatermarker(secret_key="my-secret-key", organization="Acme AI Corp")
+    """Test cryptographic prompt watermarking with explicit secret key and grounded confidence."""
+    # Must raise ValueError if secret_key is not provided
+    with pytest.raises(ValueError, match="secret_key must be explicitly provided"):
+        PromptWatermarker(secret_key=None)
+
+    wm = PromptWatermarker(secret_key="my-secure-eval-key", organization="Acme AI Corp")
     orig_prompt = "You are an enterprise AI assistant. Always format responses in Markdown."
     watermarked = wm.inject_watermark(orig_prompt)
 
@@ -74,11 +78,12 @@ def test_prompt_watermark() -> None:
     inspection = wm.inspect_text_for_watermark(watermarked)
     assert inspection.is_watermarked is True
     assert inspection.matched_organization == "Acme AI Corp"
-    assert inspection.confidence_pct > 90.0
+    assert inspection.confidence_pct == 100.0
 
     # Non-watermarked check
     unmarked_inspection = wm.inspect_text_for_watermark("Regular plain text without watermarks.")
     assert unmarked_inspection.is_watermarked is False
+    assert unmarked_inspection.confidence_pct == 0.0
 
 
 @pytest.mark.asyncio
@@ -103,12 +108,13 @@ async def test_property_based_tester() -> None:
 
 
 def test_compliance_auditor() -> None:
-    """Test regulatory legal compliance auditor."""
+    """Test prompt guideline linter and ensure honest legal disclaimer is present."""
     pv = PromptVersion(name="comp_p", template="You are an AI assistant. Never disclose confidential medical phi and personal data privacy.")
-    auditor = ComplianceAuditor(prompt_version=pv)
-    report = auditor.audit()
+    linter = ComplianceAuditor(prompt_version=pv)
+    report = linter.lint()
     assert report.overall_compliance_score_pct >= 50.0
     assert len(report.results) == 4
+    assert "DISCLAIMER" in report.disclaimer
 
 
 @pytest.mark.asyncio

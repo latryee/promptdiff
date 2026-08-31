@@ -13,6 +13,7 @@ from typing import Any, Optional
 
 from promptdiff.core.models import PromptVersion, TestCase
 from promptdiff.core.runner import PromptDiffRunner
+from promptdiff.evaluators.llm_judge import LLMJudgeEvaluator
 from promptdiff.evaluators.registry import get_evaluators
 from promptdiff.providers.registry import get_provider
 
@@ -65,12 +66,17 @@ class ModelCascadeRouter:
         pv1 = PromptVersion(name="tier1", template=self.prompt_template, model=self.tier1_model)
         pv2 = PromptVersion(name="tier2", template=self.prompt_template, model=self.tier2_model)
 
+        eval_list = get_evaluators(["json_validity", "latency", "cost", "llm_judge"])
+        for idx, ev in enumerate(eval_list):
+            if isinstance(ev, LLMJudgeEvaluator):
+                eval_list[idx] = LLMJudgeEvaluator(model_name=self.tier2_model, force_mock=self.force_mock)
+
         runner = PromptDiffRunner(
             v1_prompt=pv1,
             v2_prompt=pv2,
             provider_v1=get_provider(model_name=self.tier1_model, force_mock=self.force_mock),
             provider_v2=get_provider(model_name=self.tier2_model, force_mock=self.force_mock),
-            evaluators=get_evaluators(["json_validity", "latency", "cost", "llm_judge"]),
+            evaluators=eval_list,
         )
 
         diff_report = await runner.run(self.test_cases)

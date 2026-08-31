@@ -15,7 +15,7 @@ logger = logging.getLogger("promptdiff.generators.distiller")
 class FineTuningDistiller:
     """Extracts top-performing prompt evaluation runs into ChatML / OpenAI JSONL fine-tuning pairs."""
 
-    def __init__(self, report: DiffReport, min_judge_score: float = 4.0):
+    def __init__(self, report: DiffReport, min_judge_score: float = 3.5):
         self.report = report
         self.min_judge_score = min_judge_score
 

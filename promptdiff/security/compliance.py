@@ -1,6 +1,9 @@
-"""Regulatory Compliance & Legal Matrix Auditor for promptdiff (promptdiff compliance).
+"""Prompt Guideline Keyword Linter (Heuristic Keyword Pattern Checks).
 
-Audits system prompt templates against EU AI Act, HIPAA, GDPR, and SOC2 requirements.
+DISCLAIMER: This module performs basic heuristic keyword pattern matching against
+common prompt engineering guidelines and conventions. It is NOT legal, regulatory,
+or formal compliance advice, and does NOT constitute an audit or guarantee of compliance
+with the EU AI Act, HIPAA, GDPR, SOC2, or any other statutory or legal framework.
 """
 
 from __future__ import annotations
@@ -13,82 +16,108 @@ from promptdiff.core.models import PromptVersion
 
 logger = logging.getLogger("promptdiff.security.compliance")
 
-COMPLIANCE_CHECKS = [
+DISCLAIMER_NOTICE = (
+    "DISCLAIMER: This report is a heuristic keyword lint, NOT legal advice or a regulatory compliance audit."
+)
+
+GUIDELINE_KEYWORD_RULES = [
     {
-        "framework": "EU AI Act (Transparency Article 52)",
-        "requirement": "AI Identity Disclosure",
-        "description": "Prompt must instruct the model to disclose its artificial identity if asked",
+        "category": "Transparency Guideline (e.g. AI Identity)",
+        "guideline": "AI Identity Disclosure",
+        "description": "Prompt instructs the model to acknowledge its artificial identity if asked",
         "pattern": r"(ai|assistant|virtual|automated)",
     },
     {
-        "framework": "HIPAA / Healthcare",
-        "requirement": "Medical Disclaimer & Protected Health Info (PHI)",
-        "description": "Prompt must disclaim medical diagnosis advice or prohibit PHI collection",
+        "category": "Healthcare Guideline (e.g. Medical Disclaimer)",
+        "guideline": "Medical Advice Disclaimer",
+        "description": "Prompt disclaims medical diagnosis advice or prohibits PHI collection",
         "pattern": r"(medical|doctor|diagnosis|health|phi|disclaimer)",
     },
     {
-        "framework": "GDPR / Privacy",
-        "requirement": "Personal Data Collection Limitation",
-        "description": "Prompt must specify limits on storing or logging user personal data",
+        "category": "Privacy Guideline (e.g. Data Minimization)",
+        "guideline": "Personal Data Collection Limit",
+        "description": "Prompt specifies limits on storing or logging user personal data",
         "pattern": r"(privacy|personal data|gdpr|confidential|do not store|pii)",
     },
     {
-        "framework": "SOC2 / Security",
-        "requirement": "Secrets & System Directive Protection",
-        "description": "Prompt must contain explicit instructions against exfiltrating keys or instructions",
+        "category": "Security Guideline (e.g. Secret Protection)",
+        "guideline": "Secrets & System Directive Protection",
+        "description": "Prompt contains explicit instructions against exfiltrating keys or instructions",
         "pattern": r"(never reveal|do not share|confidential|secrets|system prompt)",
     },
 ]
 
+# Backwards-compatibility alias
+COMPLIANCE_CHECKS = GUIDELINE_KEYWORD_RULES
+
 
 @dataclass
-class ComplianceCheckResult:
-    """Individual regulatory requirement result."""
+class GuidelineCheckResult:
+    """Individual heuristic guideline rule result."""
 
-    framework: str
-    requirement: str
+    category: str
+    guideline: str
     compliant: bool
     description: str
     recommendation: str
 
+    @property
+    def framework(self) -> str:
+        """Backwards-compatibility accessor."""
+        return self.category
+
+    @property
+    def requirement(self) -> str:
+        """Backwards-compatibility accessor."""
+        return self.guideline
+
+
+# Backwards-compatibility alias
+ComplianceCheckResult = GuidelineCheckResult
+
 
 @dataclass
-class ComplianceReport:
-    """Full regulatory compliance audit report."""
+class GuidelineLintReport:
+    """Heuristic prompt guideline lint report."""
 
     prompt_name: str
     overall_compliance_score_pct: float
     is_compliant: bool
-    results: list[ComplianceCheckResult] = field(default_factory=list)
+    results: list[GuidelineCheckResult] = field(default_factory=list)
     action_items: list[str] = field(default_factory=list)
+    disclaimer: str = DISCLAIMER_NOTICE
 
 
-class ComplianceAuditor:
-    """Audits system prompt templates against global regulatory frameworks."""
+# Backwards-compatibility alias
+ComplianceReport = GuidelineLintReport
+
+
+class PromptGuidelineLinter:
+    """Heuristic regex keyword linter for common prompt guidelines."""
 
     def __init__(self, prompt_version: PromptVersion):
         self.prompt_version = prompt_version
 
-    def audit(self) -> ComplianceReport:
-        """Scan prompt template against compliance rulebook."""
+    def lint(self) -> GuidelineLintReport:
+        """Scan prompt template against guideline keyword rules."""
         text = self.prompt_version.template.lower() + " " + (self.prompt_version.system_prompt or "").lower()
 
         results = []
         action_items = []
 
-        for check in COMPLIANCE_CHECKS:
-            matched = bool(re.search(check["pattern"], text, re.IGNORECASE))
+        for rule in GUIDELINE_KEYWORD_RULES:
+            matched = bool(re.search(rule["pattern"], text, re.IGNORECASE))
             rec = ""
             if not matched:
-                rec = f"Add explicit guideline: '{check['description']}'"
-                action_items.append(f"[{check['framework']}] {rec}")
+                rec = f"Consider adding guideline: '{rule['description']}'"
+                action_items.append(f"[{rule['category']}] {rec}")
 
             results.append(
-                ComplianceCheckResult(
-                    framework=check["framework"],
-                    requirement=check["requirement"],
+                GuidelineCheckResult(
+                    category=rule["category"],
+                    guideline=rule["guideline"],
                     compliant=matched,
-                    description=check["description"],
+                    description=rule["description"],
                     recommendation=rec,
                 )
             )
@@ -96,10 +125,19 @@ class ComplianceAuditor:
         passed_count = sum(1 for r in results if r.compliant)
         score = (passed_count / len(results) * 100.0) if results else 100.0
 
-        return ComplianceReport(
+        return GuidelineLintReport(
             prompt_name=self.prompt_version.name,
             overall_compliance_score_pct=round(score, 1),
             is_compliant=score >= 75.0,
             results=results,
             action_items=action_items,
+            disclaimer=DISCLAIMER_NOTICE,
         )
+
+    def audit(self) -> GuidelineLintReport:
+        """Backwards-compatibility alias for lint()."""
+        return self.lint()
+
+
+# Backwards-compatibility alias
+ComplianceAuditor = PromptGuidelineLinter

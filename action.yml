@@ -1,0 +1,109 @@
+name: 'PromptDiff Prompt Regression Testing'
+description: 'Automated LLM prompt regression testing, cost/latency gating, and PR sticky comment reporter.'
+author: 'promptdiff team'
+branding:
+  icon: 'git-pull-request'
+  color: 'purple'
+
+inputs:
+  v1:
+    description: 'Path to baseline v1 prompt file or raw text'
+    required: true
+  v2:
+    description: 'Path to candidate v2 prompt file or raw text'
+    required: true
+  inputs:
+    description: 'Path to test dataset (.jsonl, .yaml, .csv, .json)'
+    required: false
+  model:
+    description: 'Target LLM model (e.g. gpt-4o, claude-3-5-sonnet, gemini-2.0-flash)'
+    required: false
+    default: 'gpt-4o'
+  eval:
+    description: 'Comma-separated evaluation metrics to run'
+    required: false
+    default: 'json_validity,latency,cost,similarity,faithfulness,security'
+  assertions:
+    description: 'Comma-separated assertions threshold (e.g. "cost_delta <= 15%, latency_delta <= 20%")'
+    required: false
+  mock:
+    description: 'Use deterministic mock provider (no API keys required)'
+    required: false
+    default: 'false'
+  github-token:
+    description: 'GitHub token for posting sticky PR comments (e.g. secrets.GITHUB_TOKEN)'
+    required: false
+  export-html:
+    description: 'Path to export interactive HTML report'
+    required: false
+    default: 'promptdiff-report.html'
+  export-markdown:
+    description: 'Path to export Markdown report'
+    required: false
+    default: 'promptdiff-report.md'
+  export-bundle:
+    description: 'Path to export standalone single-file HTML bundle'
+    required: false
+    default: 'promptdiff-bundle.html'
+  fail-on-regression:
+    description: 'Fail CI job if regression assertion is violated'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install promptdiff
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install promptdiff
+
+    - name: Run promptdiff regression tests
+      shell: bash
+      run: |
+        ARGS="test \"${{ inputs.v1 }}\" \"${{ inputs.v2 }}\""
+        if [ -n "${{ inputs.inputs }}" ]; then
+          ARGS="$ARGS --inputs \"${{ inputs.inputs }}\""
+        fi
+        if [ -n "${{ inputs.model }}" ]; then
+          ARGS="$ARGS --model \"${{ inputs.model }}\""
+        fi
+        if [ -n "${{ inputs.eval }}" ]; then
+          ARGS="$ARGS --eval \"${{ inputs.eval }}\""
+        fi
+        if [ -n "${{ inputs.assertions }}" ]; then
+          IFS=',' read -ra ADDR <<< "${{ inputs.assertions }}"
+          for a in "${ADDR[@]}"; do
+            ARGS="$ARGS --assert \"$a\""
+          done
+        fi
+        if [ "${{ inputs.mock }}" = "true" ]; then
+          ARGS="$ARGS --mock"
+        fi
+        if [ -n "${{ inputs.export-html }}" ]; then
+          ARGS="$ARGS --export-html \"${{ inputs.export-html }}\""
+        fi
+        if [ -n "${{ inputs.export-markdown }}" ]; then
+          ARGS="$ARGS --export-markdown \"${{ inputs.export-markdown }}\""
+        fi
+        if [ -n "${{ inputs.export-bundle }}" ]; then
+          ARGS="$ARGS --export-bundle \"${{ inputs.export-bundle }}\""
+        fi
+        if [ "${{ inputs.fail-on-regression }}" = "false" ]; then
+          ARGS="$ARGS --no-fail-on-regression"
+        fi
+        eval "promptdiff $ARGS"
+
+    - name: Post Sticky PR Comment
+      if: ${{ inputs.github-token != '' && github.event_name == 'pull_request' }}
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        path: ${{ inputs.export-markdown }}
+        header: promptdiff-regression-evaluation

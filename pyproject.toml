@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["llm", "prompt-engineering", "testing", "regression", "diff", "eval", "cli", "ai-engineering", "mlops", "llm-judge", "dspy", "rag", "streamlit"]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 4 - Beta",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
@@ -34,10 +34,7 @@ dependencies = [
     "jinja2>=3.1.0",
     "pyyaml>=6.0",
     "tenacity>=8.2.0",
-    "sentence-transformers>=2.2.0",
     "numpy>=1.24.0",
-    "streamlit>=1.30.0",
-    "textual>=0.50.0",
 ]
 
 [project.urls]
@@ -46,6 +43,23 @@ Repository = "https://github.com/latryee/promptdiff"
 Issues = "https://github.com/latryee/promptdiff/issues"
 
 [project.optional-dependencies]
+semantic = [
+    "sentence-transformers>=2.2.0",
+]
+ui = [
+    "streamlit>=1.30.0",
+    "pandas>=2.0.0",
+]
+tui = [
+    "textual>=0.50.0",
+]
+all = [
+    "sentence-transformers>=2.2.0",
+    "streamlit>=1.30.0",
+    "textual>=0.50.0",
+    "pandas>=2.0.0",
+    "scipy>=1.10.0",
+]
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",

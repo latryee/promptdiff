@@ -21,6 +21,26 @@ logger = logging.getLogger("promptdiff.evaluators.similarity")
 # Global singleton cache for local embedding model
 _EMBEDDING_MODEL: Any | None = None
 _EMBEDDING_MODEL_LOADED: bool = False
+_FALLBACK_WARNING_EMITTED: bool = False
+
+
+def _emit_fallback_warning() -> None:
+    """Emit a single visible CLI warning when falling back to difflib."""
+    global _FALLBACK_WARNING_EMITTED
+    if not _FALLBACK_WARNING_EMITTED:
+        _FALLBACK_WARNING_EMITTED = True
+        try:
+            from rich.console import Console
+            Console(stderr=True).print(
+                "[bold yellow]⚠️  [SimilarityEvaluator] sentence-transformers not installed. "
+                "Falling back to textual token-overlap (difflib). "
+                "Install promptdiff[semantic] for dense neural embeddings.[/bold yellow]"
+            )
+        except Exception:
+            logger.warning(
+                "[SimilarityEvaluator] sentence-transformers not installed. "
+                "Falling back to textual token-overlap (difflib). Install promptdiff[semantic]."
+            )
 
 
 def _get_embedding_model(model_name: str = "all-MiniLM-L6-v2") -> Any | None:
@@ -136,13 +156,14 @@ class SimilarityEvaluator(BaseEvaluator):
                 logger.debug(f"Embedding computation failed, falling back to difflib: {e}")
 
         # Fallback to composite sequence & jaccard similarity
+        _emit_fallback_warning()
         seq_sim = sequence_similarity(out1, out2)
         jaccard_sim = jaccard_similarity(out1, out2)
         composite = 0.6 * seq_sim + 0.4 * jaccard_sim
 
         delta = composite - 1.0
         passed = composite >= self.threshold
-        message = f"{composite * 100:.1f}% Textual Match (Seq: {seq_sim * 100:.1f}%, Jaccard: {jaccard_sim * 100:.1f}%)"
+        message = f"{composite * 100:.1f}% Textual Match [FALLBACK: difflib token-overlap] (Seq: {seq_sim * 100:.1f}%, Jaccard: {jaccard_sim * 100:.1f}%)"
 
         return EvaluatorScore(
             name=self.name,
@@ -154,6 +175,8 @@ class SimilarityEvaluator(BaseEvaluator):
             message=message,
             details={
                 "method": "textual_difflib_fallback",
+                "fallback": True,
+                "fallback_warning": "sentence-transformers not installed; using difflib token overlap. Install promptdiff[semantic] for neural embeddings.",
                 "sequence_similarity": round(seq_sim, 4),
                 "jaccard_similarity": round(jaccard_sim, 4),
                 "composite_score": round(composite, 4),

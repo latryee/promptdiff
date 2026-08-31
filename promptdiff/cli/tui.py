@@ -7,24 +7,30 @@ from typing import Optional
 
 from rich.panel import Panel
 from rich.text import Text
-from textual.app import App, ComposeResult
-from textual.binding import Binding
-from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.widgets import (
-    Button,
-    Checkbox,
-    DataTable,
-    Footer,
-    Header,
-    Input,
-    Label,
-    ProgressBar,
-    RichLog,
-    Static,
-    TabbedContent,
-    TabPane,
-    TextArea,
-)
+
+try:
+    from textual.app import App, ComposeResult
+    from textual.binding import Binding
+    from textual.containers import Horizontal, Vertical, VerticalScroll
+    from textual.widgets import (
+        Button,
+        Checkbox,
+        DataTable,
+        Footer,
+        Header,
+        Input,
+        Label,
+        ProgressBar,
+        RichLog,
+        Static,
+        TabbedContent,
+        TabPane,
+        TextArea,
+    )
+    TEXTUAL_INSTALLED = True
+except ImportError:
+    TEXTUAL_INSTALLED = False
+    App = object  # type: ignore[misc,assignment]
 
 from promptdiff.core.config import load_dataset
 from promptdiff.core.models import PromptVersion
@@ -375,6 +381,15 @@ def launch_tui(
     mock: bool = True,
 ) -> None:
     """Entrypoint to launch Textual TUI Application."""
+    if not TEXTUAL_INSTALLED:
+        import sys
+
+        print(
+            "[!] Error: Textual is not installed. Install with `pip install promptdiff[tui]` to use the interactive Terminal UI.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     app = PromptDiffTUI(
         v1_path=v1,
         v2_path=v2,

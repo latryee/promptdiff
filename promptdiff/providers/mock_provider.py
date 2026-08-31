@@ -85,13 +85,32 @@ class MockProvider(BaseLLMProvider):
             )
 
         # 4. LLM-as-a-Judge requests
-        if "judge" in prompt_lower or "rubric" in prompt_lower or "score the following" in prompt_lower:
-            score = 4.5 if (seed % 3 != 0) else 4.0
+        if "judge" in prompt_lower or "rubric" in prompt_lower or "score the following" in prompt_lower or "[v1_score]" in prompt_lower or "candidate response (v2)" in prompt_lower:
+            import re
+            v1_match = re.search(r"---\s*BASELINE RESPONSE \(v1\)\s*---\s*\n(.*?)(?=---\s*CANDIDATE RESPONSE|$)", raw_prompt, re.DOTALL | re.IGNORECASE)
+            v2_match = re.search(r"---\s*CANDIDATE RESPONSE \(v2\)\s*---\s*\n(.*?)(?=Evaluate and compare|$)", raw_prompt, re.DOTALL | re.IGNORECASE)
+
+            v1_text = v1_match.group(1).strip() if v1_match else ""
+            v2_text = v2_match.group(1).strip() if v2_match else ""
+
+            h1 = int(hashlib.sha256(v1_text.encode("utf-8")).hexdigest(), 16) if v1_text else seed
+            h2 = int(hashlib.sha256(v2_text.encode("utf-8")).hexdigest(), 16) if v2_text else seed + 1
+
+            # Dynamic, input-dependent scores between 4.0 and 5.0
+            v1_score = round(4.0 + ((h1 % 10) / 10.0), 1)
+            v2_score = round(4.2 + ((h2 % 9) / 10.0), 1)
+            v1_score = max(1.0, min(5.0, v1_score))
+            v2_score = max(1.0, min(5.0, v2_score))
+
+            pref = "V2" if v2_score > v1_score else ("V1" if v1_score > v2_score else "TIE")
+
             return (
-                f"### Assessment\n"
-                f"[REASONING] The response directly addresses the query requirements, adheres to strict tone guidelines, "
-                f"provides accurate technical details without hallucination, and maintains concise formatting.\n"
-                f"[SCORE] {score}"
+                f"### Comparative Assessment\n"
+                f"[REASONING] Candidate v2 adheres closer to constraints with clearer formatting than baseline v1.\n"
+                f"[V1_SCORE] {v1_score}\n"
+                f"[V2_SCORE] {v2_score}\n"
+                f"[PREFERENCE] {pref}\n"
+                f"[SCORE] {v2_score}"
             )
 
         # 5. Synthetic Test Generation requests
