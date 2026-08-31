@@ -10,17 +10,26 @@ from promptdiff.core.config import load_dataset, load_prompt_file
 from promptdiff.core.models import DiffReport, TestCase
 from promptdiff.core.runner import PromptDiffRunner
 from promptdiff.evaluators.registry import get_evaluators
+from promptdiff.generators.distiller import FineTuningDistiller
 from promptdiff.generators.mutator import DatasetMutator
+from promptdiff.generators.personas import PersonaStressTester
+from promptdiff.lsp.server import PromptDiagnostic, PromptLanguageServer
 from promptdiff.optimizer.auto_prompt import OptimizationResult, PromptOptimizer
 from promptdiff.optimizer.cache_sim import CacheSimReport, PromptCacheSimulator
 from promptdiff.optimizer.compressor import CompressionResult, PromptCompressor
+from promptdiff.optimizer.mutation_tester import MutationScoreReport, MutationTestingEngine
+from promptdiff.optimizer.saliency import PromptSaliencyMapper, SaliencyReport
 from promptdiff.optimizer.tuner import PromptTuner, TuningReport
+from promptdiff.production.canary import CanaryConfigGenerator, CanaryRolloutConfig
+from promptdiff.production.cascade import CascadeRouteReport, ModelCascadeRouter
+from promptdiff.production.replay import ReplayReport, ShadowTrafficReplayer
+from promptdiff.production.sla import SLABudgetReport, SLABudgetSimulator
 from promptdiff.providers.registry import get_provider
 from promptdiff.reporters.bundle_html import generate_interactive_bundle_html
 from promptdiff.security.fuzzer import FuzzReport, JailbreakFuzzer
 
 
-def _resolve_testcases(dataset: Optional[Union[str, list[TestCase], list[dict]]]) -> list[TestCase]:
+def _resolve_testcases(dataset: Optional[Union[str, list[TestCase], list[dict]]] = None) -> list[TestCase]:
     if dataset is None or isinstance(dataset, str):
         return load_dataset(dataset)
     elif isinstance(dataset, list):
@@ -174,16 +183,11 @@ def shrink(
 def fuzz(
     prompt: str,
     model: str = "gpt-4o",
-    attacks_count: int = 15,
     mock: bool = False,
 ) -> FuzzReport:
     """Run autonomous adversarial red-teaming and jailbreak fuzzing."""
     p = load_prompt_file(prompt, version_name="fuzz_target", model=model)
-    fuzzer = JailbreakFuzzer(
-        prompt_version=p,
-        model_name=model,
-        force_mock=mock,
-    )
+    fuzzer = JailbreakFuzzer(prompt_version=p, model_name=model, force_mock=mock)
     return asyncio.run(fuzzer.run_fuzz())
 
 
@@ -194,11 +198,7 @@ def cache_sim(
 ) -> CacheSimReport:
     """Analyze and optimize prompt template for prefix caching."""
     p = load_prompt_file(prompt, version_name="cache_target", model=model)
-    sim = PromptCacheSimulator(
-        prompt_version=p,
-        model_name=model,
-        daily_volume=daily_volume,
-    )
+    sim = PromptCacheSimulator(prompt_version=p, model_name=model, daily_volume=daily_volume)
     return sim.analyze_and_optimize()
 
 
@@ -231,6 +231,105 @@ def history(
         model_name=model,
         force_mock=mock,
     ))
+
+
+def shadow_replay(
+    candidate_prompt: str,
+    log_path: str,
+    model: str = "gpt-4o",
+    mock: bool = True,
+) -> ReplayReport:
+    """Replay production logs against candidate prompt with automated PII redaction."""
+    pv = load_prompt_file(candidate_prompt, version_name="candidate", model=model)
+    replayer = ShadowTrafficReplayer(candidate_prompt=pv, model_name=model, force_mock=mock)
+    return asyncio.run(replayer.replay(log_path))
+
+
+def cascade(
+    prompt: str,
+    dataset: Union[str, list[TestCase]],
+    tier1_model: str = "gpt-4o-mini",
+    tier2_model: str = "gpt-4o",
+    mock: bool = True,
+) -> CascadeRouteReport:
+    """Evaluate multi-tier model cascading router policies."""
+    test_cases = _resolve_testcases(dataset)
+    router = ModelCascadeRouter(
+        prompt_template=prompt,
+        test_cases=test_cases,
+        tier1_model=tier1_model,
+        tier2_model=tier2_model,
+        force_mock=mock,
+    )
+    return asyncio.run(router.optimize())
+
+
+def canary(report: DiffReport, flag_name: str = "prompt_rollout") -> CanaryRolloutConfig:
+    """Generate production A/B/n canary feature flag configs."""
+    generator = CanaryConfigGenerator(report=report, flag_name=flag_name)
+    return generator.generate()
+
+
+def sla_stress(
+    prompt: str,
+    dataset: Union[str, list[TestCase]],
+    max_p99_latency_ms: float = 1500.0,
+    model: str = "gpt-4o",
+    mock: bool = True,
+) -> SLABudgetReport:
+    """Simulate load and verify SLA p99 latency ceilings."""
+    pv = load_prompt_file(prompt, version_name="sla_test", model=model)
+    test_cases = _resolve_testcases(dataset)
+    sim = SLABudgetSimulator(
+        prompt_version=pv,
+        test_cases=test_cases,
+        max_p99_latency_ms=max_p99_latency_ms,
+        model_name=model,
+        force_mock=mock,
+    )
+    return asyncio.run(sim.run_stress_test())
+
+
+def personas(dataset: Union[str, list[TestCase]], output: Optional[str] = None) -> list[TestCase]:
+    """Generate test cases across diverse human personas."""
+    seed_cases = _resolve_testcases(dataset)
+    tester = PersonaStressTester(seed_testcases=seed_cases)
+    cases = tester.generate_persona_testcases()
+    if output:
+        tester.save_to_jsonl(cases, output)
+    return cases
+
+
+def saliency(prompt: str, sample_outputs: list[str]) -> SaliencyReport:
+    """Map output influence and identify dead-weight tokens in prompt."""
+    pv = load_prompt_file(prompt, version_name="saliency_target")
+    mapper = PromptSaliencyMapper(prompt_version=pv)
+    return mapper.analyze(sample_outputs)
+
+
+def distill(report: DiffReport, output: str = "distilled_train.jsonl") -> tuple[str, int]:
+    """Extract fine-tuning dataset pairs from evaluation runs."""
+    distiller = FineTuningDistiller(report=report)
+    return distiller.export_jsonl(output)
+
+
+def mutation_score(
+    prompt: str,
+    dataset: Union[str, list[TestCase]],
+    model: str = "gpt-4o",
+    mock: bool = True,
+) -> MutationScoreReport:
+    """Evaluate test suite quality by injecting faults into prompt."""
+    pv = load_prompt_file(prompt, version_name="original", model=model)
+    test_cases = _resolve_testcases(dataset)
+    engine = MutationTestingEngine(original_prompt=pv, test_cases=test_cases, model_name=model, force_mock=mock)
+    return asyncio.run(engine.run_mutation_analysis())
+
+
+def lsp_diagnostics(file_path: str, model: str = "gpt-4o") -> list[PromptDiagnostic]:
+    """Analyze prompt file for LSP diagnostics."""
+    server = PromptLanguageServer(model_name=model)
+    return server.analyze_file(file_path)
 
 
 def export_bundle(report: DiffReport, output_path: str = "promptdiff-bundle.html") -> str:

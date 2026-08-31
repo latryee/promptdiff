@@ -4,16 +4,20 @@ from __future__ import annotations
 
 from promptdiff.evaluators.answer_relevance import AnswerRelevanceEvaluator
 from promptdiff.evaluators.base import BaseEvaluator
+from promptdiff.evaluators.citation import CitationEvaluator
 from promptdiff.evaluators.cost import CostEvaluator
+from promptdiff.evaluators.fairness import FairnessEvaluator
 from promptdiff.evaluators.faithfulness import FaithfulnessEvaluator
 from promptdiff.evaluators.json_validity import JsonValidityEvaluator
 from promptdiff.evaluators.latency import LatencyEvaluator
 from promptdiff.evaluators.length_drift import LengthDriftEvaluator
 from promptdiff.evaluators.llm_judge import LLMJudgeEvaluator
 from promptdiff.evaluators.regex_match import RegexMatchEvaluator
+from promptdiff.evaluators.schema_repair import SchemaRepairEvaluator
 from promptdiff.evaluators.security import SecurityEvaluator
 from promptdiff.evaluators.similarity import SimilarityEvaluator
 from promptdiff.evaluators.trajectory import TrajectoryEvaluator
+from promptdiff.evaluators.vision import VisionDiffEvaluator
 
 EVALUATOR_MAP: dict[str, type[BaseEvaluator]] = {
     "json_validity": JsonValidityEvaluator,
@@ -43,6 +47,12 @@ EVALUATOR_MAP: dict[str, type[BaseEvaluator]] = {
     "trajectory": TrajectoryEvaluator,
     "agent_trajectory": TrajectoryEvaluator,
     "tool_use": TrajectoryEvaluator,
+    "fairness": FairnessEvaluator,
+    "bias": FairnessEvaluator,
+    "citation": CitationEvaluator,
+    "cite": CitationEvaluator,
+    "schema_repair": SchemaRepairEvaluator,
+    "vision": VisionDiffEvaluator,
 }
 
 
