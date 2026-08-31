@@ -30,6 +30,7 @@ if sys.platform == "win32":
         pass
 
 from promptdiff.cli.formatters import console, print_init_success, print_pricing_table
+from promptdiff.cli.history import track_git_history
 from promptdiff.core.cache import DiskCache
 from promptdiff.core.config import load_dataset, load_prompt_file
 from promptdiff.core.models import PromptVersion
@@ -39,11 +40,14 @@ from promptdiff.evaluators.faithfulness import FaithfulnessEvaluator
 from promptdiff.evaluators.llm_judge import LLMJudgeEvaluator
 from promptdiff.evaluators.registry import get_evaluators
 from promptdiff.evaluators.trajectory import TrajectoryEvaluator
+from promptdiff.generators.mutator import DatasetMutator
 from promptdiff.generators.synthetic import SyntheticTestGenerator
 from promptdiff.optimizer.auto_prompt import PromptOptimizer
+from promptdiff.optimizer.cache_sim import PromptCacheSimulator
 from promptdiff.optimizer.compressor import PromptCompressor
 from promptdiff.optimizer.tuner import PromptTuner
 from promptdiff.providers.registry import get_provider
+from promptdiff.reporters.bundle_html import generate_interactive_bundle_html
 from promptdiff.reporters.html import generate_html_report
 from promptdiff.reporters.json_reporter import generate_json_report
 from promptdiff.reporters.markdown import generate_markdown_report
@@ -55,10 +59,11 @@ from promptdiff.reporters.terminal import (
     render_tuning_terminal_report,
 )
 from promptdiff.reporters.wandb_reporter import log_to_wandb
+from promptdiff.security.fuzzer import JailbreakFuzzer
 
 app = typer.Typer(
     name="promptdiff",
-    help="⚡ Enterprise LLM Prompt & Model Regression Tester CLI with Textual TUI, Hyperparameter Tuning, Cost Forecasting & CI/CD PR Bot.",
+    help="⚡ Enterprise LLM Prompt & Model Regression Tester CLI with Textual TUI, Hyperparameter Tuning, Red-Teaming, and Caching Sim.",
     add_completion=False,
     no_args_is_help=True,
 )
@@ -83,6 +88,7 @@ def _run_test_suite(
     export_html: str | None,
     export_markdown: str | None,
     export_json: str | None,
+    export_bundle: str | None,
     concurrency: int,
     fail_on_regression: bool,
     mlflow: bool,
@@ -173,6 +179,10 @@ def _run_test_suite(
         generate_json_report(report, export_json)
         console.print(f"[bold green][+] JSON Report generated:[/bold green] [cyan]{export_json}[/cyan]")
 
+    if export_bundle:
+        bpath = generate_interactive_bundle_html(report, export_bundle, forecast_volume=forecast or 1_000_000)
+        console.print(f"[bold green][+] Interactive Standalone HTML Bundle exported:[/bold green] [cyan]{bpath}[/cyan]")
+
     if mlflow:
         ok = log_to_mlflow(report, experiment_name=mlflow_experiment)
         if ok:
@@ -212,17 +222,13 @@ def test_cmd(
     model_v2: str | None = typer.Option(None, "--model-v2", help="Override model specifically for v2"),
     temperature: float = typer.Option(0.0, "--temperature", "-t", help="Sampling temperature (0.0 to 1.0)"),
     system_prompt: str | None = typer.Option(None, "--system", "-s", help="Optional system prompt or path to file"),
-    assertions: list[str] | None = typer.Option(
-        None,
-        "--assert",
-        "-a",
-        help="Regression assertion threshold",
-    ),
+    assertions: list[str] | None = typer.Option(None, "--assert", "-a", help="Regression assertion threshold"),
     mock: bool = typer.Option(False, "--mock", help="Use deterministic offline MockProvider"),
     cache_enabled: bool = typer.Option(True, "--cache/--no-cache", help="Enable or disable persistent disk cache"),
     export_html: str | None = typer.Option(None, "--export-html", help="Path to export standalone interactive HTML report"),
     export_markdown: str | None = typer.Option(None, "--export-markdown", help="Path to export Markdown report for GitHub PRs"),
     export_json: str | None = typer.Option(None, "--export-json", help="Path to export structured JSON report"),
+    export_bundle: str | None = typer.Option(None, "--export-bundle", help="Path to export zero-dependency single-file HTML bundle"),
     concurrency: int = typer.Option(4, "--concurrency", "-c", help="Number of concurrent LLM requests"),
     fail_on_regression: bool = typer.Option(True, "--fail-on-regression/--no-fail-on-regression", help="Exit with code 1 if regressions detected"),
     mlflow: bool = typer.Option(False, "--mlflow", help="Log metrics, parameters, and artifacts to MLflow"),
@@ -251,6 +257,7 @@ def test_cmd(
         export_html=export_html,
         export_markdown=export_markdown,
         export_json=export_json,
+        export_bundle=export_bundle,
         concurrency=concurrency,
         fail_on_regression=fail_on_regression,
         mlflow=mlflow,
@@ -286,6 +293,7 @@ def run_cmd(
     export_html: str | None = typer.Option(None, "--export-html", help="Export HTML report"),
     export_markdown: str | None = typer.Option(None, "--export-markdown", help="Export Markdown report"),
     export_json: str | None = typer.Option(None, "--export-json", help="Export JSON report"),
+    export_bundle: str | None = typer.Option(None, "--export-bundle", help="Export single-file HTML bundle"),
     concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrency limit"),
     fail_on_regression: bool = typer.Option(True, "--fail-on-regression/--no-fail-on-regression", help="Exit code 1 on regression"),
     mlflow: bool = typer.Option(False, "--mlflow", help="Log to MLflow"),
@@ -314,6 +322,7 @@ def run_cmd(
         export_html=export_html,
         export_markdown=export_markdown,
         export_json=export_json,
+        export_bundle=export_bundle,
         concurrency=concurrency,
         fail_on_regression=fail_on_regression,
         mlflow=mlflow,
@@ -325,6 +334,188 @@ def run_cmd(
         rubric=rubric,
         forecast=forecast,
     )
+
+
+@app.command(name="fuzz")
+def fuzz_cmd(
+    prompt: str = typer.Argument(..., help="Path to prompt template file to test for vulnerabilities"),
+    model: str = typer.Option("gpt-4o", "--model", "-m", help="Target LLM model"),
+    mock: bool = typer.Option(False, "--mock", help="Use deterministic mock red-teaming execution"),
+) -> None:
+    """Autonomous Adversarial Red-Teaming & Jailbreak Fuzzer (20+ injection vectors)."""
+    prompt_obj = load_prompt_file(prompt, version_name="fuzz_target", model=model)
+    fuzzer = JailbreakFuzzer(prompt_version=prompt_obj, model_name=model, force_mock=mock)
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[bold red]{task.description}"),
+        BarColumn(bar_width=40, style="red", complete_style="bold red"),
+        TaskProgressColumn(),
+        TimeElapsedColumn(),
+        console=console,
+        transient=False,
+    ) as progress:
+        task = progress.add_task("Executing adversarial red-teaming attacks...", total=len(fuzzer.payloads))
+
+        def on_step(curr: int, tot: int, msg: str) -> None:
+            progress.update(task, completed=curr, description=f"[bold red]{msg}[/bold red]")
+
+        report = asyncio.run(fuzzer.run_fuzz(progress_cb=on_step))
+
+    res_color = "bold green" if report.resilience_score_pct >= 90 else ("bold yellow" if report.resilience_score_pct >= 75 else "bold red")
+
+    table = Table(
+        title="[bold red]🛡️ Adversarial Red-Teaming & Jailbreak Security Report[/bold red]",
+        box=None,
+        show_header=True,
+        header_style="bold cyan",
+    )
+    table.add_column("Security Metric", style="bold white")
+    table.add_column("Result / Score", style="cyan")
+
+    table.add_row("Total Attack Payloads", f"{report.total_attacks} vectors")
+    table.add_row("Attacks Blocked", f"[green]{report.attacks_blocked} blocked[/green]")
+    table.add_row("Bypasses / Vulnerabilities", f"[red]{report.bypasses_found} bypasses found[/red]" if report.bypasses_found > 0 else "[green]0 bypasses[/green]")
+    table.add_row("Overall Resilience Score", f"[{res_color}]{report.resilience_score_pct}% Secure[/{res_color}]")
+
+    console.print()
+    console.print(table)
+
+    if report.findings:
+        vuln_table = Table(
+            title="[bold red]🚨 Detected Security Vulnerabilities[/bold red]",
+            box=None,
+            show_header=True,
+            header_style="bold red",
+        )
+        vuln_table.add_column("Attack Vector", style="bold magenta")
+        vuln_table.add_column("Severity", style="bold red")
+        vuln_table.add_column("Breach Type", style="white")
+        vuln_table.add_column("Leaked Snippet Preview", style="dim")
+
+        for f in report.findings:
+            vuln_table.add_row(f.attack_name, f.severity, f.breach_type, f.response_snippet[:80])
+
+        console.print()
+        console.print(vuln_table)
+
+    rec_panel = Panel(
+        "\n".join(f"• {r}" for r in report.recommendations),
+        title="[bold yellow]Hardening & Defense Recommendations[/bold yellow]",
+        border_style="yellow",
+        padding=(1, 2),
+    )
+    console.print()
+    console.print(rec_panel)
+    console.print()
+
+
+@app.command(name="cache-sim")
+def cache_sim_cmd(
+    prompt: str = typer.Argument(..., help="Path to prompt template file to analyze"),
+    model: str = typer.Option("claude-3-5-sonnet", "--model", "-m", help="Target LLM provider engine"),
+    volume: str = typer.Option("1M", "--volume", "-v", help="Projected daily request volume"),
+) -> None:
+    """Simulate and optimize Prompt / Prefix Caching hit rates & cost savings."""
+    from promptdiff.pricing import parse_volume_string
+    vol = parse_volume_string(volume)
+    prompt_obj = load_prompt_file(prompt, version_name="cache_target", model=model)
+
+    sim = PromptCacheSimulator(prompt_version=prompt_obj, model_name=model, daily_volume=vol)
+    rep = sim.analyze_and_optimize()
+
+    table = Table(
+        title="[bold cyan]⚡ Prompt Prefix Caching Simulation & ROI Analysis[/bold cyan]",
+        box=None,
+        show_header=True,
+        header_style="bold cyan",
+    )
+    table.add_column("Metric", style="bold white")
+    table.add_column("Baseline Template", style="magenta")
+    table.add_column("Prefix-Optimized Template", style="green")
+
+    table.add_row("Cache Hit Rate Potential", f"{rep.original_cache_hit_rate_pct:.0f}%", f"[bold green]{rep.optimized_cache_hit_rate_pct:.0f}%[/bold green]")
+    table.add_row("Static Prefix Tokens", "-", f"{rep.prefix_tokens_cached} tokens (Eligible for cache)")
+    table.add_row("Standard Cost (1M reqs)", f"${rep.estimated_standard_cost_per_million_reqs:,.2f}", f"${rep.estimated_cached_cost_per_million_reqs:,.2f}")
+    table.add_row("Monthly Savings Forecast", "-", f"[bold green]+${rep.monthly_savings_forecast_usd:,.2f}/mo[/bold green] (at {volume}/day)")
+
+    console.print()
+    console.print(table)
+
+    opt_panel = Panel(
+        f"[bold white]Optimized Prompt Structure (Static Prefix ➔ Dynamic Tail):[/bold white]\n\n"
+        f"[dim]{rep.optimized_template[:250]}...[/dim]\n\n"
+        + "\n".join(f"[yellow]💡 {i}[/yellow]" for i in rep.structural_insights),
+        title="[bold green]Prefix Caching Recommendation[/bold green]",
+        border_style="green",
+        padding=(1, 2),
+    )
+    console.print()
+    console.print(opt_panel)
+    console.print()
+
+
+@app.command(name="mutate")
+def mutate_cmd(
+    inputs: str = typer.Argument(..., help="Path to seed dataset (.jsonl)"),
+    output: str = typer.Option("mutated_testcases.jsonl", "--output", "-o", help="Target output JSONL path"),
+    multiplier: int = typer.Option(5, "--multiplier", "-m", help="Expansion multiplier (e.g. 5 for 5x cases)"),
+) -> None:
+    """Mutate and expand seed test cases into diverse high-entropy stress test cases."""
+    test_cases = load_dataset(inputs)
+    mutator = DatasetMutator(seed_testcases=test_cases, multiplier=multiplier)
+    mutated = mutator.generate_mutations()
+    saved = mutator.save_to_jsonl(mutated, output)
+
+    console.print(f"[bold green][+] Generated {len(mutated)} mutated test cases from {len(test_cases)} seed cases.[/bold green]")
+    console.print(f"[bold cyan][+] Saved to:[/bold cyan] [white]{saved}[/white]")
+
+
+@app.command(name="history")
+def history_cmd(
+    prompt: str = typer.Argument(..., help="Path to prompt file tracked in Git"),
+    inputs: str | None = typer.Option(None, "--inputs", "-i", help="Path to test dataset (.jsonl)"),
+    commits: int = typer.Option(4, "--commits", "-n", help="Number of recent Git revisions to benchmark"),
+    model: str = typer.Option("gpt-4o", "--model", "-m", help="Target LLM model"),
+    mock: bool = typer.Option(False, "--mock", help="Use deterministic mock execution"),
+) -> None:
+    """Benchmark prompt regression and evolution across Git commit history."""
+    rep = asyncio.run(track_git_history(
+        prompt_file=prompt,
+        dataset_path=inputs,
+        commits_count=commits,
+        model_name=model,
+        force_mock=mock,
+    ))
+
+    table = Table(
+        title=f"[bold yellow]📜 Git Version History Benchmark for '{Path(prompt).name}'[/bold yellow]",
+        box=None,
+        show_header=True,
+        header_style="bold cyan",
+    )
+    table.add_column("Revision", style="bold magenta")
+    table.add_column("Date", style="cyan")
+    table.add_column("Author", style="dim")
+    table.add_column("Commit Message", style="white")
+    table.add_column("Total Cost ($)", justify="right", style="green")
+    table.add_column("Avg Latency (ms)", justify="right", style="yellow")
+    table.add_column("Judge Score", justify="right", style="bold green")
+
+    for rev in rep.revisions_evaluated:
+        table.add_row(
+            rev.short_hash,
+            rev.commit_date,
+            rev.author[:15],
+            rev.message,
+            f"${rev.total_cost_usd:.6f}",
+            f"{rev.avg_latency_ms:.1f}ms",
+            f"{rev.avg_judge_score:.2f} / 5.0",
+        )
+
+    console.print()
+    console.print(table)
+    console.print()
 
 
 @app.command(name="shrink")

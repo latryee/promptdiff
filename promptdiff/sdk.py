@@ -5,14 +5,19 @@ from __future__ import annotations
 import asyncio
 from typing import Optional, Union
 
+from promptdiff.cli.history import GitHistoryReport, track_git_history
 from promptdiff.core.config import load_dataset, load_prompt_file
 from promptdiff.core.models import DiffReport, TestCase
 from promptdiff.core.runner import PromptDiffRunner
 from promptdiff.evaluators.registry import get_evaluators
+from promptdiff.generators.mutator import DatasetMutator
 from promptdiff.optimizer.auto_prompt import OptimizationResult, PromptOptimizer
+from promptdiff.optimizer.cache_sim import CacheSimReport, PromptCacheSimulator
 from promptdiff.optimizer.compressor import CompressionResult, PromptCompressor
 from promptdiff.optimizer.tuner import PromptTuner, TuningReport
 from promptdiff.providers.registry import get_provider
+from promptdiff.reporters.bundle_html import generate_interactive_bundle_html
+from promptdiff.security.fuzzer import FuzzReport, JailbreakFuzzer
 
 
 def _resolve_testcases(dataset: Optional[Union[str, list[TestCase], list[dict]]]) -> list[TestCase]:
@@ -164,3 +169,70 @@ def shrink(
         force_mock=mock,
     )
     return asyncio.run(compressor.compress())
+
+
+def fuzz(
+    prompt: str,
+    model: str = "gpt-4o",
+    attacks_count: int = 15,
+    mock: bool = False,
+) -> FuzzReport:
+    """Run autonomous adversarial red-teaming and jailbreak fuzzing."""
+    p = load_prompt_file(prompt, version_name="fuzz_target", model=model)
+    fuzzer = JailbreakFuzzer(
+        prompt_version=p,
+        model_name=model,
+        force_mock=mock,
+    )
+    return asyncio.run(fuzzer.run_fuzz())
+
+
+def cache_sim(
+    prompt: str,
+    model: str = "claude-3-5-sonnet",
+    daily_volume: int = 1_000_000,
+) -> CacheSimReport:
+    """Analyze and optimize prompt template for prefix caching."""
+    p = load_prompt_file(prompt, version_name="cache_target", model=model)
+    sim = PromptCacheSimulator(
+        prompt_version=p,
+        model_name=model,
+        daily_volume=daily_volume,
+    )
+    return sim.analyze_and_optimize()
+
+
+def mutate(
+    dataset: Union[str, list[TestCase]],
+    output: Optional[str] = None,
+    multiplier: int = 5,
+) -> list[TestCase]:
+    """Mutate and expand seed test cases into diverse high-entropy stress test cases."""
+    seed_cases = _resolve_testcases(dataset)
+    mutator = DatasetMutator(seed_testcases=seed_cases, multiplier=multiplier)
+    mutated = mutator.generate_mutations()
+    if output:
+        mutator.save_to_jsonl(mutated, output)
+    return mutated
+
+
+def history(
+    prompt_file: str,
+    dataset: Optional[str] = None,
+    commits: int = 4,
+    model: str = "gpt-4o",
+    mock: bool = True,
+) -> GitHistoryReport:
+    """Benchmark prompt evolution across Git commit history."""
+    return asyncio.run(track_git_history(
+        prompt_file=prompt_file,
+        dataset_path=dataset,
+        commits_count=commits,
+        model_name=model,
+        force_mock=mock,
+    ))
+
+
+def export_bundle(report: DiffReport, output_path: str = "promptdiff-bundle.html") -> str:
+    """Export single-file zero-dependency interactive HTML bundle."""
+    return generate_interactive_bundle_html(report, output_path)

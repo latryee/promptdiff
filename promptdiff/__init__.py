@@ -1,8 +1,4 @@
-"""promptdiff: Enterprise-grade LLM Prompt & Model Regression Testing Framework.
-
-A developer-first framework and CLI for detecting silent regressions, format breakages,
-cost spikes, latency inflation, output drift, and security leaks across LLM prompt iterations.
-"""
+"""promptdiff: Enterprise-grade LLM Prompt & Model Regression Testing Framework."""
 
 __version__ = "3.0.0"
 __author__ = "promptdiff team"
@@ -19,7 +15,12 @@ from promptdiff.core.models import (
 )
 from promptdiff.sdk import (
     async_compare,
+    cache_sim,
     compare,
+    export_bundle,
+    fuzz,
+    history,
+    mutate,
     optimize,
     shrink,
     tune,
@@ -39,5 +40,10 @@ __all__ = [
     "optimize",
     "tune",
     "shrink",
+    "fuzz",
+    "cache_sim",
+    "mutate",
+    "history",
+    "export_bundle",
     "__version__",
 ]
