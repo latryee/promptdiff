@@ -1,0 +1,55 @@
+﻿name: Validate and Generate VHS Demo GIF
+
+on:
+  push:
+    paths:
+      - 'demo.tape'
+      - '.github/workflows/vhs.yml'
+    branches: [ main ]
+  pull_request:
+    paths:
+      - 'demo.tape'
+      - '.github/workflows/vhs.yml'
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  vhs:
+    name: Generate Terminal Demo Recording
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install promptdiff in editable mode
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Validate VHS demo.tape existence
+        run: |
+          test -f demo.tape
+          echo "demo.tape validated successfully."
+
+      - name: Render VHS Demo Tape to GIF
+        uses: charmbracelet/vhs-action@v2
+        with:
+          path: 'demo.tape'
+
+      - name: Verify generated asset
+        run: |
+          test -f assets/demo.gif
+          test -s assets/demo.gif
+          echo "assets/demo.gif successfully rendered and validated."
+
+      - name: Upload Demo Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-gif
+          path: assets/demo.gif
