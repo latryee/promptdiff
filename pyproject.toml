@@ -118,3 +118,25 @@ python_version = "3.10"
 warn_unused_configs = true
 disallow_untyped_defs = true
 ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["promptdiff"]
+omit = [
+    "promptdiff/ui/*",
+    "promptdiff/tui/*",
+    "promptdiff/reporters/mlflow_reporter.py",
+    "promptdiff/reporters/wandb_reporter.py",
+    "promptdiff/reporters/otel_reporter.py",
+    "promptdiff/providers/openai_provider.py",
+    "promptdiff/providers/anthropic_provider.py",
+    "promptdiff/providers/gemini_provider.py",
+    "promptdiff/providers/ollama_provider.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]

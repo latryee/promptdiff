@@ -46,7 +46,7 @@ async def test_multi_turn_runner_with_trajectory_evaluator() -> None:
         model="mock-gpt-4o",
         messages=[
             {"role": "user", "content": "Find order {{order_id}} and cancel it if pending."},
-            {"role": "assistant", "content": "<tool_call>{\"tool\": \"lookup_order\", \"id\": \"{{order_id}}\"}</tool_call>"},
+            {"role": "assistant", "content": '<tool_call>{"tool": "lookup_order", "id": "{{order_id}}"}</tool_call>'},
             {"role": "user", "content": "Proceed with cancellation."},
         ],
     )

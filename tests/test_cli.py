@@ -171,7 +171,7 @@ def test_cli_fuzz_with_custom_payloads(tmp_path: Path) -> None:
     res = runner.invoke(app, ["fuzz", str(prompt_file), "--payloads", str(payloads_file), "--mock"])
     assert res.exit_code == 0
     assert "Adversarial Red-Teaming" in res.output
-    assert ("System Prompt Leak" in res.output or "Custom Override" in res.output)
+    assert "System Prompt Leak" in res.output or "Custom Override" in res.output
 
 
 def test_cli_test_estimate_aborted(tmp_path: Path) -> None:
@@ -249,6 +249,7 @@ def test_cli_run_and_arena() -> None:
         assert res_gen.exit_code == 0
         assert Path(gen_out).exists()
 
+
 def test_cli_fail_on_regression() -> None:
     """Test CLI --fail-on-regression flag triggering exit code 1 on failed assertion."""
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -276,6 +277,7 @@ def test_cli_fail_on_regression() -> None:
         )
         assert res.exit_code == 1
 
+
 def test_cli_check_with_custom_config(tmp_path: Path) -> None:
     """Test promptdiff check command with .promptdifflintrc.yaml."""
     from typer.testing import CliRunner
@@ -287,11 +289,7 @@ def test_cli_check_with_custom_config(tmp_path: Path) -> None:
 
     config_file = tmp_path / ".promptdifflintrc.yaml"
     config_file.write_text(
-        "rules:\n"
-        "  ambiguous_instructions:\n"
-        "    enabled: true\n"
-        "    severity: 'WARNING'\n"
-        "    patterns: ['try to']\n",
+        "rules:\n  ambiguous_instructions:\n    enabled: true\n    severity: 'WARNING'\n    patterns: ['try to']\n",
         encoding="utf-8",
     )
 
@@ -299,6 +297,7 @@ def test_cli_check_with_custom_config(tmp_path: Path) -> None:
     result = runner.invoke(app, ["check", str(prompt_file), "--config", str(config_file)])
     assert result.exit_code == 0
     assert "AMBIGUOUS_INSTRUCTION" in result.stdout
+
 
 def test_cli_db_commands(tmp_path: Path) -> None:
     """Test CLI commands: promptdiff db stats and promptdiff db hotspots."""
@@ -309,6 +308,7 @@ def test_cli_db_commands(tmp_path: Path) -> None:
 
     res_hotspots = runner.invoke(app, ["db", "hotspots"])
     assert res_hotspots.exit_code == 0
+
 
 def test_cli_install_hook(tmp_path: Path) -> None:
     """Test CLI command: promptdiff install-hook."""

@@ -107,10 +107,7 @@ async def test_fuzzer_progress_callback_attack_name_alignment() -> None:
         template="Hello: {{query}}",
         model="gpt-4o",
     )
-    custom_payloads = [
-        {"category": "TestCat", "name": f"Attack_{i}", "payload": f"Payload {i}"}
-        for i in range(5)
-    ]
+    custom_payloads = [{"category": "TestCat", "name": f"Attack_{i}", "payload": f"Payload {i}"} for i in range(5)]
     fuzzer = JailbreakFuzzer(
         prompt_version=pv,
         model_name="gpt-4o",

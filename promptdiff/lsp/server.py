@@ -32,7 +32,10 @@ DEFAULT_LINT_CONFIG: dict[str, Any] = {
             "enabled": True,
             "severity": "WARNING",
             "pairs": [
-                {"first": r"\b(concise|brief|short|terse)\b", "second": r"\b(detailed|comprehensive|exhaustive|in-depth)\b"},
+                {
+                    "first": r"\b(concise|brief|short|terse)\b",
+                    "second": r"\b(detailed|comprehensive|exhaustive|in-depth)\b",
+                },
                 {"first": r"\b(json only|only json)\b", "second": r"\b(explain your reasoning|conversational)\b"},
             ],
         },
