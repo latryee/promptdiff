@@ -1,0 +1,36 @@
+name: Test GitHub Action
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-action:
+    name: Integration Test Composite Action
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run promptdiff action (Mock regression test)
+        uses: ./
+        with:
+          v1: "examples/prompts/support_bot_v1.txt"
+          v2: "examples/prompts/support_bot_v2.txt"
+          inputs: "examples/testcases.jsonl"
+          eval: "json_validity,latency,cost,similarity"
+          mock: "true"
+          export-html: "action-test-report.html"
+          export-markdown: "action-test-report.md"
+          export-bundle: "action-test-bundle.html"
+          fail-on-regression: "false"
+
+      - name: Verify generated report artifacts
+        shell: bash
+        run: |
+          test -f action-test-report.html
+          test -f action-test-report.md
+          test -f action-test-bundle.html
+          echo "PromptDiff Action successfully executed and produced all expected artifacts."
