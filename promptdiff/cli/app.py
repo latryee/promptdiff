@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 from pathlib import Path
 
 import typer
+import yaml
 from rich.panel import Panel
 from rich.progress import (
     BarColumn,
@@ -366,11 +368,38 @@ def run_cmd(
 def fuzz_cmd(
     prompt: str = typer.Argument(..., help="Path to prompt template file to test for vulnerabilities"),
     model: str = typer.Option("gpt-4o", "--model", "-m", help="Target LLM model"),
+    payloads: str | None = typer.Option(
+        None, "--payloads", "-p", help="Path to custom attack payloads file (.yaml, .yml, .json)"
+    ),
     mock: bool = typer.Option(False, "--mock", help="Use deterministic mock red-teaming execution"),
 ) -> None:
     """Autonomous Adversarial Red-Teaming & Jailbreak Fuzzer (20 distinct attack vectors)."""
+    custom_payloads = None
+    if payloads:
+        payloads_path = Path(payloads)
+        if not payloads_path.is_file():
+            console.print(f"[bold red]Payloads file not found: {payloads}[/bold red]")
+            raise typer.Exit(code=1)
+        raw = payloads_path.read_text(encoding="utf-8")
+        if payloads_path.suffix.lower() in (".yaml", ".yml"):
+            data = yaml.safe_load(raw)
+        else:
+            data = json.loads(raw)
+        if isinstance(data, list):
+            custom_payloads = [
+                {
+                    "category": str(item.get("category", "Custom")),
+                    "name": str(item.get("name", f"Attack_{i}")),
+                    "payload": str(item.get("payload", "")),
+                }
+                for i, item in enumerate(data)
+                if isinstance(item, dict) and "payload" in item
+            ]
+
     prompt_obj = load_prompt_file(prompt, version_name="fuzz_target", model=model)
-    fuzzer = JailbreakFuzzer(prompt_version=prompt_obj, model_name=model, force_mock=mock)
+    fuzzer = JailbreakFuzzer(
+        prompt_version=prompt_obj, model_name=model, custom_payloads=custom_payloads, force_mock=mock
+    )
 
     with Progress(
         SpinnerColumn(),
