@@ -82,6 +82,40 @@ async def test_jailbreak_fuzzer() -> None:
     assert len(report.recommendations) > 0
 
 
+@pytest.mark.asyncio
+async def test_fuzzer_progress_callback_attack_name_alignment() -> None:
+    """Regression test ensuring progress_cb receives the actual completing attack's name."""
+    pv = PromptVersion(
+        name="test_prompt",
+        template="Hello: {{query}}",
+        model="gpt-4o",
+    )
+    custom_payloads = [
+        {"category": "TestCat", "name": f"Attack_{i}", "payload": f"Payload {i}"}
+        for i in range(5)
+    ]
+    fuzzer = JailbreakFuzzer(
+        prompt_version=pv,
+        model_name="gpt-4o",
+        custom_payloads=custom_payloads,
+        force_mock=True,
+    )
+
+    reported_attacks: list[str] = []
+
+    def on_progress(curr: int, total: int, msg: str) -> None:
+        reported_attacks.append(msg)
+
+    report = await fuzzer.run_fuzz(progress_cb=on_progress)
+    assert report.total_attacks == 5
+    assert len(reported_attacks) == 5
+
+    # Verify that every custom attack name was reported in progress callback
+    expected_names = {f"Attack_{i}" for i in range(5)}
+    found_names = {name for name in expected_names if any(f"[{name}]" in msg for msg in reported_attacks)}
+    assert found_names == expected_names
+
+
 def test_prompt_cache_simulator() -> None:
     """Test LLM prompt prefix caching simulator."""
     pv = PromptVersion(

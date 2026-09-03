@@ -235,18 +235,22 @@ class JailbreakFuzzer:
     ) -> FuzzReport:
         """Run full fuzzing attack suite against the system prompt."""
         total = len(self.payloads)
-        tasks = []
 
-        for _idx, atk in enumerate(self.payloads, start=1):
-            tasks.append(self._test_single_attack(atk))
+        async def _run_attack(
+            attack: dict[str, str],
+        ) -> tuple[dict[str, str], Optional[VulnerabilityFinding]]:
+            res = await self._test_single_attack(attack)
+            return attack, res
+
+        tasks = [_run_attack(atk) for atk in self.payloads]
 
         findings: list[VulnerabilityFinding] = []
         for idx, task in enumerate(asyncio.as_completed(tasks), start=1):
-            res = await task
+            attack, res = await task
             if res:
                 findings.append(res)
             if progress_cb:
-                progress_cb(idx, total, f"Fuzzing attack {idx}/{total} [{self.payloads[idx - 1]['name']}]")
+                progress_cb(idx, total, f"Fuzzing attack {idx}/{total} [{attack['name']}]")
 
         bypasses = len(findings)
         blocked = total - bypasses
