@@ -111,23 +111,26 @@ class TelemetryDatabase:
                 ),
             )
 
-            for comp in report.comparisons:
-                comp_passed = 1 if all(s.passed for s in comp.scores.values()) else 0
-                conn.execute(
+            execution_rows = [
+                (
+                    report.run_id,
+                    comp.test_case.id,
+                    1 if all(s.passed for s in comp.scores.values()) else 0,
+                    comp.v1_result.latency_ms,
+                    comp.v2_result.latency_ms,
+                    comp.v1_result.cost_usd,
+                    comp.v2_result.cost_usd,
+                )
+                for comp in report.comparisons
+            ]
+            if execution_rows:
+                conn.executemany(
                     """
                     INSERT INTO test_case_executions
                     (run_id, test_case_id, passed, v1_latency_ms, v2_latency_ms, v1_cost_usd, v2_cost_usd)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (
-                        report.run_id,
-                        comp.test_case.id,
-                        comp_passed,
-                        comp.v1_result.latency_ms,
-                        comp.v2_result.latency_ms,
-                        comp.v1_result.cost_usd,
-                        comp.v2_result.cost_usd,
-                    ),
+                    execution_rows,
                 )
             conn.commit()
 
