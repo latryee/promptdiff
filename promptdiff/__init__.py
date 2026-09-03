@@ -16,6 +16,15 @@ __version__ = "3.4.0"
 __author__ = "promptdiff team"
 
 from promptdiff.core.db import TelemetryDatabase
+from promptdiff.core.exceptions import (
+    CacheError,
+    ConfigurationError,
+    DatasetLoadError,
+    EvaluatorExecutionError,
+    PromptDiffError,
+    ProviderExecutionError,
+    RunnerError,
+)
 from promptdiff.core.models import (
     ArenaReport,
     ComparisonResult,
@@ -81,12 +90,19 @@ from promptdiff.sdk import (
 
 __all__ = [
     "ArenaReport",
+    "CacheError",
     "ComparisonResult",
+    "ConfigurationError",
     "ConversationVersion",
+    "DatasetLoadError",
     "DiffReport",
+    "EvaluatorExecutionError",
     "MultiComparisonResult",
+    "PromptDiffError",
     "PromptVersion",
+    "ProviderExecutionError",
     "RegressionVerdict",
+    "RunnerError",
     "RunResult",
     "TestCase",
     "TelemetryDatabase",

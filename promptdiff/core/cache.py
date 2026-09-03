@@ -9,11 +9,14 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
 from promptdiff.core.models import RunResult
+
+logger = logging.getLogger("promptdiff.core.cache")
 
 
 class DiskCache:
@@ -103,7 +106,8 @@ class DiskCache:
                     result = RunResult.model_validate(data)
                     result.cached = True
                     return result
-        except Exception:
+        except Exception as err:
+            logger.warning("Cache read failed for key %s: %s", hash_key, err)
             return None
         return None
 
@@ -120,8 +124,8 @@ class DiskCache:
                     (hash_key, json.dumps(result.model_dump()), now_str),
                 )
                 conn.commit()
-        except Exception:
-            pass
+        except Exception as err:
+            logger.warning("Cache write failed for key %s: %s", hash_key, err)
 
     def prune_expired(self) -> int:
         """Remove all cache entries older than TTL. Returns number of removed rows."""
@@ -138,7 +142,8 @@ class DiskCache:
                 )
                 conn.commit()
                 return cursor.rowcount
-        except Exception:
+        except Exception as err:
+            logger.warning("Cache prune failed: %s", err)
             return 0
 
     def clear(self) -> int:

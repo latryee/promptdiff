@@ -109,7 +109,13 @@ class PromptDiffRunner:
                     cached=False,
                 )
             except Exception as err:
-                logger.warning(f"Error executing provider for case {test_case.id}: {err}")
+                logger.error(
+                    "Provider '%s' failed executing prompt '%s' on case '%s': %s",
+                    prompt_version.model,
+                    prompt_version.name,
+                    test_case.id,
+                    err,
+                )
                 run_result = RunResult(
                     prompt_name=prompt_version.name,
                     test_case_id=test_case.id,
@@ -159,8 +165,21 @@ class PromptDiffRunner:
         for evaluator in self.evaluators:
             try:
                 score = await evaluator.async_evaluate(v1_result, v2_result, test_case)
-            except Exception:
-                score = evaluator.evaluate(v1_result, v2_result, test_case)
+            except Exception as async_err:
+                logger.debug("Async evaluation failed for '%s', trying sync fallback: %s", evaluator.name, async_err)
+                try:
+                    score = evaluator.evaluate(v1_result, v2_result, test_case)
+                except Exception as sync_err:
+                    logger.error("Evaluator '%s' failed on case '%s': %s", evaluator.name, test_case.id, sync_err)
+                    score = EvaluatorScore(
+                        name=evaluator.name,
+                        v1_score=0.0,
+                        v2_score=0.0,
+                        delta=0.0,
+                        delta_pct=0.0,
+                        passed=False,
+                        message=f"Evaluation failed: {sync_err}",
+                    )
             scores[evaluator.name] = score
 
         return ComparisonResult(
@@ -294,6 +313,13 @@ class ArenaRunner:
                     model=pv.model,
                 )
             except Exception as e:
+                logger.error(
+                    "Variant '%s' (model '%s') execution failed on case '%s': %s",
+                    variant_name,
+                    pv.model,
+                    test_case.id,
+                    e,
+                )
                 run_res = RunResult(
                     prompt_name=variant_name,
                     test_case_id=test_case.id,
@@ -331,8 +357,21 @@ class ArenaRunner:
             for ev in self.evaluators:
                 try:
                     score_obj = await ev.async_evaluate(baseline_res, cand_res, test_case)
-                except Exception:
-                    score_obj = ev.evaluate(baseline_res, cand_res, test_case)
+                except Exception as async_err:
+                    logger.debug("Async arena evaluation failed for '%s', falling back to sync: %s", ev.name, async_err)
+                    try:
+                        score_obj = ev.evaluate(baseline_res, cand_res, test_case)
+                    except Exception as sync_err:
+                        logger.error("Arena evaluator '%s' failed for '%s': %s", ev.name, name, sync_err)
+                        score_obj = EvaluatorScore(
+                            name=ev.name,
+                            v1_score=0.0,
+                            v2_score=0.0,
+                            delta=0.0,
+                            delta_pct=0.0,
+                            passed=False,
+                            message=f"Arena eval failed: {sync_err}",
+                        )
                 scores[name][ev.name] = score_obj
             pairwise_diffs[name] = compute_word_diff(baseline_res.output, cand_res.output)
 
