@@ -74,6 +74,9 @@ app.add_typer(cache_app)
 recipe_app = typer.Typer(name="recipe", help="Curated evaluation recipes and domain starter packs.")
 app.add_typer(recipe_app)
 
+db_app = typer.Typer(name="db", help="Manage and query persistent SQLite evaluation telemetry.")
+app.add_typer(db_app)
+
 
 def _run_test_suite(
     v1: str,
@@ -1411,6 +1414,87 @@ def executive_cmd(
     console.print(
         f"Production Verdict: [bold]{scorecard.decision}[/bold] | Annual Savings: [bold green]${scorecard.annualized_savings_usd:,.2f}[/bold green]"
     )
+
+
+@db_app.command(name="stats")
+def db_stats_cmd() -> None:
+    """Display historical telemetry summary from SQLite database."""
+    from promptdiff.core.db import TelemetryDatabase
+
+    db = TelemetryDatabase()
+    runs = db.get_recent_runs(limit=10)
+    if not runs:
+        console.print("[yellow]No historical evaluation runs found in database yet.[/yellow]")
+        return
+
+    table = Table(title="📊 Recent Evaluation Telemetry (SQLite)", border_style="cyan")
+    table.add_column("Run ID", style="dim")
+    table.add_column("Date", justify="center")
+    table.add_column("Baseline (v1)")
+    table.add_column("Candidate (v2)")
+    table.add_column("Cases", justify="right")
+    table.add_column("Status")
+    table.add_column("Cost Delta")
+    table.add_column("Latency Delta")
+
+    import datetime
+
+    for r in runs:
+        status = "[bold green]PASSED[/bold green]" if r.passed else "[bold red]FAILED[/bold red]"
+        dt = datetime.datetime.fromtimestamp(r.timestamp).strftime("%Y-%m-%d %H:%M")
+        cost_style = "green" if r.cost_delta_pct <= 0 else "red"
+        lat_style = "green" if r.latency_delta_pct <= 0 else "yellow"
+
+        table.add_row(
+            r.run_id[:12],
+            dt,
+            r.v1_name,
+            r.v2_name,
+            str(r.total_cases),
+            status,
+            f"[{cost_style}]{r.cost_delta_pct:+.1f}%[/{cost_style}]",
+            f"[{lat_style}]{r.latency_delta_pct:+.1f}%[/{lat_style}]",
+        )
+    console.print(table)
+
+
+@db_app.command(name="hotspots")
+def db_hotspots_cmd() -> None:
+    """Identify test cases with the highest regression failure frequency."""
+    from promptdiff.core.db import TelemetryDatabase
+
+    db = TelemetryDatabase()
+    hotspots = db.get_failure_hotspots(limit=10)
+    if not hotspots:
+        console.print("[green]No test case failure hotspots detected in database![/green]")
+        return
+
+    table = Table(title="🔥 Test Case Regression Hotspots", border_style="red")
+    table.add_column("Test Case ID", style="bold yellow")
+    table.add_column("Failure Count", justify="right", style="bold red")
+
+    for h in hotspots:
+        table.add_row(h.test_case_id, str(h.failure_count))
+    console.print(table)
+
+
+@app.command(name="install-hook")
+def install_hook_cmd(
+    directory: str = typer.Option(".", "--dir", "-d", help="Git repository root directory"),
+) -> None:
+    """Install automated pre-commit hook into .git/hooks/pre-commit to guard against broken prompts."""
+    from promptdiff.cli.hooks import GitHookInstaller
+
+    installer = GitHookInstaller(repo_root=directory)
+    try:
+        path = installer.install_pre_commit()
+        console.print(f"[bold green]✓ Successfully installed PromptDiff pre-commit hook to {path}[/bold green]")
+        console.print(
+            "[dim]Every future 'git commit' will automatically validate staged prompts with 'promptdiff check'.[/dim]"
+        )
+    except Exception as e:
+        console.print(f"[bold red]Failed to install Git hook:[/bold red] {e}")
+        raise typer.Exit(code=1)
 
 
 def main() -> int:

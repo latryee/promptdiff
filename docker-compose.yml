@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  promptdiff-studio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: promptdiff-studio
+    restart: unless-stopped
+    ports:
+      - "8765:8765"
+    volumes:
+      - ./prompts:/app/prompts:ro
+      - ./.promptdiff:/app/.promptdiff
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: ["studio", "--host", "0.0.0.0", "--port", "8765", "--no-browser"]

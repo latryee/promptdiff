@@ -15,6 +15,7 @@ if sys.platform == "win32":
 __version__ = "3.4.0"
 __author__ = "promptdiff team"
 
+from promptdiff.core.db import TelemetryDatabase
 from promptdiff.core.models import (
     ArenaReport,
     ComparisonResult,
@@ -86,6 +87,7 @@ __all__ = [
     "RegressionVerdict",
     "RunResult",
     "TestCase",
+    "TelemetryDatabase",
     "async_compare",
     "compare",
     "optimize",

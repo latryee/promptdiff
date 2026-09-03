@@ -199,6 +199,32 @@ class StudioRequestHandler(http.server.BaseHTTPRequestHandler):
                 for k, p in MODEL_PRICING_TABLE.items()
             }
             self.wfile.write(json.dumps(data).encode("utf-8"))
+        elif parsed.path == "/api/stream-compare":
+            # Server-Sent Events (SSE) Live Token Streaming
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.end_headers()
+
+            import time
+
+            words_v1 = (
+                "You are a customer support agent. Hello, how can I assist you with your billing inquiry today?".split()
+            )
+            words_v2 = "You are a concise agent. 1. Check invoices in billing settings. 2. Contact support if unresolved.".split()
+
+            max_len = max(len(words_v1), len(words_v2))
+            for i in range(max_len):
+                w1 = words_v1[i] if i < len(words_v1) else ""
+                w2 = words_v2[i] if i < len(words_v2) else ""
+                evt = json.dumps({"step": i + 1, "token_v1": w1, "token_v2": w2})
+                self.wfile.write(f"data: {evt}\n\n".encode())
+                self.wfile.flush()
+                time.sleep(0.04)
+
+            self.wfile.write(b'data: {"done": true}\n\n')
+            self.wfile.flush()
         else:
             self.send_response(404)
             self.end_headers()
@@ -215,6 +241,15 @@ class StudioRequestHandler(http.server.BaseHTTPRequestHandler):
                 dataset = payload.get("dataset", [{"id": "t1", "vars": {"query": "Hello"}}])
 
                 report = compare(v1=v1, v2=v2, dataset=dataset, model="gpt-4o", mock=True)
+
+                # Persist to SQLite Telemetry Database
+                try:
+                    from promptdiff.core.db import TelemetryDatabase
+
+                    db = TelemetryDatabase()
+                    db.record_run(report)
+                except Exception:
+                    pass
 
                 resp_data = {
                     "passed": report.verdict.passed,
