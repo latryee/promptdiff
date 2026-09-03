@@ -379,7 +379,9 @@ class ArenaRunner:
             if name != self.baseline_name:
                 for ev in self.evaluators:
                     scores_list = [comp.scores.get(name, {}).get(ev.name) for comp in comparisons]
-                    valid_scores = [float(s.v2_score) for s in scores_list if s is not None and isinstance(s.v2_score, (int, float))]
+                    valid_scores = [
+                        float(s.v2_score) for s in scores_list if s is not None and isinstance(s.v2_score, (int, float))
+                    ]
                     if valid_scores:
                         avg_eval[ev.name] = round(sum(valid_scores) / len(valid_scores), 3)
 

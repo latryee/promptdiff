@@ -107,7 +107,8 @@ class PromptOptimizer:
                         "variables": comp.test_case.vars,
                         "actual_output": comp.v2_result.output[:300],
                         "expected_output": comp.test_case.expected_output,
-                        "criticisms": criticisms or [f"Output did not satisfy requirements ({comp.v2_result.error or 'Failed metric'})"],
+                        "criticisms": criticisms
+                        or [f"Output did not satisfy requirements ({comp.v2_result.error or 'Failed metric'})"],
                     }
                 )
         return failures
@@ -208,7 +209,9 @@ class PromptOptimizer:
                 break
 
             if progress_cb:
-                progress_cb(it, self.max_iterations, f"Iteration {it}: Analyzing {len(failures)} failure(s) with Meta-LLM...")
+                progress_cb(
+                    it, self.max_iterations, f"Iteration {it}: Analyzing {len(failures)} failure(s) with Meta-LLM..."
+                )
 
             failure_text = self._format_failures_for_meta_prompt(failures)
             meta_prompt = META_OPTIMIZER_PROMPT.format(

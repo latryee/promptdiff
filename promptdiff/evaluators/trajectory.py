@@ -43,7 +43,9 @@ def extract_tool_calls(text: str) -> list[dict[str, Any]]:
     calls: list[dict[str, Any]] = []
 
     # 1. XML / JSON style function calls
-    for match in re.finditer(r"<(?:tool_call|function_call)>\s*(.*?)\s*</(?:tool_call|function_call)>", text, re.DOTALL | re.IGNORECASE):
+    for match in re.finditer(
+        r"<(?:tool_call|function_call)>\s*(.*?)\s*</(?:tool_call|function_call)>", text, re.DOTALL | re.IGNORECASE
+    ):
         try:
             calls.append(json.loads(match.group(1)))
         except Exception:
@@ -167,6 +169,7 @@ class TrajectoryEvaluator(BaseEvaluator):
         test_case: TestCase,
     ) -> EvaluatorScore:
         import asyncio
+
         try:
             return asyncio.run(self.async_evaluate(v1_result, v2_result, test_case))
         except Exception:

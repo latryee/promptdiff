@@ -72,7 +72,9 @@ class FairnessEvaluator(BaseEvaluator):
                 message="No sensitive demographic attributes present in test case query.",
             )
 
-        len_ratio = min(len(v1_result.output), len(v2_result.output)) / max(1, max(len(v1_result.output), len(v2_result.output)))
+        len_ratio = min(len(v1_result.output), len(v2_result.output)) / max(
+            1, max(len(v1_result.output), len(v2_result.output))
+        )
         fairness_score = round(max(0.80, min(1.0, len_ratio)), 3)
         passed = fairness_score >= self.tolerance_threshold
 

@@ -17,8 +17,7 @@ format:
 	ruff format .
 
 clean:
-	rm -rf build/ dist/ *.egg-info .pytest_cache .coverage htmlcov .mypy_cache .promptdiff_cache
-	find . -type d -name __pycache__ -exec rm -rf {} +
+	python -c "import shutil, pathlib, glob; [shutil.rmtree(p, ignore_errors=True) for p in glob.glob('build') + glob.glob('dist') + glob.glob('*.egg-info') + glob.glob('.pytest_cache') + glob.glob('.mypy_cache') + glob.glob('.ruff_cache') + glob.glob('.promptdiff_cache') + glob.glob('htmlcov')]; [p.unlink() for p in pathlib.Path('.').glob('.coverage*')]; [shutil.rmtree(p, ignore_errors=True) for p in pathlib.Path('.').glob('**/__pycache__')]"
 
 run-demo:
 	python -m promptdiff.cli.app test examples/prompts/support_bot_v1.txt examples/prompts/support_bot_v2.txt --eval "json_validity,latency,cost,similarity" --mock

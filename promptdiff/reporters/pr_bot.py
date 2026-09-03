@@ -59,8 +59,13 @@ def generate_pr_markdown_comment(report_data: dict[str, Any], forecast_vol: Opti
     forecast_row = ""
     if forecast_vol:
         from promptdiff.pricing import calculate_forecast
+
         fc = calculate_forecast(cost_v1, cost_v2, total_cases, forecast_vol)
-        savings_text = f"**+${fc.monthly_savings_usd:,.2f}/mo** ({fc.cost_delta_pct:+.1f}%)" if fc.monthly_savings_usd > 0 else f"${fc.monthly_delta_cost:+,.2f}/mo"
+        savings_text = (
+            f"**+${fc.monthly_savings_usd:,.2f}/mo** ({fc.cost_delta_pct:+.1f}%)"
+            if fc.monthly_savings_usd > 0
+            else f"${fc.monthly_delta_cost:+,.2f}/mo"
+        )
         forecast_row = f"| **Projected Monthly Impact ({fc.daily_volume:,} reqs/day)** | {savings_text} |\n"
 
     # Failed Assertions block
@@ -89,10 +94,12 @@ def generate_pr_markdown_comment(report_data: dict[str, Any], forecast_vol: Opti
             avg_v1 = sum(scores_v1) / len(scores_v1) if scores_v1 else 0.0
             avg_v2 = sum(scores_v2) / len(scores_v2)
             delta = avg_v2 - avg_v1
-            status_tag = "✅ Pass" if all(c.get("scores", {}).get(ev_name, {}).get("passed", True) for c in comparisons) else "❌ Regressed"
-            evaluators_rows.append(
-                f"| `{ev_name}` | `{avg_v1:.3f}` | `{avg_v2:.3f}` | `{delta:+.3f}` | {status_tag} |"
+            status_tag = (
+                "✅ Pass"
+                if all(c.get("scores", {}).get(ev_name, {}).get("passed", True) for c in comparisons)
+                else "❌ Regressed"
             )
+            evaluators_rows.append(f"| `{ev_name}` | `{avg_v1:.3f}` | `{avg_v2:.3f}` | `{delta:+.3f}` | {status_tag} |")
 
     eval_table = "\n".join(evaluators_rows)
 
@@ -115,9 +122,9 @@ def generate_pr_markdown_comment(report_data: dict[str, Any], forecast_vol: Opti
 <p align="left">
   <img src="{badge}" alt="Quality Gate Status" />
   &nbsp;
-  <code>{report_data.get('v1_name', 'v1')}</code> ➔ <code>{report_data.get('v2_name', 'v2')}</code>
+  <code>{report_data.get("v1_name", "v1")}</code> ➔ <code>{report_data.get("v2_name", "v2")}</code>
   &nbsp;|&nbsp;
-  Model: <code>{report_data.get('model_v2', 'gpt-4o')}</code>
+  Model: <code>{report_data.get("model_v2", "gpt-4o")}</code>
 </p>
 
 ### 📊 Regression KPI Summary

@@ -21,6 +21,7 @@ try:
         stop_after_attempt,
         wait_random_exponential,
     )
+
     TENACITY_AVAILABLE = True
 except ImportError:  # pragma: no cover
     TENACITY_AVAILABLE = False
@@ -51,7 +52,9 @@ def is_retryable_exception(exc: BaseException) -> bool:
         return True
     # Catch string error descriptions from other client SDKs
     msg = str(exc).lower()
-    return any(k in msg for k in ["rate limit", "429", "too many requests", "overloaded", "503", "500", "timeout", "timed out"])
+    return any(
+        k in msg for k in ["rate limit", "429", "too many requests", "overloaded", "503", "500", "timeout", "timed out"]
+    )
 
 
 T = TypeVar("T")

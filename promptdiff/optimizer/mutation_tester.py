@@ -32,12 +32,14 @@ PROMPT_MUTATORS: list[dict[str, Any]] = [
     {
         "name": "Strip Few-Shot Examples",
         "description": "Deletes example blocks to measure test sensitivity to few-shot adherence",
-        "transform": lambda text: text.split("### Examples")[0] if "### Examples" in text else text[:int(len(text)*0.6)],
+        "transform": lambda text: (
+            text.split("### Examples")[0] if "### Examples" in text else text[: int(len(text) * 0.6)]
+        ),
     },
     {
         "name": "Truncate System Prompt Rules",
         "description": "Cuts prompt in half to test boundary coverage",
-        "transform": lambda text: text[:max(20, len(text)//2)],
+        "transform": lambda text: text[: max(20, len(text) // 2)],
     },
 ]
 
@@ -106,7 +108,11 @@ class MutationTestingEngine:
 
             diff_rep = await runner.run(self.test_cases)
             # A mutant is "killed" (caught) if the test suite detects regression or assertion fails
-            is_caught = not diff_rep.verdict.passed or len(diff_rep.verdict.failed_assertions) > 0 or diff_rep.verdict.cost_delta_pct > 10.0
+            is_caught = (
+                not diff_rep.verdict.passed
+                or len(diff_rep.verdict.failed_assertions) > 0
+                or diff_rep.verdict.cost_delta_pct > 10.0
+            )
 
             if self.force_mock:
                 is_caught = True  # Mock baseline catches mutants
@@ -129,7 +135,9 @@ class MutationTestingEngine:
             recs.append("Add strict JSON schema assertions to catch mutant prompts that strip JSON formatting.")
             recs.append("Increase test case diversity with boundary queries to prevent prompt truncation escapes.")
         else:
-            recs.append("Test suite achieves 100% Mutation Kill Rate. Excellent coverage against silent prompt corruptions.")
+            recs.append(
+                "Test suite achieves 100% Mutation Kill Rate. Excellent coverage against silent prompt corruptions."
+            )
 
         return MutationScoreReport(
             prompt_name=self.original_prompt.name,

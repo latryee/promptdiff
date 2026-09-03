@@ -42,7 +42,9 @@ class SelfCorrectionBenchmark:
 
     async def benchmark_reflection(self) -> ReflectionLoopReport:
         """Benchmark direct generation against reflection loop."""
-        pv_direct = PromptVersion(name="direct_single_pass", template=self.prompt_version.template, model=self.model_name)
+        pv_direct = PromptVersion(
+            name="direct_single_pass", template=self.prompt_version.template, model=self.model_name
+        )
         # Reflection prompt has self-critique instructions
         reflection_template = (
             self.prompt_version.template
@@ -63,7 +65,7 @@ class SelfCorrectionBenchmark:
 
         score_direct = 4.2
         score_reflect = 4.7
-        quality_gain = ((score_reflect - score_direct) / score_direct * 100.0)
+        quality_gain = (score_reflect - score_direct) / score_direct * 100.0
 
         lat_inflation = v.latency_delta_pct
         cost_increase = v.cost_delta_pct

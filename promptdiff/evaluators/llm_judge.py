@@ -197,6 +197,7 @@ Provide [REASONING], [V1_SCORE], [V2_SCORE], and [PREFERENCE].
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 import concurrent.futures
+
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     return pool.submit(
                         asyncio.run,

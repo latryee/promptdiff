@@ -47,12 +47,12 @@ async def test_prompt_compressor() -> None:
 
 def test_extract_tool_calls() -> None:
     """Test extraction of tool calls from agent outputs."""
-    output_xml = "<tool_call>{\"name\": \"search_db\", \"arguments\": {\"query\": \"user_123\"}}</tool_call>"
+    output_xml = '<tool_call>{"name": "search_db", "arguments": {"query": "user_123"}}</tool_call>'
     calls = extract_tool_calls(output_xml)
     assert len(calls) == 1
     assert calls[0].get("name") == "search_db"
 
-    output_json_block = "```json\n{\"action\": \"send_email\", \"to\": \"test@example.com\"}\n```"
+    output_json_block = '```json\n{"action": "send_email", "to": "test@example.com"}\n```'
     calls_json = extract_tool_calls(output_json_block)
     assert len(calls_json) == 1
     assert calls_json[0].get("action") == "send_email"
@@ -77,7 +77,7 @@ async def test_trajectory_evaluator() -> None:
         prompt_name="agent_v1",
         test_case_id="agent_case_1",
         rendered_prompt="test",
-        output="<tool_call>{\"name\": \"get_order\", \"id\": 999}</tool_call>",
+        output='<tool_call>{"name": "get_order", "id": 999}</tool_call>',
         latency_ms=150.0,
         prompt_tokens=50,
         completion_tokens=20,
@@ -89,7 +89,7 @@ async def test_trajectory_evaluator() -> None:
         prompt_name="agent_v2",
         test_case_id="agent_case_1",
         rendered_prompt="test",
-        output="<tool_call>{\"name\": \"get_order\", \"id\": 999}</tool_call><tool_call>{\"name\": \"issue_refund\", \"id\": 999}</tool_call>",
+        output='<tool_call>{"name": "get_order", "id": 999}</tool_call><tool_call>{"name": "issue_refund", "id": 999}</tool_call>',
         latency_ms=160.0,
         prompt_tokens=50,
         completion_tokens=30,

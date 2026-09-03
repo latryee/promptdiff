@@ -71,25 +71,11 @@ def evaluate_assertions(
     # Calculate aggregate totals
     total_cost_v1 = sum(c.v1_result.cost_usd for c in comparisons)
     total_cost_v2 = sum(c.v2_result.cost_usd for c in comparisons)
-    cost_delta_pct = (
-        ((total_cost_v2 - total_cost_v1) / total_cost_v1 * 100.0)
-        if total_cost_v1 > 0
-        else 0.0
-    )
+    cost_delta_pct = ((total_cost_v2 - total_cost_v1) / total_cost_v1 * 100.0) if total_cost_v1 > 0 else 0.0
 
-    avg_lat_v1 = (
-        sum(c.v1_result.latency_ms for c in comparisons) / len(comparisons)
-        if comparisons
-        else 0.0
-    )
-    avg_lat_v2 = (
-        sum(c.v2_result.latency_ms for c in comparisons) / len(comparisons)
-        if comparisons
-        else 0.0
-    )
-    lat_delta_pct = (
-        ((avg_lat_v2 - avg_lat_v1) / avg_lat_v1 * 100.0) if avg_lat_v1 > 0 else 0.0
-    )
+    avg_lat_v1 = sum(c.v1_result.latency_ms for c in comparisons) / len(comparisons) if comparisons else 0.0
+    avg_lat_v2 = sum(c.v2_result.latency_ms for c in comparisons) / len(comparisons) if comparisons else 0.0
+    lat_delta_pct = ((avg_lat_v2 - avg_lat_v1) / avg_lat_v1 * 100.0) if avg_lat_v1 > 0 else 0.0
 
     # Check aggregate and case-by-case rules
     for rule in assertion_rules:

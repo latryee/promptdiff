@@ -63,7 +63,7 @@ class EdgeQuantizationBenchmark:
         base_score = 4.85
 
         for level, lat, ram, score in quant_specs:
-            retention = (score / base_score * 100.0)
+            retention = score / base_score * 100.0
 
             if retention >= 90.0:
                 stat = "RECOMMENDED_FOR_EDGE"

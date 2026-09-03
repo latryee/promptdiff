@@ -98,6 +98,7 @@ def launch_server(host: str = "127.0.0.1", port: int = 8000) -> None:
     """Launch Uvicorn HTTP server."""
     try:
         import uvicorn
+
         app_instance = create_app()
         if app_instance:
             uvicorn.run(app_instance, host=host, port=port)

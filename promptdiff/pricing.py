@@ -49,49 +49,49 @@ class CostForecast:
 # Pricing Registry (Per 1 Million Tokens in USD)
 MODEL_PRICING_TABLE: dict[str, ModelPrice] = {
     # OpenAI Models
+    "gpt-4.5-preview": ModelPrice(75.00, 150.00, "OpenAI GPT-4.5 preview"),
+    "gpt-4.5": ModelPrice(75.00, 150.00, "OpenAI GPT-4.5"),
     "gpt-4o": ModelPrice(2.50, 10.00, "OpenAI GPT-4o flagship multimodal"),
     "gpt-4o-2024-08-06": ModelPrice(2.50, 10.00, "OpenAI GPT-4o checkpoint"),
     "gpt-4o-mini": ModelPrice(0.15, 0.60, "OpenAI GPT-4o-mini fast & affordable"),
     "gpt-4-turbo": ModelPrice(10.00, 30.00, "OpenAI GPT-4 Turbo"),
     "gpt-4": ModelPrice(30.00, 60.00, "OpenAI GPT-4 legacy"),
     "gpt-3.5-turbo": ModelPrice(0.50, 1.50, "OpenAI GPT-3.5 Turbo"),
+    "o1": ModelPrice(15.00, 60.00, "OpenAI o1 reasoning flagship"),
     "o1-preview": ModelPrice(15.00, 60.00, "OpenAI o1 reasoning preview"),
     "o1-mini": ModelPrice(3.00, 12.00, "OpenAI o1-mini fast reasoning"),
     "o3-mini": ModelPrice(1.10, 4.40, "OpenAI o3-mini efficient reasoning"),
-
     # Anthropic Claude Models
+    "claude-3-7-sonnet-latest": ModelPrice(3.00, 15.00, "Anthropic Claude 3.7 Sonnet hybrid reasoning"),
+    "claude-3-7-sonnet": ModelPrice(3.00, 15.00, "Anthropic Claude 3.7 Sonnet"),
     "claude-3-5-sonnet-20241022": ModelPrice(3.00, 15.00, "Anthropic Claude 3.5 Sonnet v2"),
     "claude-3-5-sonnet-latest": ModelPrice(3.00, 15.00, "Anthropic Claude 3.5 Sonnet"),
     "claude-3-5-haiku-latest": ModelPrice(0.80, 4.00, "Anthropic Claude 3.5 Haiku"),
     "claude-3-5-haiku-20241022": ModelPrice(0.80, 4.00, "Anthropic Claude 3.5 Haiku"),
     "claude-3-opus-latest": ModelPrice(15.00, 75.00, "Anthropic Claude 3 Opus"),
     "claude-3-haiku-20240307": ModelPrice(0.25, 1.25, "Anthropic Claude 3 Haiku legacy"),
-
     # Google Gemini Models
+    "gemini-2.5-pro": ModelPrice(1.25, 5.00, "Google Gemini 2.5 Pro advanced thinking"),
     "gemini-2.0-flash": ModelPrice(0.10, 0.40, "Google Gemini 2.0 Flash next-gen"),
     "gemini-2.0-flash-exp": ModelPrice(0.00, 0.00, "Google Gemini 2.0 Flash Exp (Free)"),
     "gemini-1.5-pro": ModelPrice(1.25, 5.00, "Google Gemini 1.5 Pro"),
     "gemini-1.5-pro-latest": ModelPrice(1.25, 5.00, "Google Gemini 1.5 Pro Latest"),
     "gemini-1.5-flash": ModelPrice(0.075, 0.30, "Google Gemini 1.5 Flash"),
     "gemini-1.5-flash-latest": ModelPrice(0.075, 0.30, "Google Gemini 1.5 Flash Latest"),
-
     # DeepSeek Models
     "deepseek-chat": ModelPrice(0.14, 0.28, "DeepSeek-V3"),
     "deepseek-v3": ModelPrice(0.14, 0.28, "DeepSeek-V3"),
     "deepseek-reasoner": ModelPrice(0.55, 2.19, "DeepSeek-R1 reasoning"),
     "deepseek-r1": ModelPrice(0.55, 2.19, "DeepSeek-R1 reasoning"),
-
     # Meta Llama (via Together/Groq/OpenRouter pricing benchmark)
     "llama-3.3-70b": ModelPrice(0.59, 0.79, "Meta Llama 3.3 70B Instruct"),
     "llama-3.1-70b": ModelPrice(0.59, 0.79, "Meta Llama 3.1 70B Instruct"),
     "llama-3.1-8b": ModelPrice(0.05, 0.08, "Meta Llama 3.1 8B Instruct"),
     "llama-3.1-405b": ModelPrice(2.50, 3.50, "Meta Llama 3.1 405B Instruct"),
-
     # Mistral AI
     "mistral-large-latest": ModelPrice(2.00, 6.00, "Mistral Large 2"),
     "mistral-small-latest": ModelPrice(0.20, 0.60, "Mistral Small"),
     "codestral-latest": ModelPrice(0.30, 0.90, "Mistral Codestral"),
-
     # Local / Mock / Free
     "mock": ModelPrice(0.50, 1.50, "Deterministic Mock Model (Simulated Pricing)"),
     "ollama": ModelPrice(0.00, 0.00, "Local Ollama (Self-Hosted / Free)"),
@@ -193,11 +193,7 @@ def calculate_forecast(
     monthly_savings = -monthly_delta if monthly_delta < 0 else 0.0
     annual_savings = monthly_savings * 12.0
 
-    delta_pct = (
-        ((v2_monthly - v1_monthly) / v1_monthly * 100.0)
-        if v1_monthly > 0
-        else 0.0
-    )
+    delta_pct = ((v2_monthly - v1_monthly) / v1_monthly * 100.0) if v1_monthly > 0 else 0.0
 
     if monthly_delta < 0:
         summary = (
@@ -205,10 +201,7 @@ def calculate_forecast(
             f"(${annual_savings:,.2f}/yr) at {vol_daily:,} reqs/day ({delta_pct:+.1f}%)"
         )
     elif monthly_delta > 0:
-        summary = (
-            f"Projected Cost Increase: +${monthly_delta:,.2f}/mo "
-            f"at {vol_daily:,} reqs/day ({delta_pct:+.1f}%)"
-        )
+        summary = f"Projected Cost Increase: +${monthly_delta:,.2f}/mo at {vol_daily:,} reqs/day ({delta_pct:+.1f}%)"
     else:
         summary = f"Zero Cost Variance at {vol_daily:,} reqs/day"
 

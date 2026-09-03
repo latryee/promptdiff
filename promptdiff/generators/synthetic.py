@@ -18,11 +18,26 @@ logger = logging.getLogger("promptdiff.generators.synthetic")
 
 CATEGORIES = [
     ("happy_path", "Standard expected user queries with typical formatting, valid tokens, and realistic data"),
-    ("boundary_extremes", "Edge boundary inputs: single character, extremely verbose paragraphs (1000+ words), whitespace only, repeated words"),
-    ("adversarial_injection", "Prompt injection attempts: 'Ignore previous instructions', SQL injection payloads, markdown hijack, jailbreak attempts"),
-    ("malformed_schema", "Corrupted or non-standard inputs: mismatched JSON, unclosed quotes, escape sequences, null values, unicode emojis 🚀💥, RTL text"),
-    ("multilingual_slang", "Multilingual queries (Spanish, German, Japanese, Arabic), heavy colloquial slang, typos, abbreviations, mixed casing"),
-    ("domain_corner_cases", "High-complexity domain-specific corner cases: edge financial figures, rare error codes, conflicting constraints, multi-step requests"),
+    (
+        "boundary_extremes",
+        "Edge boundary inputs: single character, extremely verbose paragraphs (1000+ words), whitespace only, repeated words",
+    ),
+    (
+        "adversarial_injection",
+        "Prompt injection attempts: 'Ignore previous instructions', SQL injection payloads, markdown hijack, jailbreak attempts",
+    ),
+    (
+        "malformed_schema",
+        "Corrupted or non-standard inputs: mismatched JSON, unclosed quotes, escape sequences, null values, unicode emojis 🚀💥, RTL text",
+    ),
+    (
+        "multilingual_slang",
+        "Multilingual queries (Spanish, German, Japanese, Arabic), heavy colloquial slang, typos, abbreviations, mixed casing",
+    ),
+    (
+        "domain_corner_cases",
+        "High-complexity domain-specific corner cases: edge financial figures, rare error codes, conflicting constraints, multi-step requests",
+    ),
 ]
 
 
@@ -103,7 +118,7 @@ Respond ONLY with the JSON array. Do not include markdown code block backticks o
             if isinstance(data, list):
                 for idx, item in enumerate(data):
                     tc = TestCase(
-                        id=str(item.get("id", f"{category}_{idx+1}")),
+                        id=str(item.get("id", f"{category}_{idx + 1}")),
                         description=str(item.get("description", f"Synthetic test for {category}")),
                         vars=item.get("vars", {"query": str(item)}),
                         expected_output=item.get("expected_output"),
@@ -122,7 +137,7 @@ Respond ONLY with the JSON array. Do not include markdown code block backticks o
                 if isinstance(item, dict) and "vars" in item:
                     cases.append(
                         TestCase(
-                            id=str(item.get("id", f"{category}_{idx+1}")),
+                            id=str(item.get("id", f"{category}_{idx + 1}")),
                             description=str(item.get("description", f"Synthetic test for {category}")),
                             vars=item.get("vars", {}),
                             expected_output=item.get("expected_output"),

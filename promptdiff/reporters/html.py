@@ -31,7 +31,11 @@ def _chunk_to_html(chunk: DiffChunk, side: str) -> str:
 def generate_html_report(report: DiffReport, output_path: str) -> str:
     """Generate self-contained interactive dark-mode HTML report."""
     v = report.verdict
-    status_bg = "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" if v.passed else "bg-rose-500/10 text-rose-400 border-rose-500/30"
+    status_bg = (
+        "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+        if v.passed
+        else "bg-rose-500/10 text-rose-400 border-rose-500/30"
+    )
     status_icon = "✓" if v.passed else "⚠"
     status_text = "ALL ASSERTIONS PASSED" if v.passed else "REGRESSION DETECTED"
 
@@ -47,12 +51,16 @@ def generate_html_report(report: DiffReport, output_path: str) -> str:
         for m_name, s in comp.scores.items():
             if not s.passed:
                 all_passed = False
-            badge_color = "bg-emerald-900/60 text-emerald-300 border-emerald-700" if s.passed else "bg-rose-900/60 text-rose-300 border-rose-700"
+            badge_color = (
+                "bg-emerald-900/60 text-emerald-300 border-emerald-700"
+                if s.passed
+                else "bg-rose-900/60 text-rose-300 border-rose-700"
+            )
             score_badges.append(
                 f'<div class="flex items-center justify-between text-xs px-2.5 py-1.5 rounded border {badge_color}">'
                 f'<span class="font-medium">{html.escape(m_name.replace("_", " ").title())}</span>'
                 f'<span class="font-mono">{html.escape(s.message)}</span>'
-                f'</div>'
+                f"</div>"
             )
 
         card_filter_class = "case-passed" if all_passed else "case-failed"
@@ -63,7 +71,7 @@ def generate_html_report(report: DiffReport, output_path: str) -> str:
                 <div>
                     <h3 class="text-base font-semibold text-slate-100 flex items-center gap-2">
                         <span class="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-xs rounded border border-indigo-500/30 font-mono">{html.escape(tc.id)}</span>
-                        {html.escape(tc.description or 'Regression test scenario')}
+                        {html.escape(tc.description or "Regression test scenario")}
                     </h3>
                 </div>
                 <div class="text-xs text-slate-400 font-mono">
@@ -95,7 +103,7 @@ def generate_html_report(report: DiffReport, output_path: str) -> str:
 
             <!-- Metric Scores Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 pt-2">
-                {''.join(score_badges)}
+                {"".join(score_badges)}
             </div>
         </div>
         """
@@ -103,7 +111,9 @@ def generate_html_report(report: DiffReport, output_path: str) -> str:
 
     failed_reasons_html = ""
     if not v.passed:
-        items = "".join(f'<li class="text-xs text-rose-300 font-mono py-0.5">• {html.escape(f)}</li>' for f in v.failed_assertions)
+        items = "".join(
+            f'<li class="text-xs text-rose-300 font-mono py-0.5">• {html.escape(f)}</li>' for f in v.failed_assertions
+        )
         failed_reasons_html = f"""
         <div class="mb-6 p-4 rounded-xl bg-rose-950/40 border border-rose-800">
             <h4 class="text-sm font-semibold text-rose-200 mb-2 flex items-center gap-1.5">
@@ -153,16 +163,16 @@ def generate_html_report(report: DiffReport, output_path: str) -> str:
         <section class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
                 <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Cost Delta</span>
-                <div class="text-xl font-bold mt-1 {'text-rose-400' if v.cost_delta_pct > 0 else 'text-emerald-400'} font-mono">
-                    {'+' if v.cost_delta_pct > 0 else ''}{v.cost_delta_pct:.1f}%
+                <div class="text-xl font-bold mt-1 {"text-rose-400" if v.cost_delta_pct > 0 else "text-emerald-400"} font-mono">
+                    {"+" if v.cost_delta_pct > 0 else ""}{v.cost_delta_pct:.1f}%
                 </div>
                 <span class="text-[11px] text-slate-500 font-mono">${v.total_cost_v1:.5f} &rarr; ${v.total_cost_v2:.5f}</span>
             </div>
 
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
                 <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Avg Latency Delta</span>
-                <div class="text-xl font-bold mt-1 {'text-rose-400' if v.latency_delta_pct > 0 else 'text-emerald-400'} font-mono">
-                    {'+' if v.latency_delta_pct > 0 else ''}{v.latency_delta_pct:.1f}%
+                <div class="text-xl font-bold mt-1 {"text-rose-400" if v.latency_delta_pct > 0 else "text-emerald-400"} font-mono">
+                    {"+" if v.latency_delta_pct > 0 else ""}{v.latency_delta_pct:.1f}%
                 </div>
                 <span class="text-[11px] text-slate-500 font-mono">{v.avg_latency_v1:.0f}ms &rarr; {v.avg_latency_v2:.0f}ms</span>
             </div>
@@ -170,7 +180,7 @@ def generate_html_report(report: DiffReport, output_path: str) -> str:
             <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
                 <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Test Cases</span>
                 <div class="text-xl font-bold mt-1 text-slate-100 font-mono">
-                    {report.aggregate_stats.get('passed_cases', report.total_cases)} / {report.total_cases}
+                    {report.aggregate_stats.get("passed_cases", report.total_cases)} / {report.total_cases}
                 </div>
                 <span class="text-[11px] text-slate-500">Passed without regressions</span>
             </div>
@@ -198,7 +208,7 @@ def generate_html_report(report: DiffReport, output_path: str) -> str:
 
         <!-- Diff Cards -->
         <div id="diff-cards-container">
-            {''.join(cards_html)}
+            {"".join(cards_html)}
         </div>
 
         <!-- Footer -->

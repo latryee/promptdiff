@@ -194,7 +194,7 @@ def pull_recipe(name: str, target_dir: str = ".") -> None:
         f"  - [cyan]{testcases_file.as_posix()}[/cyan] (Domain test suite)\n"
         f"  - [cyan]{config_file.as_posix()}[/cyan] (Pre-tuned configuration)\n\n"
         f"[bold yellow]Run regression benchmark:[/bold yellow]\n"
-        f"  [magenta]promptdiff test {v1_file.as_posix()} {v2_file.as_posix()} --inputs {testcases_file.as_posix()} --eval \"{','.join(recipe.evaluators)}\" --mock[/magenta]",
+        f'  [magenta]promptdiff test {v1_file.as_posix()} {v2_file.as_posix()} --inputs {testcases_file.as_posix()} --eval "{",".join(recipe.evaluators)}" --mock[/magenta]',
         title=f"[bold cyan]Recipe: {recipe.name}[/bold cyan]",
         box=ROUNDED,
         padding=(1, 2),

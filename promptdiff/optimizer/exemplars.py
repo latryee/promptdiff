@@ -57,7 +57,7 @@ class DynamicExemplarSelector:
             scored.append((sim, ex))
 
         scored.sort(key=lambda x: x[0], reverse=True)
-        return [item[1] for item in scored[:self.top_k]]
+        return [item[1] for item in scored[: self.top_k]]
 
     def format_dynamic_prompt(self, base_template: str, query: str) -> str:
         """Inject top-k relevant exemplars dynamically into template."""
@@ -93,7 +93,7 @@ class DynamicExemplarSelector:
 
         score_static = 4.2
         score_dyn = 4.7
-        gain = ((score_dyn - score_static) / score_static * 100.0)
+        gain = (score_dyn - score_static) / score_static * 100.0
 
         insights = [
             f"Dynamic few-shot retrieval improves LLM Judge quality score by +{gain:.1f}%.",

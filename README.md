@@ -6,6 +6,8 @@
 
 *Catch silent quality regressions, schema breakages, latency spikes, and cost inflation before merging prompt changes.*
 
+[![PyPI version](https://img.shields.io/pypi/v/promptdiff.svg?color=blue)](https://pypi.org/project/promptdiff/)
+[![Python versions](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://pypi.org/project/promptdiff/)
 [![CI](https://github.com/latryee/promptdiff/actions/workflows/ci.yml/badge.svg)](https://github.com/latryee/promptdiff/actions)
 [![Tests](https://img.shields.io/badge/tests-92%2F92%20passing-brightgreen.svg)](https://github.com/latryee/promptdiff)
 [![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://github.com/latryee/promptdiff)
@@ -18,9 +20,10 @@
 
 [🚀 **Quickstart**](#-quickstart-in-30-seconds) •
 [🔍 **Core Workflow**](#-how-it-works) •
+[🐍 **Python SDK**](#-python-sdk) •
 [📚 **Recipe Catalog**](#-curated-recipe-catalog) •
 [🧪 **Pytest Integration**](#-pytest-plugin-integration) •
-[🧩 **Optional Extras**](#-optional-extras--advanced-features) •
+[🧩 **Optional Extras**](#-advanced--extended-modules) •
 [📦 **Installation**](#-installation)
 
 </div>
@@ -107,6 +110,7 @@ Use `promptdiff` fixtures directly in your standard Python unit test suites:
 import pytest
 from promptdiff.core.models import TestCase
 
+
 @pytest.mark.asyncio
 async def test_support_prompt_regression(prompt_diff):
     report = await prompt_diff.compare(
@@ -125,6 +129,41 @@ async def test_support_prompt_regression(prompt_diff):
 Run with standard `pytest`:
 ```bash
 pytest tests/test_prompts.py
+```
+
+---
+
+## 🐍 Python SDK
+
+Use `promptdiff` programmatically inside Python applications or evaluation scripts:
+
+```python
+import promptdiff
+from promptdiff.core.models import TestCase
+
+# Run regression evaluation
+report = promptdiff.compare(
+    v1="prompts/support_v1.txt",
+    v2="prompts/support_v2.txt",
+    dataset=[
+        TestCase(id="tc1", vars={"query": "Reset password"}),
+        TestCase(id="tc2", vars={"query": "Billing question"}),
+    ],
+    model="gpt-4o",
+    mock=True,
+    assertions=["cost_delta <= 15%", "latency_delta <= 20%"],
+)
+
+print(f"Passed: {report.verdict.passed}")
+print(f"Cost Delta: {report.verdict.cost_delta_pct:.1f}%")
+
+# Compress prompt tokens while maintaining quality
+shrunk = promptdiff.shrink(
+    prompt="Please kindly act as an AI and answer: {{query}}",
+    dataset=[TestCase(id="1", vars={"query": "Help"})],
+    mock=True,
+)
+print(f"Compressed Prompt: {shrunk.compressed_prompt}")
 ```
 
 ---
@@ -156,6 +195,12 @@ pip install "promptdiff[all]"
 
 | Command / Tool | Extra Required | Description |
 | :--- | :---: | :--- |
+| `promptdiff studio` | *Core* | Launch zero-dependency local-first visual diff web studio & playground. |
+| `promptdiff mcts` | *Core* | Active Monte Carlo Tree Search prompt optimizer with Pareto frontier. |
+| `promptdiff redteam` | *Core* | Multi-turn TAP adversarial red-teaming (steganography & CVSS risk matrix). |
+| `promptdiff cascade` | *Core* | Confidence-aware model cascade router & enterprise ROI forecaster. |
+| `promptdiff check` | *Core* | Static linting & token cost analysis for prompt templates. |
+| `promptdiff serve` | *Core* | Launch FastAPI REST API server & playground (`pip install fastapi uvicorn`). |
 | `promptdiff arena` | *Core* | Evaluate $N$ prompt versions across multiple LLMs with leaderboard rankings. |
 | `promptdiff diff` | *Core* | Instant side-by-side terminal syntax diff without calling model APIs. |
 | `promptdiff pricing` | *Core* | Query token pricing and cost calculations for 30+ providers. |
@@ -166,6 +211,23 @@ pip install "promptdiff[all]"
 | `promptdiff shrink` | *Core* | Token compressor pruning boilerplate fluff while preserving 100% output quality. |
 | `promptdiff cache-sim` | *Core* | Prefix caching hit rate analyzer and ROI forecaster. |
 | `promptdiff history` | *Core* | Benchmark prompt quality and cost evolution across Git revisions. |
+
+---
+
+## 🏛️ Architecture & Resume Showcase
+
+Detailed mathematical formulations, system diagrams, and resume-ready STAR bullet points for senior AI Engineer and MLOps roles are available in:
+
+👉 [**Technical Architecture & Portfolio Showcase (PORTFOLIO.md)**](PORTFOLIO.md)
+
+---
+
+## 🤝 Community & Contributing
+
+- [Contributing Guide](CONTRIBUTING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security Policy](SECURITY.md)
+- [Changelog](CHANGELOG.md)
 
 ---
 

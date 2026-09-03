@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from promptdiff.cli.history import GitHistoryReport, track_git_history
 from promptdiff.core.config import load_dataset, load_prompt_file
@@ -47,13 +47,15 @@ def _resolve_testcases(dataset: Optional[Union[str, list[TestCase], list[dict]]]
             if isinstance(item, TestCase):
                 cases.append(item)
             elif isinstance(item, dict):
-                cases.append(TestCase(
-                    id=str(item.get("id", f"tc_{len(cases)+1}")),
-                    description=str(item.get("description", "")),
-                    vars=item.get("vars", {}),
-                    expected_output=item.get("expected_output"),
-                    tags=item.get("tags", []),
-                ))
+                cases.append(
+                    TestCase(
+                        id=str(item.get("id", f"tc_{len(cases) + 1}")),
+                        description=str(item.get("description", "")),
+                        vars=item.get("vars", {}),
+                        expected_output=item.get("expected_output"),
+                        tags=item.get("tags", []),
+                    )
+                )
         return cases
     return []
 
@@ -108,18 +110,20 @@ def compare(
     concurrency: int = 4,
 ) -> DiffReport:
     """Synchronously compare two prompt versions across test cases."""
-    return asyncio.run(async_compare(
-        v1=v1,
-        v2=v2,
-        dataset=dataset,
-        model=model,
-        model_v1=model_v1,
-        model_v2=model_v2,
-        eval_metrics=eval_metrics,
-        assertions=assertions,
-        mock=mock,
-        concurrency=concurrency,
-    ))
+    return asyncio.run(
+        async_compare(
+            v1=v1,
+            v2=v2,
+            dataset=dataset,
+            model=model,
+            model_v1=model_v1,
+            model_v2=model_v2,
+            eval_metrics=eval_metrics,
+            assertions=assertions,
+            mock=mock,
+            concurrency=concurrency,
+        )
+    )
 
 
 def optimize(
@@ -233,13 +237,15 @@ def history(
     mock: bool = True,
 ) -> GitHistoryReport:
     """Benchmark prompt evolution across Git commit history."""
-    return asyncio.run(track_git_history(
-        prompt_file=prompt_file,
-        dataset_path=dataset,
-        commits_count=commits,
-        model_name=model,
-        force_mock=mock,
-    ))
+    return asyncio.run(
+        track_git_history(
+            prompt_file=prompt_file,
+            dataset_path=dataset,
+            commits_count=commits,
+            model_name=model,
+            force_mock=mock,
+        )
+    )
 
 
 def shadow_replay(
@@ -360,8 +366,31 @@ def council(
     r1 = p1.render(test_case.vars)
     r2 = p2.render(test_case.vars)
     from promptdiff.core.models import RunResult
-    res1 = RunResult(prompt_name="v1", test_case_id=test_case.id, rendered_prompt=r1, output=r1, latency_ms=10.0, prompt_tokens=10, completion_tokens=10, total_tokens=20, cost_usd=0.0001, model="gpt-4o")
-    res2 = RunResult(prompt_name="v2", test_case_id=test_case.id, rendered_prompt=r2, output=r2, latency_ms=10.0, prompt_tokens=10, completion_tokens=10, total_tokens=20, cost_usd=0.0001, model="gpt-4o")
+
+    res1 = RunResult(
+        prompt_name="v1",
+        test_case_id=test_case.id,
+        rendered_prompt=r1,
+        output=r1,
+        latency_ms=10.0,
+        prompt_tokens=10,
+        completion_tokens=10,
+        total_tokens=20,
+        cost_usd=0.0001,
+        model="gpt-4o",
+    )
+    res2 = RunResult(
+        prompt_name="v2",
+        test_case_id=test_case.id,
+        rendered_prompt=r2,
+        output=r2,
+        latency_ms=10.0,
+        prompt_tokens=10,
+        completion_tokens=10,
+        total_tokens=20,
+        cost_usd=0.0001,
+        model="gpt-4o",
+    )
     return evaluator.evaluate(res1, res2, test_case)
 
 
@@ -425,3 +454,183 @@ def compile_prompt(prompt: str) -> CompilationResult:
     pv = load_prompt_file(prompt, version_name="compile_target")
     compiler = PromptJITCompiler(prompt_version=pv)
     return compiler.compile()
+
+
+def mcts_optimize(
+    prompt: str,
+    dataset: Union[str, list[dict[str, Any]], list[TestCase]],
+    model: str = "gpt-4o",
+    max_iterations: int = 8,
+    mock: bool = True,
+) -> Any:
+    """Active Monte Carlo Tree Search (MCTS) prompt optimizer with Pareto frontier."""
+    from promptdiff.optimizer.mcts import MCTSPromptOptimizer
+
+    cases = _resolve_testcases(dataset)
+    optimizer = MCTSPromptOptimizer(
+        initial_prompt=prompt,
+        test_cases=cases,
+        model_name=model,
+        max_iterations=max_iterations,
+        force_mock=mock,
+    )
+    return optimizer.optimize_sync()
+
+
+def attribute_hallucinations(output_text: str, context_text: str) -> Any:
+    """Sub-sentence token-level hallucination attribution and bipartite grounding graph."""
+    from promptdiff.evaluators.hallucination_graph import TokenAttributionEvaluator
+
+    evaluator = TokenAttributionEvaluator()
+    return evaluator.analyze(output_text=output_text, context_text=context_text)
+
+
+def attack_tree(prompt: str, model: str = "gpt-4o", max_turns: int = 3, mock: bool = True) -> Any:
+    """Autonomous Multi-Turn Red-Teaming & Jailbreak Attack Tree (TAP / PAIR)."""
+    from promptdiff.security.attack_tree import MultiTurnAttackTreeFuzzer
+
+    fuzzer = MultiTurnAttackTreeFuzzer(target_prompt=prompt, model_name=model, max_turns=max_turns, force_mock=mock)
+    return fuzzer.run_fuzz_sync()
+
+
+def profile_streaming(
+    prompt: str,
+    model: str = "gpt-4o",
+    token_count: int = 30,
+    target_ttft_ms: float = 400.0,
+) -> Any:
+    """Microsecond streaming TTFT and Inter-Token Latency (ITL) profiler."""
+    from promptdiff.production.streaming_profiler import AsyncStreamingProfiler
+
+    profiler = AsyncStreamingProfiler(target_ttft_sla_ms=target_ttft_ms)
+    return asyncio.run(profiler.simulate_streaming_profiling(prompt=prompt, model_name=model, token_count=token_count))
+
+
+def simulate_cascade(
+    queries: list[str],
+    monthly_volume: int = 1_000_000,
+    baseline_model: str = "gpt-4o",
+) -> Any:
+    """Simulate confidence-aware model cascading and ROI savings."""
+    from promptdiff.production.routing import ConfidenceCascadeRouter
+
+    router = ConfidenceCascadeRouter()
+    return router.forecast_roi(queries=queries, monthly_volume=monthly_volume, baseline_model=baseline_model)
+
+
+def launch_studio(host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True) -> Any:
+    """Launch local-first PromptDiff Studio Web server."""
+    from promptdiff.cli.studio import launch_studio as _launch
+
+    return _launch(host=host, port=port, open_browser=open_browser)
+
+
+def test_hypothesis(v1_scores: list[float], v2_scores: list[float], alpha: float = 0.05) -> Any:
+    """Compute Paired Wilcoxon Signed-Rank Test & Bootstrap Confidence Intervals."""
+    from promptdiff.core.hypothesis_testing import compute_paired_wilcoxon
+
+    return compute_paired_wilcoxon(v1_scores, v2_scores, alpha=alpha)
+
+
+def generate_hard_negatives(prompt: str) -> Any:
+    """Synthesize adversarial boundary hard-negative test cases for a prompt."""
+    from promptdiff.generators.hard_negatives import HardNegativeGenerator
+
+    gen = HardNegativeGenerator()
+    return gen.generate(prompt)
+
+
+def synthesize_dpo(report: DiffReport) -> Any:
+    """Synthesize DPO preference pairs (prompt, chosen, rejected) from DiffReport."""
+    from promptdiff.generators.dpo_synthesizer import DPOSynthesizer
+
+    synth = DPOSynthesizer()
+    return synth.synthesize(report)
+
+
+def select_exemplars_mmr(query: str, pool: list[Any], top_k: int = 3, diversity_lambda: float = 0.65) -> Any:
+    """Select diverse prompt exemplars using Maximal Marginal Relevance."""
+    from promptdiff.optimizer.mmr_selector import MMRExemplarSelector
+
+    selector = MMRExemplarSelector(diversity_lambda=diversity_lambda)
+    return selector.select(query=query, pool=pool, top_k=top_k)
+
+
+def saliency_heatmap(prompt: str) -> Any:
+    """Compute token occlusion sensitivity attribution heatmap."""
+    from promptdiff.optimizer.saliency_heatmap import SaliencyHeatmapEngine
+
+    engine = SaliencyHeatmapEngine()
+    return engine.analyze_heuristics(prompt)
+
+
+def optimize_prefix_cache(prompt: str) -> Any:
+    """Optimize prompt template for maximum KV-cache prefix hits."""
+    from promptdiff.optimizer.prefix_warmup import PrefixCacheOptimizer
+
+    opt = PrefixCacheOptimizer()
+    return opt.optimize(prompt)
+
+
+def detect_drift(values: list[float], target_mean: float = 200.0) -> Any:
+    """Run sequential CUSUM change-point drift detector on streaming metric series."""
+    from promptdiff.production.drift_detector import CUSUMDriftDetector
+
+    detector = CUSUMDriftDetector(target_mean=target_mean)
+    return detector.analyze_series(values)
+
+
+def diff_ast(json1: str, json2: str) -> Any:
+    """Perform structural AST diff on structured output JSON payloads."""
+    from promptdiff.diff.ast_diff import ASTStructuredDiffer
+
+    differ = ASTStructuredDiffer()
+    return differ.diff_json(json1, json2)
+
+
+def sanitize_input(text: str) -> Any:
+    """Screen and sanitize prompt input against steganography and prompt injections."""
+    from promptdiff.security.defense_shield import InputDefenseShield
+
+    shield = InputDefenseShield()
+    return shield.sanitize(text)
+
+
+def detect_watermark(text: str) -> Any:
+    """Compute Kirchenbauer statistical green/red token watermark z-score."""
+    from promptdiff.security.stego_detector import StatisticalWatermarkDetector
+
+    detector = StatisticalWatermarkDetector()
+    return detector.test_text(text)
+
+
+def benchmark_reflexion(scores: list[float]) -> Any:
+    """Benchmark multi-step self-refinement convergence and stopping criteria."""
+    from promptdiff.optimizer.reflexion_bench import ReflexionConvergenceBenchmark
+
+    bench = ReflexionConvergenceBenchmark()
+    return bench.evaluate_trajectory(scores)
+
+
+def benchmark_needle_matrix() -> Any:
+    """Benchmark multi-depth 2D Needle-in-a-Haystack retrieval matrix."""
+    from promptdiff.evaluators.needle_matrix import NeedleMatrixEvaluator
+
+    evaluator = NeedleMatrixEvaluator()
+    return evaluator.benchmark_mock()
+
+
+def scaffold_editor_extensions(output_dir: str = ".") -> Any:
+    """Scaffold VS Code and Cursor extension configurations for PromptDiff LSP."""
+    from promptdiff.lsp.extension_gen import ExtensionScaffolder
+
+    scaffolder = ExtensionScaffolder()
+    return scaffolder.scaffold(output_dir)
+
+
+def export_executive_report(report: DiffReport, project_name: str = "Enterprise AI Assistant") -> Any:
+    """Generate C-Suite presentation scorecard and sign-off briefing."""
+    from promptdiff.reporters.executive import ExecutiveReportExporter
+
+    exporter = ExecutiveReportExporter()
+    return exporter.generate(report, project_name=project_name)

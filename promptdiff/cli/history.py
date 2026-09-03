@@ -61,13 +61,15 @@ def get_git_file_revisions(file_path: str, max_commits: int = 5) -> list[dict[st
                 continue
             parts = line.split("|")
             if len(parts) >= 5:
-                revisions.append({
-                    "hash": parts[0],
-                    "short_hash": parts[1],
-                    "message": parts[2],
-                    "author": parts[3],
-                    "date": parts[4],
-                })
+                revisions.append(
+                    {
+                        "hash": parts[0],
+                        "short_hash": parts[1],
+                        "message": parts[2],
+                        "author": parts[3],
+                        "date": parts[4],
+                    }
+                )
         return revisions
     except Exception as e:
         logger.warning(f"Could not retrieve Git history: {e}")

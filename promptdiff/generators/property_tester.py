@@ -106,12 +106,14 @@ class PropertyBasedTester:
             # Check invariants
             for inv in self.invariants:
                 if not inv.check_fn(output, rand_vars):
-                    failing.append({
-                        "iteration": i + 1,
-                        "invariant": inv.name,
-                        "input_vars": rand_vars,
-                        "violating_output": output[:150],
-                    })
+                    failing.append(
+                        {
+                            "iteration": i + 1,
+                            "invariant": inv.name,
+                            "input_vars": rand_vars,
+                            "violating_output": output[:150],
+                        }
+                    )
 
         violations = len(failing)
         passed = (self.num_iterations * len(self.invariants)) - violations

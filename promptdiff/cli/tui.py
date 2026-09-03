@@ -27,6 +27,7 @@ try:
         TabPane,
         TextArea,
     )
+
     TEXTUAL_INSTALLED = True
 except ImportError:
     TEXTUAL_INSTALLED = False
@@ -146,14 +147,10 @@ class PromptDiffTUI(App[None]):
     ):
         super().__init__()
         self.v1_initial = (
-            Path(v1_path).read_text(encoding="utf-8")
-            if v1_path and Path(v1_path).is_file()
-            else DEFAULT_V1
+            Path(v1_path).read_text(encoding="utf-8") if v1_path and Path(v1_path).is_file() else DEFAULT_V1
         )
         self.v2_initial = (
-            Path(v2_path).read_text(encoding="utf-8")
-            if v2_path and Path(v2_path).is_file()
-            else DEFAULT_V2
+            Path(v2_path).read_text(encoding="utf-8") if v2_path and Path(v2_path).is_file() else DEFAULT_V2
         )
         self.dataset_initial = dataset_path or "testcases.jsonl"
         self.model_name = model
@@ -176,7 +173,9 @@ class PromptDiffTUI(App[None]):
         # Middle Toolbar
         with Horizontal(classes="controls-row"):
             yield Label("Dataset: ", classes="pane-title")
-            yield Input(value=self.dataset_initial, placeholder="testcases.jsonl", id="inp_dataset", classes="control-input")
+            yield Input(
+                value=self.dataset_initial, placeholder="testcases.jsonl", id="inp_dataset", classes="control-input"
+            )
             yield Checkbox("Offline Mock Mode", value=self.mock_mode, id="chk_mock")
             yield Button("▶ Run Evaluation (R)", id="btn_run", classes="btn-run")
             yield Button("🧹 Clear (C)", id="btn_clear", classes="btn-clear")
@@ -354,12 +353,12 @@ class PromptDiffTUI(App[None]):
         fc = calculate_forecast(v.total_cost_v1, v.total_cost_v2, report.total_cases, 100_000)
 
         kpi_text = f"""
-[bold cyan]⚡ PROMPTDIFF REGRESSION VERDICT:[/bold cyan] [bold {'green' if v.passed else 'red'}]{v.status}[/bold {'green' if v.passed else 'red'}]
+[bold cyan]⚡ PROMPTDIFF REGRESSION VERDICT:[/bold cyan] [bold {"green" if v.passed else "red"}]{v.status}[/bold {"green" if v.passed else "red"}]
 
 [bold white]Performance Summary:[/bold white]
-- [bold]Total Token Cost:[/bold] ${v.total_cost_v1:.6f} ➔ ${v.total_cost_v2:.6f} ([bold {'green' if v.cost_delta_pct <= 0 else 'red'}]{v.cost_delta_pct:+.1f}%[/bold {'green' if v.cost_delta_pct <= 0 else 'red'}])
-- [bold]Avg Latency:[/bold] {v.avg_latency_v1:.1f}ms ➔ {v.avg_latency_v2:.1f}ms ([bold {'green' if v.latency_delta_pct <= 0 else 'red'}]{v.latency_delta_pct:+.1f}%[/bold {'green' if v.latency_delta_pct <= 0 else 'red'}])
-- [bold]Test Cases Passed:[/bold] {report.aggregate_stats.get('passed_cases', len(test_cases))} / {len(test_cases)}
+- [bold]Total Token Cost:[/bold] ${v.total_cost_v1:.6f} ➔ ${v.total_cost_v2:.6f} ([bold {"green" if v.cost_delta_pct <= 0 else "red"}]{v.cost_delta_pct:+.1f}%[/bold {"green" if v.cost_delta_pct <= 0 else "red"}])
+- [bold]Avg Latency:[/bold] {v.avg_latency_v1:.1f}ms ➔ {v.avg_latency_v2:.1f}ms ([bold {"green" if v.latency_delta_pct <= 0 else "red"}]{v.latency_delta_pct:+.1f}%[/bold {"green" if v.latency_delta_pct <= 0 else "red"}])
+- [bold]Test Cases Passed:[/bold] {report.aggregate_stats.get("passed_cases", len(test_cases))} / {len(test_cases)}
 
 [bold yellow]💰 Projected Production Cost Impact (100,000 reqs/day):[/bold yellow]
 - [bold]Baseline Monthly Spend:[/bold] ${fc.v1_monthly_cost:,.2f}

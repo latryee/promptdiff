@@ -28,6 +28,107 @@ def pytest_configure(config: Any) -> None:
     )
 
 
+class PromptDiffPluginHelper:
+    """Pytest test fixture helper providing both async and sync prompt regression comparisons."""
+
+    async def compare(
+        self,
+        v1: str,
+        v2: str,
+        test_cases: Any = None,
+        dataset: Any = None,
+        model: str = "gpt-4o",
+        model_v1: Optional[str] = None,
+        model_v2: Optional[str] = None,
+        eval_metrics: str = "json_validity,latency,cost,similarity,llm_judge",
+        assert_rules: Optional[list[str]] = None,
+        mock: bool = True,
+        concurrency: int = 4,
+    ) -> DiffReport:
+        """Run asynchronous regression comparison (as demonstrated in README)."""
+        from promptdiff.sdk import async_compare as sdk_async_compare
+
+        cases = test_cases if test_cases is not None else dataset
+        return await sdk_async_compare(
+            v1=v1,
+            v2=v2,
+            dataset=cases,
+            model=model,
+            model_v1=model_v1,
+            model_v2=model_v2,
+            eval_metrics=eval_metrics,
+            assertions=assert_rules,
+            mock=mock,
+            concurrency=concurrency,
+        )
+
+    async def async_compare(
+        self,
+        v1: str,
+        v2: str,
+        test_cases: Any = None,
+        dataset: Any = None,
+        model: str = "gpt-4o",
+        model_v1: Optional[str] = None,
+        model_v2: Optional[str] = None,
+        eval_metrics: str = "json_validity,latency,cost,similarity,llm_judge",
+        assert_rules: Optional[list[str]] = None,
+        mock: bool = True,
+        concurrency: int = 4,
+    ) -> DiffReport:
+        """Explicit async regression comparison."""
+        return await self.compare(
+            v1=v1,
+            v2=v2,
+            test_cases=test_cases,
+            dataset=dataset,
+            model=model,
+            model_v1=model_v1,
+            model_v2=model_v2,
+            eval_metrics=eval_metrics,
+            assert_rules=assert_rules,
+            mock=mock,
+            concurrency=concurrency,
+        )
+
+    def sync_compare(
+        self,
+        v1: str,
+        v2: str,
+        test_cases: Any = None,
+        dataset: Any = None,
+        model: str = "gpt-4o",
+        model_v1: Optional[str] = None,
+        model_v2: Optional[str] = None,
+        eval_metrics: str = "json_validity,latency,cost,similarity,llm_judge",
+        assert_rules: Optional[list[str]] = None,
+        mock: bool = True,
+        concurrency: int = 4,
+    ) -> DiffReport:
+        """Synchronous prompt comparison."""
+        from promptdiff.sdk import compare as sdk_compare
+
+        cases = test_cases if test_cases is not None else dataset
+        return sdk_compare(
+            v1=v1,
+            v2=v2,
+            dataset=cases,
+            model=model,
+            model_v1=model_v1,
+            model_v2=model_v2,
+            eval_metrics=eval_metrics,
+            assertions=assert_rules,
+            mock=mock,
+            concurrency=concurrency,
+        )
+
+
+@pytest.fixture
+def prompt_diff() -> PromptDiffPluginHelper:
+    """Pytest fixture providing `prompt_diff` helper with `await prompt_diff.compare(...)`."""
+    return PromptDiffPluginHelper()
+
+
 @pytest.fixture
 def promptdiff_eval() -> Callable[..., DiffReport]:
     """Pytest fixture providing synchronous prompt evaluation helper."""
@@ -50,6 +151,7 @@ def promptdiff_eval() -> Callable[..., DiffReport]:
         p1 = load_prompt_file(v1, version_name="v1", model=m1)
         p2 = load_prompt_file(v2, version_name="v2", model=m2)
         from promptdiff.sdk import _resolve_testcases
+
         test_cases = _resolve_testcases(dataset)
 
         prov1 = get_provider(model_name=m1, force_mock=mock)

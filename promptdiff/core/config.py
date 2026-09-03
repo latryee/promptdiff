@@ -30,7 +30,9 @@ class ProjectConfig(BaseModel):
     cache: bool = True
 
 
-def load_prompt_file(file_path: str, version_name: str = "v1", model: str = "gpt-4o", temperature: float = 0.0) -> PromptVersion:
+def load_prompt_file(
+    file_path: str, version_name: str = "v1", model: str = "gpt-4o", temperature: float = 0.0
+) -> PromptVersion:
     """Load prompt template from a local file or string.
 
     Args:
@@ -88,14 +90,14 @@ def load_dataset(dataset_path: str | None) -> list[TestCase]:
                 if not line:
                     continue
                 data = json.loads(line)
-                test_cases.append(_parse_testcase_dict(data, f"case_{i+1}"))
+                test_cases.append(_parse_testcase_dict(data, f"case_{i + 1}"))
 
     elif suffix == ".json":
         with open(path, encoding="utf-8") as f:
             raw_data = json.load(f)
             if isinstance(raw_data, list):
                 for i, item in enumerate(raw_data):
-                    test_cases.append(_parse_testcase_dict(item, f"case_{i+1}"))
+                    test_cases.append(_parse_testcase_dict(item, f"case_{i + 1}"))
             elif isinstance(raw_data, dict):
                 test_cases.append(_parse_testcase_dict(raw_data, "case_1"))
 
@@ -104,23 +106,25 @@ def load_dataset(dataset_path: str | None) -> list[TestCase]:
             raw_data = yaml.safe_load(f)
             if isinstance(raw_data, list):
                 for i, item in enumerate(raw_data):
-                    test_cases.append(_parse_testcase_dict(item, f"case_{i+1}"))
+                    test_cases.append(_parse_testcase_dict(item, f"case_{i + 1}"))
             elif isinstance(raw_data, dict):
                 cases = raw_data.get("testcases", raw_data.get("tests", [raw_data]))
                 if isinstance(cases, list):
                     for i, item in enumerate(cases):
-                        test_cases.append(_parse_testcase_dict(item, f"case_{i+1}"))
+                        test_cases.append(_parse_testcase_dict(item, f"case_{i + 1}"))
 
     elif suffix == ".csv":
         with open(path, encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for i, row in enumerate(reader):
-                test_cases.append(TestCase(
-                    id=row.get("id", f"case_{i+1}"),
-                    description=row.get("description", ""),
-                    vars=dict(row),
-                    expected_output=row.get("expected_output"),
-                ))
+                test_cases.append(
+                    TestCase(
+                        id=row.get("id", f"case_{i + 1}"),
+                        description=row.get("description", ""),
+                        vars=dict(row),
+                        expected_output=row.get("expected_output"),
+                    )
+                )
     else:
         raise ValueError(f"Unsupported dataset format: {suffix}. Supported formats: .jsonl, .json, .yaml, .csv")
 
@@ -142,7 +146,11 @@ def _parse_testcase_dict(data: dict[str, Any], default_id: str) -> TestCase:
         variables = data["inputs"]
     else:
         # Treat all top-level keys except metadata as variables
-        variables = {k: v for k, v in data.items() if k not in {"id", "description", "expected_output", "expected", "schema", "tags"}}
+        variables = {
+            k: v
+            for k, v in data.items()
+            if k not in {"id", "description", "expected_output", "expected", "schema", "tags"}
+        }
 
     return TestCase(
         id=str(tc_id),

@@ -49,9 +49,7 @@ def test_load_dataset_json(tmp_path: Path):
 def test_load_dataset_yaml(tmp_path: Path):
     yaml_file = tmp_path / "cases.yaml"
     yaml_file.write_text(
-        "- id: tc_yaml_1\n"
-        "  vars:\n"
-        "    query: hello yaml\n",
+        "- id: tc_yaml_1\n  vars:\n    query: hello yaml\n",
         encoding="utf-8",
     )
 
@@ -72,9 +70,7 @@ def test_load_dataset_csv(tmp_path: Path):
 def test_load_project_config(tmp_path: Path):
     cfg_file = tmp_path / "promptdiff.yaml"
     cfg_file.write_text(
-        "model: claude-3-5-sonnet\n"
-        "temperature: 0.2\n"
-        "evaluators: [json_validity, latency]\n",
+        "model: claude-3-5-sonnet\ntemperature: 0.2\nevaluators: [json_validity, latency]\n",
         encoding="utf-8",
     )
 

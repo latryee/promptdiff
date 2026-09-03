@@ -164,6 +164,7 @@ class AnswerRelevanceEvaluator(BaseEvaluator):
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 import concurrent.futures
+
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     return pool.submit(
                         asyncio.run,

@@ -47,7 +47,9 @@ class FaithfulnessEvaluator(BaseEvaluator):
     """Evaluates factual consistency and groundedness against retrieval context."""
 
     name: str = "faithfulness"
-    description: str = "RAG Groundedness & Hallucination check against provided context (1.0 = Fully Faithful, 0.0 = Hallucinated)"
+    description: str = (
+        "RAG Groundedness & Hallucination check against provided context (1.0 = Fully Faithful, 0.0 = Hallucinated)"
+    )
 
     def __init__(
         self,
@@ -94,11 +96,7 @@ class FaithfulnessEvaluator(BaseEvaluator):
         if hallu_match:
             raw_h = hallu_match.group(1).strip()
             if raw_h and "none" not in raw_h.lower():
-                hallucinations = [
-                    re.sub(r"^[- *•\s]+", "", line).strip()
-                    for line in raw_h.split("\n")
-                    if line.strip()
-                ]
+                hallucinations = [re.sub(r"^[- *•\s]+", "", line).strip() for line in raw_h.split("\n") if line.strip()]
 
         return max(0.0, min(1.0, score)), hallucinations
 
@@ -189,6 +187,7 @@ class FaithfulnessEvaluator(BaseEvaluator):
             loop = asyncio.get_event_loop()
             if loop.is_running():
                 import concurrent.futures
+
                 with concurrent.futures.ThreadPoolExecutor() as pool:
                     return pool.submit(
                         asyncio.run,

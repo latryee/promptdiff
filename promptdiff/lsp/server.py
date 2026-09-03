@@ -23,8 +23,6 @@ class PromptDiagnostic:
     code: str
 
 
-
-
 class PromptLanguageServer:
     """LSP and diagnostic analyzer for .txt and .jinja2 prompt files."""
 
@@ -88,4 +86,4 @@ class PromptLanguageServer:
         diags = self.analyze_file(file_path)
         print(f"Diagnostics for {file_path}:")
         for d in diags:
-            print(f"[{d.severity}] Line {d.line+1}: {d.message} ({d.code})")
+            print(f"[{d.severity}] Line {d.line + 1}: {d.message} ({d.code})")

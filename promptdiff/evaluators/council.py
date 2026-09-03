@@ -72,8 +72,15 @@ class CouncilOfJudgesEvaluator(BaseEvaluator):
             # Deterministic mock votes
             votes = [
                 JudgeVote(model_name="gpt-4o", v1_score=4.0, v2_score=4.8, reasoning="Candidate is more concise."),
-                JudgeVote(model_name="claude-3-5-sonnet", v1_score=4.2, v2_score=4.9, reasoning="Strong formatting compliance."),
-                JudgeVote(model_name="gemini-2.0-flash", v1_score=4.0, v2_score=4.7, reasoning="Follows system prompt rules."),
+                JudgeVote(
+                    model_name="claude-3-5-sonnet",
+                    v1_score=4.2,
+                    v2_score=4.9,
+                    reasoning="Strong formatting compliance.",
+                ),
+                JudgeVote(
+                    model_name="gemini-2.0-flash", v1_score=4.0, v2_score=4.7, reasoning="Follows system prompt rules."
+                ),
             ]
         else:
             tasks = []

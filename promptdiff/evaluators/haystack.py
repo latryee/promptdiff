@@ -59,9 +59,11 @@ class NeedleInAHaystackTester:
         self.force_mock = force_mock
 
     def _generate_filler_text(self, target_words: int) -> str:
-        base_sentence = "The annual corporate financial report contains comprehensive quarterly metrics and operational updates. "
+        base_sentence = (
+            "The annual corporate financial report contains comprehensive quarterly metrics and operational updates. "
+        )
         repeats = max(1, target_words // 12)
-        return (base_sentence * repeats)[:target_words * 6]
+        return (base_sentence * repeats)[: target_words * 6]
 
     def construct_haystack(self, context_tokens: int, depth_pct: int) -> str:
         """Embed needle at depth percentage in filler context."""
@@ -94,7 +96,11 @@ class NeedleInAHaystackTester:
                 if self.force_mock:
                     # In mock mode, middle depths on >16k contexts occasionally fail (realistic Lost in the Middle)
                     success = not (ctx_len >= 32000 and depth in (40, 50, 60))
-                    output = f"The secret code is {EXPECTED_ANSWER}." if success else "I could not find the code in the document."
+                    output = (
+                        f"The secret code is {EXPECTED_ANSWER}."
+                        if success
+                        else "I could not find the code in the document."
+                    )
                     lat = 120.0 + (ctx_len * 0.01)
                 else:
                     try:

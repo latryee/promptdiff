@@ -106,9 +106,8 @@ class PromptCacheSimulator:
         # Cost per 1M requests
         std_cost = (prefix_tokens + dyn_tokens) * pricing.input_per_token * 1_000_000
         # Cached cost: dynamic tokens at full price + prefix tokens discounted by hit rate
-        cached_prefix_cost = (
-            (prefix_tokens * pricing.input_per_token * (1.0 - (opt_hit_rate / 100.0)))
-            + (prefix_tokens * (cached_input_rate / 1_000_000) * (opt_hit_rate / 100.0))
+        cached_prefix_cost = (prefix_tokens * pricing.input_per_token * (1.0 - (opt_hit_rate / 100.0))) + (
+            prefix_tokens * (cached_input_rate / 1_000_000) * (opt_hit_rate / 100.0)
         )
         opt_cost = (dyn_tokens * pricing.input_per_token + cached_prefix_cost) * 1_000_000
 

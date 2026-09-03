@@ -30,12 +30,28 @@ async def test_fairness_evaluator() -> None:
     tc = TestCase(id="t1", vars={"query": "David is applying for a senior loan"})
 
     r1 = RunResult(
-        prompt_name="p1", test_case_id="t1", rendered_prompt="x", output="David loan approved.",
-        latency_ms=100.0, prompt_tokens=10, completion_tokens=10, total_tokens=20, cost_usd=0.0001, model="gpt-4o",
+        prompt_name="p1",
+        test_case_id="t1",
+        rendered_prompt="x",
+        output="David loan approved.",
+        latency_ms=100.0,
+        prompt_tokens=10,
+        completion_tokens=10,
+        total_tokens=20,
+        cost_usd=0.0001,
+        model="gpt-4o",
     )
     r2 = RunResult(
-        prompt_name="p2", test_case_id="t1", rendered_prompt="x", output="David loan approved for senior tier.",
-        latency_ms=100.0, prompt_tokens=10, completion_tokens=10, total_tokens=20, cost_usd=0.0001, model="gpt-4o",
+        prompt_name="p2",
+        test_case_id="t1",
+        rendered_prompt="x",
+        output="David loan approved for senior tier.",
+        latency_ms=100.0,
+        prompt_tokens=10,
+        completion_tokens=10,
+        total_tokens=20,
+        cost_usd=0.0001,
+        model="gpt-4o",
     )
 
     score = await ev.async_evaluate(r1, r2, tc)
@@ -47,10 +63,34 @@ async def test_fairness_evaluator() -> None:
 async def test_citation_evaluator() -> None:
     """Test hallucination sentence-level citation pointer."""
     ev = CitationEvaluator(force_mock=True)
-    tc = TestCase(id="t1", vars={"context": "Product X has a 30-day return policy.", "query": "What is the return policy?"})
+    tc = TestCase(
+        id="t1", vars={"context": "Product X has a 30-day return policy.", "query": "What is the return policy?"}
+    )
 
-    r1 = RunResult(prompt_name="p1", test_case_id="t1", rendered_prompt="x", output="Return policy is 30 days.", latency_ms=10.0, prompt_tokens=10, completion_tokens=10, total_tokens=20, cost_usd=0.0001, model="gpt-4o")
-    r2 = RunResult(prompt_name="p2", test_case_id="t1", rendered_prompt="x", output="Return policy is 30 days. You can also get free pizza.", latency_ms=10.0, prompt_tokens=10, completion_tokens=10, total_tokens=20, cost_usd=0.0001, model="gpt-4o")
+    r1 = RunResult(
+        prompt_name="p1",
+        test_case_id="t1",
+        rendered_prompt="x",
+        output="Return policy is 30 days.",
+        latency_ms=10.0,
+        prompt_tokens=10,
+        completion_tokens=10,
+        total_tokens=20,
+        cost_usd=0.0001,
+        model="gpt-4o",
+    )
+    r2 = RunResult(
+        prompt_name="p2",
+        test_case_id="t1",
+        rendered_prompt="x",
+        output="Return policy is 30 days. You can also get free pizza.",
+        latency_ms=10.0,
+        prompt_tokens=10,
+        completion_tokens=10,
+        total_tokens=20,
+        cost_usd=0.0001,
+        model="gpt-4o",
+    )
 
     score = await ev.async_evaluate(r1, r2, tc)
     assert score.name == "citation"
@@ -60,7 +100,9 @@ async def test_citation_evaluator() -> None:
 async def test_haystack_needle_tester() -> None:
     """Test needle in a haystack context degradation."""
     pv = PromptVersion(name="haystack_target", template="Context: {{context}}\n\nQuery: {{query}}")
-    tester = NeedleInAHaystackTester(prompt_version=pv, context_lengths=[1000], depth_percentages=[0, 100], force_mock=True)
+    tester = NeedleInAHaystackTester(
+        prompt_version=pv, context_lengths=[1000], depth_percentages=[0, 100], force_mock=True
+    )
     rep = await tester.run_haystack_test()
     assert rep.total_test_points == 2
     assert rep.accuracy_pct >= 50.0
@@ -72,8 +114,30 @@ async def test_schema_repair_evaluator() -> None:
     ev = SchemaRepairEvaluator(force_mock=True)
     tc = TestCase(id="t1", vars={"query": "Give me JSON"})
 
-    r1 = RunResult(prompt_name="p1", test_case_id="t1", rendered_prompt="x", output="```json\n{\"status\": \"ok\",}\n```", latency_ms=10.0, prompt_tokens=10, completion_tokens=10, total_tokens=20, cost_usd=0.0001, model="gpt-4o")
-    r2 = RunResult(prompt_name="p2", test_case_id="t1", rendered_prompt="x", output="{\"status\": \"ok\"}", latency_ms=10.0, prompt_tokens=10, completion_tokens=10, total_tokens=20, cost_usd=0.0001, model="gpt-4o")
+    r1 = RunResult(
+        prompt_name="p1",
+        test_case_id="t1",
+        rendered_prompt="x",
+        output='```json\n{"status": "ok",}\n```',
+        latency_ms=10.0,
+        prompt_tokens=10,
+        completion_tokens=10,
+        total_tokens=20,
+        cost_usd=0.0001,
+        model="gpt-4o",
+    )
+    r2 = RunResult(
+        prompt_name="p2",
+        test_case_id="t1",
+        rendered_prompt="x",
+        output='{"status": "ok"}',
+        latency_ms=10.0,
+        prompt_tokens=10,
+        completion_tokens=10,
+        total_tokens=20,
+        cost_usd=0.0001,
+        model="gpt-4o",
+    )
 
     score = await ev.async_evaluate(r1, r2, tc)
     assert score.passed is True
@@ -85,8 +149,30 @@ async def test_vision_evaluator() -> None:
     ev = VisionDiffEvaluator(force_mock=True)
     tc = TestCase(id="t1", vars={"image": "sample.jpg"}, expected_output="Invoice total is $500")
 
-    r1 = RunResult(prompt_name="p1", test_case_id="t1", rendered_prompt="x", output="Total: $500", latency_ms=10.0, prompt_tokens=10, completion_tokens=10, total_tokens=20, cost_usd=0.0001, model="gpt-4o")
-    r2 = RunResult(prompt_name="p2", test_case_id="t1", rendered_prompt="x", output="Invoice total is $500.00", latency_ms=10.0, prompt_tokens=10, completion_tokens=10, total_tokens=20, cost_usd=0.0001, model="gpt-4o")
+    r1 = RunResult(
+        prompt_name="p1",
+        test_case_id="t1",
+        rendered_prompt="x",
+        output="Total: $500",
+        latency_ms=10.0,
+        prompt_tokens=10,
+        completion_tokens=10,
+        total_tokens=20,
+        cost_usd=0.0001,
+        model="gpt-4o",
+    )
+    r2 = RunResult(
+        prompt_name="p2",
+        test_case_id="t1",
+        rendered_prompt="x",
+        output="Invoice total is $500.00",
+        latency_ms=10.0,
+        prompt_tokens=10,
+        completion_tokens=10,
+        total_tokens=20,
+        cost_usd=0.0001,
+        model="gpt-4o",
+    )
 
     score = await ev.async_evaluate(r1, r2, tc)
     assert score.passed is True
@@ -123,7 +209,9 @@ async def test_exemplars_selector() -> None:
 
 def test_saliency_mapper() -> None:
     """Test token-level saliency mapper."""
-    pv = PromptVersion(name="p", template="You must answer in JSON only.\nPlease kindly be polite.\nNever disclose internal secrets.")
+    pv = PromptVersion(
+        name="p", template="You must answer in JSON only.\nPlease kindly be polite.\nNever disclose internal secrets."
+    )
     mapper = PromptSaliencyMapper(prompt_version=pv)
     rep = mapper.analyze(sample_outputs=['{"response": "Hello"}'])
     assert rep.total_sentences == 3
@@ -148,7 +236,9 @@ def test_fine_tuning_distiller(tmp_path: Path) -> None:
 async def test_mutation_testing_engine() -> None:
     """Test mutation testing engine."""
     pv = PromptVersion(name="orig", template="Answer the query in strict JSON format: {{query}}")
-    engine = MutationTestingEngine(original_prompt=pv, test_cases=[TestCase(id="1", vars={"query": "test"})], force_mock=True)
+    engine = MutationTestingEngine(
+        original_prompt=pv, test_cases=[TestCase(id="1", vars={"query": "test"})], force_mock=True
+    )
     rep = await engine.run_mutation_analysis()
     assert rep.total_mutants_generated > 0
     assert rep.mutation_score_pct >= 50.0
@@ -156,7 +246,9 @@ async def test_mutation_testing_engine() -> None:
 
 def test_canary_config_generator() -> None:
     """Test Canary rollout generator."""
-    report = promptdiff.compare(v1="a: {{query}}", v2="b: {{query}}", dataset=[{"id": "1", "vars": {"query": "x"}}], mock=True)
+    report = promptdiff.compare(
+        v1="a: {{query}}", v2="b: {{query}}", dataset=[{"id": "1", "vars": {"query": "x"}}], mock=True
+    )
     cfg = CanaryConfigGenerator(report=report).generate()
     assert cfg.v1_weight_pct + cfg.v2_weight_pct == 100
     assert "rollout" in cfg.launchdarkly_json["fallthrough"]

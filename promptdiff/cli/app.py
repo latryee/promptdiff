@@ -189,12 +189,16 @@ def _run_test_suite(
     if mlflow:
         ok = log_to_mlflow(report, experiment_name=mlflow_experiment)
         if ok:
-            console.print(f"[bold green][+] Telemetry logged to MLflow experiment:[/bold green] [cyan]{mlflow_experiment}[/cyan]")
+            console.print(
+                f"[bold green][+] Telemetry logged to MLflow experiment:[/bold green] [cyan]{mlflow_experiment}[/cyan]"
+            )
 
     if wandb:
         ok = log_to_wandb(report, project=wandb_project)
         if ok:
-            console.print(f"[bold green][+] Telemetry logged to Weights & Biases project:[/bold green] [cyan]{wandb_project}[/cyan]")
+            console.print(
+                f"[bold green][+] Telemetry logged to Weights & Biases project:[/bold green] [cyan]{wandb_project}[/cyan]"
+            )
 
     if otel:
         export_to_opentelemetry(report)
@@ -205,7 +209,9 @@ def _run_test_suite(
         console.print("[bold green][+] Langfuse telemetry exported successfully.[/bold green]")
 
     if fail_on_regression and not report.verdict.passed:
-        console.print("[bold red][!] CI/CD Quality Gate: Regression threshold violated. Exiting with code 1.[/bold red]")
+        console.print(
+            "[bold red][!] CI/CD Quality Gate: Regression threshold violated. Exiting with code 1.[/bold red]"
+        )
         raise typer.Exit(code=1)
 
 
@@ -228,12 +234,20 @@ def test_cmd(
     assertions: list[str] | None = typer.Option(None, "--assert", "-a", help="Regression assertion threshold"),
     mock: bool = typer.Option(False, "--mock", help="Use deterministic offline MockProvider"),
     cache_enabled: bool = typer.Option(True, "--cache/--no-cache", help="Enable or disable persistent disk cache"),
-    export_html: str | None = typer.Option(None, "--export-html", help="Path to export standalone interactive HTML report"),
-    export_markdown: str | None = typer.Option(None, "--export-markdown", help="Path to export Markdown report for GitHub PRs"),
+    export_html: str | None = typer.Option(
+        None, "--export-html", help="Path to export standalone interactive HTML report"
+    ),
+    export_markdown: str | None = typer.Option(
+        None, "--export-markdown", help="Path to export Markdown report for GitHub PRs"
+    ),
     export_json: str | None = typer.Option(None, "--export-json", help="Path to export structured JSON report"),
-    export_bundle: str | None = typer.Option(None, "--export-bundle", help="Path to export zero-dependency single-file HTML bundle"),
+    export_bundle: str | None = typer.Option(
+        None, "--export-bundle", help="Path to export zero-dependency single-file HTML bundle"
+    ),
     concurrency: int = typer.Option(4, "--concurrency", "-c", help="Number of concurrent LLM requests"),
-    fail_on_regression: bool = typer.Option(True, "--fail-on-regression/--no-fail-on-regression", help="Exit with code 1 if regressions detected"),
+    fail_on_regression: bool = typer.Option(
+        True, "--fail-on-regression/--no-fail-on-regression", help="Exit with code 1 if regressions detected"
+    ),
     mlflow: bool = typer.Option(False, "--mlflow", help="Log metrics, parameters, and artifacts to MLflow"),
     wandb: bool = typer.Option(False, "--wandb", help="Log metrics and comparison tables to Weights & Biases"),
     otel: bool = typer.Option(False, "--otel", help="Export traces to OpenTelemetry OTLP endpoint"),
@@ -241,7 +255,9 @@ def test_cmd(
     mlflow_experiment: str = typer.Option("promptdiff-evals", "--mlflow-experiment", help="MLflow experiment name"),
     wandb_project: str = typer.Option("promptdiff", "--wandb-project", help="Weights & Biases project name"),
     rubric: str | None = typer.Option(None, "--rubric", help="Custom evaluation rubric for LLM Judge"),
-    forecast: str | None = typer.Option(None, "--forecast", "-f", help="Projected daily production request volume (e.g. '1M', '500k')"),
+    forecast: str | None = typer.Option(
+        None, "--forecast", "-f", help="Projected daily production request volume (e.g. '1M', '500k')"
+    ),
 ) -> None:
     """Run regression comparison between two prompt versions across test cases."""
     _run_test_suite(
@@ -298,7 +314,9 @@ def run_cmd(
     export_json: str | None = typer.Option(None, "--export-json", help="Export JSON report"),
     export_bundle: str | None = typer.Option(None, "--export-bundle", help="Export single-file HTML bundle"),
     concurrency: int = typer.Option(4, "--concurrency", "-c", help="Concurrency limit"),
-    fail_on_regression: bool = typer.Option(True, "--fail-on-regression/--no-fail-on-regression", help="Exit code 1 on regression"),
+    fail_on_regression: bool = typer.Option(
+        True, "--fail-on-regression/--no-fail-on-regression", help="Exit code 1 on regression"
+    ),
     mlflow: bool = typer.Option(False, "--mlflow", help="Log to MLflow"),
     wandb: bool = typer.Option(False, "--wandb", help="Log to WandB"),
     otel: bool = typer.Option(False, "--otel", help="Export traces to OpenTelemetry OTLP endpoint"),
@@ -306,7 +324,9 @@ def run_cmd(
     mlflow_experiment: str = typer.Option("promptdiff-evals", "--mlflow-experiment", help="MLflow experiment name"),
     wandb_project: str = typer.Option("promptdiff", "--wandb-project", help="W&B project name"),
     rubric: str | None = typer.Option(None, "--rubric", help="Custom evaluation rubric for LLM Judge"),
-    forecast: str | None = typer.Option(None, "--forecast", "-f", help="Projected daily production request volume (e.g. '1M', '500k')"),
+    forecast: str | None = typer.Option(
+        None, "--forecast", "-f", help="Projected daily production request volume (e.g. '1M', '500k')"
+    ),
 ) -> None:
     """Run regression comparison between prompt versions (alias for `promptdiff test`)."""
     _run_test_suite(
@@ -365,7 +385,11 @@ def fuzz_cmd(
 
         report = asyncio.run(fuzzer.run_fuzz(progress_cb=on_step))
 
-    res_color = "bold green" if report.resilience_score_pct >= 90 else ("bold yellow" if report.resilience_score_pct >= 75 else "bold red")
+    res_color = (
+        "bold green"
+        if report.resilience_score_pct >= 90
+        else ("bold yellow" if report.resilience_score_pct >= 75 else "bold red")
+    )
 
     table = Table(
         title="[bold red]🛡️ Adversarial Red-Teaming & Jailbreak Security Report[/bold red]",
@@ -378,7 +402,12 @@ def fuzz_cmd(
 
     table.add_row("Total Attack Payloads", f"{report.total_attacks} vectors")
     table.add_row("Attacks Blocked", f"[green]{report.attacks_blocked} blocked[/green]")
-    table.add_row("Bypasses / Vulnerabilities", f"[red]{report.bypasses_found} bypasses found[/red]" if report.bypasses_found > 0 else "[green]0 bypasses[/green]")
+    table.add_row(
+        "Bypasses / Vulnerabilities",
+        f"[red]{report.bypasses_found} bypasses found[/red]"
+        if report.bypasses_found > 0
+        else "[green]0 bypasses[/green]",
+    )
     table.add_row("Overall Resilience Score", f"[{res_color}]{report.resilience_score_pct}% Secure[/{res_color}]")
 
     console.print()
@@ -421,6 +450,7 @@ def cache_sim_cmd(
 ) -> None:
     """Simulate and optimize Prompt / Prefix Caching hit rates & cost savings."""
     from promptdiff.pricing import parse_volume_string
+
     vol = parse_volume_string(volume)
     prompt_obj = load_prompt_file(prompt, version_name="cache_target", model=model)
 
@@ -437,10 +467,22 @@ def cache_sim_cmd(
     table.add_column("Baseline Template", style="magenta")
     table.add_column("Prefix-Optimized Template", style="green")
 
-    table.add_row("Cache Hit Rate Potential", f"{rep.original_cache_hit_rate_pct:.0f}%", f"[bold green]{rep.optimized_cache_hit_rate_pct:.0f}%[/bold green]")
+    table.add_row(
+        "Cache Hit Rate Potential",
+        f"{rep.original_cache_hit_rate_pct:.0f}%",
+        f"[bold green]{rep.optimized_cache_hit_rate_pct:.0f}%[/bold green]",
+    )
     table.add_row("Static Prefix Tokens", "-", f"{rep.prefix_tokens_cached} tokens (Eligible for cache)")
-    table.add_row("Standard Cost (1M reqs)", f"${rep.estimated_standard_cost_per_million_reqs:,.2f}", f"${rep.estimated_cached_cost_per_million_reqs:,.2f}")
-    table.add_row("Monthly Savings Forecast", "-", f"[bold green]+${rep.monthly_savings_forecast_usd:,.2f}/mo[/bold green] (at {volume}/day)")
+    table.add_row(
+        "Standard Cost (1M reqs)",
+        f"${rep.estimated_standard_cost_per_million_reqs:,.2f}",
+        f"${rep.estimated_cached_cost_per_million_reqs:,.2f}",
+    )
+    table.add_row(
+        "Monthly Savings Forecast",
+        "-",
+        f"[bold green]+${rep.monthly_savings_forecast_usd:,.2f}/mo[/bold green] (at {volume}/day)",
+    )
 
     console.print()
     console.print(table)
@@ -470,7 +512,9 @@ def mutate_cmd(
     mutated = mutator.generate_mutations()
     saved = mutator.save_to_jsonl(mutated, output)
 
-    console.print(f"[bold green][+] Generated {len(mutated)} mutated test cases from {len(test_cases)} seed cases.[/bold green]")
+    console.print(
+        f"[bold green][+] Generated {len(mutated)} mutated test cases from {len(test_cases)} seed cases.[/bold green]"
+    )
     console.print(f"[bold cyan][+] Saved to:[/bold cyan] [white]{saved}[/white]")
 
 
@@ -483,13 +527,15 @@ def history_cmd(
     mock: bool = typer.Option(False, "--mock", help="Use deterministic mock execution"),
 ) -> None:
     """Benchmark prompt regression and evolution across Git commit history."""
-    rep = asyncio.run(track_git_history(
-        prompt_file=prompt,
-        dataset_path=inputs,
-        commits_count=commits,
-        model_name=model,
-        force_mock=mock,
-    ))
+    rep = asyncio.run(
+        track_git_history(
+            prompt_file=prompt,
+            dataset_path=inputs,
+            commits_count=commits,
+            model_name=model,
+            force_mock=mock,
+        )
+    )
 
     table = Table(
         title=f"[bold yellow]📜 Git Version History Benchmark for '{Path(prompt).name}'[/bold yellow]",
@@ -525,8 +571,12 @@ def history_cmd(
 def shrink_cmd(
     prompt: str = typer.Argument(..., help="Path to prompt template file to compress"),
     inputs: str | None = typer.Option(None, "--inputs", "-i", help="Path to test dataset (.jsonl)"),
-    output: str = typer.Option("prompts/system_shrunk.txt", "--output", "-o", help="Target compressed prompt output path"),
-    target_reduction: float = typer.Option(0.30, "--target-reduction", "-r", help="Target token reduction ratio (e.g. 0.30 for 30%)"),
+    output: str = typer.Option(
+        "prompts/system_shrunk.txt", "--output", "-o", help="Target compressed prompt output path"
+    ),
+    target_reduction: float = typer.Option(
+        0.30, "--target-reduction", "-r", help="Target token reduction ratio (e.g. 0.30 for 30%)"
+    ),
     model: str = typer.Option("gpt-4o", "--model", "-m", help="Target LLM model"),
     mock: bool = typer.Option(False, "--mock", help="Use deterministic mock compression"),
 ) -> None:
@@ -616,7 +666,9 @@ def tune_cmd(
     prompt: str = typer.Argument(..., help="Path to prompt template file or raw prompt string"),
     inputs: str | None = typer.Option(None, "--inputs", "-i", help="Path to test dataset (.jsonl, .yaml, .csv, .json)"),
     model: str = typer.Option("gpt-4o", "--model", "-m", help="Target LLM model"),
-    temperatures: str = typer.Option("0.0,0.3,0.7,1.0", "--temperatures", "-t", help="Comma-separated temperature grid points"),
+    temperatures: str = typer.Option(
+        "0.0,0.3,0.7,1.0", "--temperatures", "-t", help="Comma-separated temperature grid points"
+    ),
     top_ps: str = typer.Option("0.7,0.9,1.0", "--top-ps", "-p", help="Comma-separated top_p grid points"),
     mock: bool = typer.Option(False, "--mock", help="Use deterministic mock execution"),
     concurrency: int = typer.Option(6, "--concurrency", "-c", help="Concurrency limit for evaluation"),
@@ -654,7 +706,9 @@ def tune_cmd(
         console=console,
         transient=False,
     ) as progress:
-        task = progress.add_task(f"Running grid search over {total_points} hyperparameter points...", total=total_points)
+        task = progress.add_task(
+            f"Running grid search over {total_points} hyperparameter points...", total=total_points
+        )
 
         def on_step(current: int, total: int, msg: str) -> None:
             progress.update(task, completed=current, description=f"[bold cyan]{msg}[/bold cyan]")
@@ -674,6 +728,7 @@ def tui_cmd(
 ) -> None:
     """Launch Interactive Split-Screen Terminal UI (TUI) Dashboard."""
     from promptdiff.cli.tui import launch_tui
+
     launch_tui(v1=v1, v2=v2, inputs=inputs, model=model, mock=mock)
 
 
@@ -681,8 +736,12 @@ def tui_cmd(
 def optimize_cmd(
     prompt: str = typer.Argument(..., help="Path to initial prompt template file or raw prompt string"),
     inputs: str | None = typer.Option(None, "--inputs", "-i", help="Path to test dataset (.jsonl, .yaml, .csv)"),
-    output: str = typer.Option("system_v3_optimized.txt", "--output", "-o", help="Target output path for optimized prompt"),
-    eval_metrics: str = typer.Option("json_validity,latency,cost,similarity,llm_judge", "--eval", "-e", help="Evaluation metrics"),
+    output: str = typer.Option(
+        "system_v3_optimized.txt", "--output", "-o", help="Target output path for optimized prompt"
+    ),
+    eval_metrics: str = typer.Option(
+        "json_validity,latency,cost,similarity,llm_judge", "--eval", "-e", help="Evaluation metrics"
+    ),
     model: str = typer.Option("gpt-4o", "--model", "-m", help="Target model being optimized"),
     meta_model: str = typer.Option("gpt-4o", "--meta-model", help="Meta-optimizer model (DSPy style)"),
     iterations: int = typer.Option(3, "--iterations", "-n", help="Max optimization reflection iterations"),
@@ -744,7 +803,9 @@ def optimize_cmd(
 
     summary_table.add_row("Pass Rate", f"{init_pct:.1f}%", f"{final_pct:.1f}%", f"+{diff_pct:.1f}%")
     summary_table.add_row("Iterations Run", "-", str(result.iterations), f"{result.iterations} round(s)")
-    summary_table.add_row("Failures Fixed", "-", str(result.failed_cases_addressed), f"{result.failed_cases_addressed} cases")
+    summary_table.add_row(
+        "Failures Fixed", "-", str(result.failed_cases_addressed), f"{result.failed_cases_addressed} cases"
+    )
 
     console.print()
     console.print(summary_table)
@@ -770,6 +831,7 @@ def ui_cmd(
 ) -> None:
     """Launch Streamlit Interactive Web Dashboard."""
     from promptdiff.cli.dashboard import launch_dashboard
+
     launch_dashboard(port=port, host=host, report_path=report)
 
 
@@ -781,15 +843,22 @@ def dashboard_cmd(
 ) -> None:
     """Launch Streamlit Interactive Web Dashboard (alias for `promptdiff ui`)."""
     from promptdiff.cli.dashboard import launch_dashboard
+
     launch_dashboard(port=port, host=host, report_path=report)
 
 
 @app.command(name="arena")
 def arena_cmd(
-    prompts: str = typer.Option(..., "--prompts", "-p", help="Comma-separated paths to prompt templates (e.g. 'v1.txt,v2.txt,v3.txt')"),
-    models: str = typer.Option("gpt-4o,claude-3-5-sonnet,gemini-2.0-flash", "--models", "-m", help="Comma-separated models to evaluate"),
+    prompts: str = typer.Option(
+        ..., "--prompts", "-p", help="Comma-separated paths to prompt templates (e.g. 'v1.txt,v2.txt,v3.txt')"
+    ),
+    models: str = typer.Option(
+        "gpt-4o,claude-3-5-sonnet,gemini-2.0-flash", "--models", "-m", help="Comma-separated models to evaluate"
+    ),
     inputs: str | None = typer.Option(None, "--inputs", "-i", help="Path to test dataset (.jsonl, .yaml, .csv, .json)"),
-    eval_metrics: str = typer.Option("json_validity,latency,cost,similarity,faithfulness,security", "--eval", "-e", help="Evaluation metrics"),
+    eval_metrics: str = typer.Option(
+        "json_validity,latency,cost,similarity,faithfulness,security", "--eval", "-e", help="Evaluation metrics"
+    ),
     mock: bool = typer.Option(False, "--mock", help="Use deterministic mock provider"),
     concurrency: int = typer.Option(6, "--concurrency", "-c", help="Concurrency limit"),
 ) -> None:
@@ -820,7 +889,7 @@ def arena_cmd(
     else:
         for idx, p_path in enumerate(prompt_list):
             m_name = model_list[idx % len(model_list)]
-            var_name = f"var_{idx+1}_{Path(p_path).stem}" if Path(p_path).exists() else f"var_{idx+1}"
+            var_name = f"var_{idx + 1}_{Path(p_path).stem}" if Path(p_path).exists() else f"var_{idx + 1}"
             pv = load_prompt_file(p_path, version_name=var_name, model=m_name)
             variants[var_name] = pv
             providers[var_name] = get_provider(model_name=m_name, force_mock=mock)
@@ -855,8 +924,12 @@ def arena_cmd(
 
 @app.command(name="generate-tests")
 def generate_tests_cmd(
-    description: str | None = typer.Option(None, "--desc", "-d", help="Prompt description or natural language task spec"),
-    prompt_file: str | None = typer.Option(None, "--prompt", "-p", help="Path to prompt template file to extract variables and context"),
+    description: str | None = typer.Option(
+        None, "--desc", "-d", help="Prompt description or natural language task spec"
+    ),
+    prompt_file: str | None = typer.Option(
+        None, "--prompt", "-p", help="Path to prompt template file to extract variables and context"
+    ),
     output: str = typer.Option("testcases.jsonl", "--output", "-o", help="Target output JSONL path"),
     count: int = typer.Option(50, "--count", "-n", help="Number of diverse test cases to generate"),
     model: str = typer.Option("gpt-4o", "--model", "-m", help="LLM to use for generation"),
@@ -1032,13 +1105,312 @@ def recipe_list_cmd() -> None:
 
 @recipe_app.command(name="pull")
 def recipe_pull_cmd(
-    name: str = typer.Argument(..., help="Recipe identifier (e.g. 'rag-qa', 'json-extractor', 'sql-gen', 'security-guard')"),
+    name: str = typer.Argument(
+        ..., help="Recipe identifier (e.g. 'rag-qa', 'json-extractor', 'sql-gen', 'security-guard')"
+    ),
     target_dir: str = typer.Option(".", "--target-dir", "-d", help="Directory to scaffold recipe files"),
 ) -> None:
     """Pull a curated evaluation recipe starter kit into your project."""
     from promptdiff.cli.recipes import pull_recipe
 
     pull_recipe(name=name, target_dir=target_dir)
+
+
+@app.command(name="serve")
+def serve_cmd(
+    host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host interface to bind"),
+    port: int = typer.Option(8000, "--port", "-p", help="Port to listen on"),
+) -> None:
+    """Launch FastAPI REST API Server and Interactive Playground."""
+    try:
+        import uvicorn
+
+        from promptdiff.cli.server import create_app
+
+        api_app = create_app()
+        if api_app is None:
+            console.print("[bold red]FastAPI is not installed. Install with `pip install fastapi uvicorn`.[/bold red]")
+            raise typer.Exit(code=1)
+        console.print(f"[bold green]⚡ Starting PromptDiff API Server at http://{host}:{port}[/bold green]")
+        uvicorn.run(api_app, host=host, port=port)
+    except ImportError:
+        console.print(
+            "[bold red]FastAPI or Uvicorn not installed. Run `pip install fastapi uvicorn` to enable server mode.[/bold red]"
+        )
+        raise typer.Exit(code=1)
+
+
+@app.command(name="check")
+def check_cmd(
+    paths: list[str] = typer.Argument(..., help="Prompt file(s) or directories to analyze"),
+    model: str = typer.Option("gpt-4o", "--model", "-m", help="Target model for token cost calculations"),
+) -> None:
+    """Statically lint and analyze prompt files (syntax, tokens, cost estimate, unclosed braces)."""
+    from promptdiff.lsp.server import PromptLanguageServer
+
+    server = PromptLanguageServer(model_name=model)
+
+    has_errors = False
+    files_to_check: list[Path] = []
+    for p_str in paths:
+        p = Path(p_str)
+        if p.is_file():
+            files_to_check.append(p)
+        elif p.is_dir():
+            files_to_check.extend(p.glob("**/*.txt"))
+            files_to_check.extend(p.glob("**/*.jinja2"))
+            files_to_check.extend(p.glob("**/*.prompt"))
+
+    if not files_to_check:
+        console.print("[bold yellow]No prompt files found to check.[/bold yellow]")
+        return
+
+    table = Table(title="Prompt Lint & Cost Diagnostics", header_style="bold cyan")
+    table.add_column("File", style="bold")
+    table.add_column("Line:Col", justify="right")
+    table.add_column("Severity")
+    table.add_column("Code", style="dim")
+    table.add_column("Message")
+
+    for f in files_to_check:
+        diags = server.analyze_file(str(f))
+        for d in diags:
+            if d.severity == "ERROR":
+                has_errors = True
+                sev_style = "[bold red]ERROR[/bold red]"
+            elif d.severity == "WARNING":
+                sev_style = "[yellow]WARNING[/yellow]"
+            else:
+                sev_style = "[blue]INFO[/blue]"
+
+            table.add_row(
+                str(f),
+                f"{d.line + 1}:{d.character + 1}",
+                sev_style,
+                d.code,
+                d.message,
+            )
+
+    console.print(table)
+    if has_errors:
+        raise typer.Exit(code=1)
+
+
+@app.command(name="studio")
+def studio_cmd(
+    host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host interface to bind"),
+    port: int = typer.Option(8765, "--port", "-p", help="Port to listen on"),
+    no_browser: bool = typer.Option(False, "--no-browser", help="Do not automatically launch web browser"),
+) -> None:
+    """Launch the zero-dependency interactive PromptDiff Studio visual diff workspace."""
+    from promptdiff.cli.studio import launch_studio
+
+    console.print(f"[bold green]⚡ Launching PromptDiff Studio at http://{host}:{port}[/bold green]")
+    server = launch_studio(host=host, port=port, open_browser=not no_browser)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        console.print("[yellow]Studio stopped.[/yellow]")
+
+
+@app.command(name="mcts")
+def mcts_cmd(
+    prompt: str = typer.Argument(..., help="Path to initial prompt file or raw text"),
+    inputs: str = typer.Option("testcases.jsonl", "--inputs", "-i", help="Path to evaluation test cases"),
+    iterations: int = typer.Option(8, "--iterations", "-n", help="MCTS exploration iterations"),
+    model: str = typer.Option("gpt-4o", "--model", "-m", help="Target model for evaluations"),
+    mock: bool = typer.Option(False, "--mock", help="Use offline deterministic mock provider"),
+) -> None:
+    """Run Active Monte Carlo Tree Search (MCTS) prompt optimization with Pareto frontier."""
+    from promptdiff.core.config import load_dataset, load_prompt_file
+    from promptdiff.optimizer.mcts import MCTSPromptOptimizer
+
+    pv = load_prompt_file(prompt, version_name="initial")
+    dataset = load_dataset(inputs)
+
+    console.print(f"[bold cyan]⚡ Running MCTS Active Prompt Optimization ({iterations} iterations)...[/bold cyan]")
+    optimizer = MCTSPromptOptimizer(
+        initial_prompt=pv.template,
+        test_cases=dataset,
+        model_name=model,
+        max_iterations=iterations,
+        force_mock=mock,
+    )
+    result = optimizer.optimize_sync()
+
+    console.print(
+        f"\n[bold green]✓ MCTS Search Completed! Explored {result.nodes_explored} candidate states.[/bold green]"
+    )
+    console.print(
+        f"Initial Quality: {result.initial_quality:.2f} ➔ Best Quality: [bold yellow]{result.best_quality:.2f}[/bold yellow]"
+    )
+    console.print(f"Pareto-Optimal Candidates: [bold cyan]{len(result.pareto_frontier)}[/bold cyan]")
+
+    console.print("\n[bold]MCTS Exploration Tree:[/bold]")
+    console.print(result.tree_ascii)
+
+    console.print("\n[bold green]Optimized Prompt Template:[/bold green]")
+    console.print(Panel(result.best_prompt, border_style="green", title="Pareto Optimal Prompt"))
+
+
+@app.command(name="redteam")
+def redteam_cmd(
+    prompt: str = typer.Argument(..., help="Path to target prompt file or raw text"),
+    turns: int = typer.Option(3, "--turns", "-t", help="Adversarial conversation depth"),
+    model: str = typer.Option("gpt-4o", "--model", "-m", help="Target model to attack"),
+    mock: bool = typer.Option(False, "--mock", help="Use offline deterministic mock provider"),
+) -> None:
+    """Autonomous Multi-Turn Red-Teaming & Jailbreak Attack Tree (TAP / PAIR)."""
+    from promptdiff.core.config import load_prompt_file
+    from promptdiff.security.attack_tree import MultiTurnAttackTreeFuzzer
+
+    pv = load_prompt_file(prompt, version_name="target")
+    console.print("[bold red]⚡ Launching Multi-Turn TAP Attack Tree against target prompt...[/bold red]")
+
+    fuzzer = MultiTurnAttackTreeFuzzer(target_prompt=pv.template, model_name=model, max_turns=turns, force_mock=mock)
+    res = fuzzer.run_fuzz_sync()
+
+    risk_style = "bold red" if res.risk_level in ("CRITICAL", "HIGH") else "bold green"
+    console.print(
+        f"\nAI Safety Vulnerability Score: [{risk_style}]{res.vulnerability_score}/10.0 ({res.risk_level})[/{risk_style}]"
+    )
+    console.print(f"Attacks Attempted: {res.total_attacks_attempted} | Breaches Detected: {res.successful_breaches}")
+
+    if res.owasp_categories_triggered:
+        console.print(
+            f"[bold yellow]OWASP Categories Triggered:[/bold yellow] {', '.join(res.owasp_categories_triggered)}"
+        )
+
+    console.print(f"\n[bold cyan]Recommended Mitigation:[/bold cyan]\n{res.recommended_mitigation}")
+
+
+@app.command(name="cascade")
+def cascade_cmd(
+    volume: int = typer.Option(1_000_000, "--volume", "-v", help="Simulated monthly request volume"),
+    baseline_model: str = typer.Option("gpt-4o", "--baseline", "-b", help="Baseline single-model tier"),
+) -> None:
+    """Simulate Confidence-Aware Model Cascading ROI and Latency Impact."""
+    from promptdiff.production.routing import ConfidenceCascadeRouter
+
+    sample_queries = [
+        "What is the capital of France?",
+        "Explain step by step the mathematical proof of Euler's totient theorem and provide counter-examples.",
+        "Extract invoice JSON with line items, tax, and company VAT number.",
+        "How do I reset my password?",
+        "Analyze the architectural trade-offs between Paxos and Raft consensus algorithms under Byzantine network partitions.",
+    ]
+
+    router = ConfidenceCascadeRouter()
+    forecast = router.forecast_roi(queries=sample_queries, monthly_volume=volume, baseline_model=baseline_model)
+
+    console.print(
+        Panel(
+            f"[bold]Monthly Request Volume:[/bold] {forecast.monthly_request_volume:,}\n"
+            f"[bold]Baseline Monthly Cost ({baseline_model}):[/bold] ${forecast.baseline_monthly_cost_usd:,.2f}\n"
+            f"[bold]Cascade Monthly Cost:[/bold] ${forecast.cascade_monthly_cost_usd:,.2f}\n"
+            f"[bold green]Monthly Net Savings:[/bold green] ${forecast.monthly_savings_usd:,.2f} ([bold green]{forecast.savings_percentage}%[/bold green])\n"
+            f"[bold green]Annualized Savings:[/bold green] ${forecast.annual_savings_usd:,.2f}\n"
+            f"[bold cyan]Average Latency Reduction:[/bold cyan] {forecast.avg_latency_reduction_pct}%\n"
+            f"[bold]Tier Traffic Distribution:[/bold] {forecast.tier_distribution_pct}",
+            title="⚡ Production Model Cascade ROI Simulation",
+            border_style="cyan",
+        )
+    )
+
+
+@app.command(name="hypothesis")
+def hypothesis_cmd(
+    v1_scores: str = typer.Argument(..., help="Comma-separated v1 evaluation scores (e.g. '0.8,0.85,0.78')"),
+    v2_scores: str = typer.Argument(..., help="Comma-separated v2 evaluation scores (e.g. '0.9,0.92,0.85')"),
+    alpha: float = typer.Option(0.05, "--alpha", "-a", help="Significance threshold level"),
+) -> None:
+    """Run Paired Wilcoxon Signed-Rank Test & Bootstrap Confidence Intervals."""
+    from promptdiff.core.hypothesis_testing import compute_paired_wilcoxon
+
+    s1 = [float(x.strip()) for x in v1_scores.split(",") if x.strip()]
+    s2 = [float(x.strip()) for x in v2_scores.split(",") if x.strip()]
+
+    report = compute_paired_wilcoxon(s1, s2, alpha=alpha)
+
+    style = "bold green" if report.is_significant else "bold yellow"
+    console.print(
+        Panel(
+            f"[bold]Metric Sample Size (N):[/bold] {report.sample_size}\n"
+            f"[bold]Baseline Mean (v1):[/bold] {report.v1_mean:.4f}\n"
+            f"[bold]Candidate Mean (v2):[/bold] {report.v2_mean:.4f}\n"
+            f"[bold]Delta Mean:[/bold] {report.delta_mean:+.4f}\n"
+            f"[bold]Empirical p-value:[/bold] [{style}]{report.p_value:.5f}[/{style}] (alpha = {report.alpha})\n"
+            f"[bold]95% Bootstrap CI:[/bold] [{report.confidence_interval_95[0]:.4f}, {report.confidence_interval_95[1]:.4f}]\n"
+            f"[bold]Verdict:[/bold] [{style}]{report.verdict_message}[/{style}]",
+            title="📊 Statistical Significance & Hypothesis Testing",
+            border_style="green" if report.is_significant else "yellow",
+        )
+    )
+
+
+@app.command(name="hard-negatives")
+def hard_negatives_cmd(
+    prompt: str = typer.Argument(..., help="Path to prompt template or raw text"),
+    output: str = typer.Option("hard_negatives.jsonl", "--output", "-o", help="Output file to save test cases"),
+) -> None:
+    """Synthesize adversarial boundary hard-negative test cases for a prompt."""
+    from promptdiff.core.config import load_prompt_file
+    from promptdiff.generators.hard_negatives import HardNegativeGenerator
+
+    pv = load_prompt_file(prompt, version_name="target")
+    gen = HardNegativeGenerator()
+    suite = gen.generate(pv.template)
+
+    # Save to file
+    out_path = Path(output)
+    lines = [tc.model_dump_json() for tc in suite.boundary_cases]
+    out_path.write_text("\n".join(lines), encoding="utf-8")
+
+    console.print(
+        f"[bold green]✓ Generated {suite.total_generated} hard-negative test cases saved to {output}[/bold green]"
+    )
+    console.print("\n[bold]Identified Vulnerability Profiles:[/bold]")
+    for v in suite.identified_vulnerabilities:
+        console.print(f"  [yellow]•[/yellow] {v}")
+
+
+@app.command(name="executive")
+def executive_cmd(
+    config: str = typer.Option("promptdiff.yaml", "--config", "-c", help="Path to promptdiff configuration file"),
+    output: str = typer.Option("EXECUTIVE_REPORT.md", "--output", "-o", help="Output Markdown report path"),
+) -> None:
+    """Generate C-Suite presentation scorecard and sign-off briefing."""
+    from promptdiff.core.config import load_dataset, load_project_config, load_prompt_file
+    from promptdiff.core.runner import PromptDiffRunner
+    from promptdiff.evaluators.registry import get_evaluators
+    from promptdiff.providers.registry import get_provider
+    from promptdiff.reporters.executive import ExecutiveReportExporter
+
+    cfg = load_project_config(config)
+    v1_pv = load_prompt_file(cfg.v1_prompt or "prompts/system_v1.txt", version_name="v1")
+    v2_pv = load_prompt_file(cfg.v2_prompt or "prompts/system_v2.txt", version_name="v2")
+    cases = load_dataset(cfg.dataset or "testcases.jsonl")
+    provider = get_provider(cfg.model, force_mock=True)
+
+    runner = PromptDiffRunner(
+        v1_prompt=v1_pv,
+        v2_prompt=v2_pv,
+        provider_v1=provider,
+        provider_v2=provider,
+        evaluators=get_evaluators(cfg.evaluators),
+        assertions=cfg.assertions,
+    )
+    report = asyncio.run(runner.run(cases))
+
+    exporter = ExecutiveReportExporter()
+    scorecard = exporter.generate(report)
+    md_content = exporter.export_markdown(scorecard)
+
+    Path(output).write_text(md_content, encoding="utf-8")
+    console.print(f"[bold green]✓ Generated C-Suite Executive Scorecard saved to {output}[/bold green]")
+    console.print(
+        f"Production Verdict: [bold]{scorecard.decision}[/bold] | Annual Savings: [bold green]${scorecard.annualized_savings_usd:,.2f}[/bold green]"
+    )
 
 
 def main() -> int:

@@ -19,10 +19,17 @@ from promptdiff.reporters.pr_bot import (
 def main() -> int:
     parser = argparse.ArgumentParser(description="Post PromptDiff evaluation report to GitHub Pull Request.")
     parser.add_argument("--report", "-r", default="report.json", help="Path to DiffReport JSON file")
-    parser.add_argument("--token", "-t", default=os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN"), help="GitHub API Token")
+    parser.add_argument(
+        "--token", "-t", default=os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN"), help="GitHub API Token"
+    )
     parser.add_argument("--repo", default=os.getenv("GITHUB_REPOSITORY"), help="Target repository (e.g. 'owner/repo')")
     parser.add_argument("--pr", "-p", type=int, default=None, help="Pull Request number")
-    parser.add_argument("--forecast", "-f", default=os.getenv("PROMPTDIFF_FORECAST"), help="Optional daily volume forecast (e.g. '1M', '500k')")
+    parser.add_argument(
+        "--forecast",
+        "-f",
+        default=os.getenv("PROMPTDIFF_FORECAST"),
+        help="Optional daily volume forecast (e.g. '1M', '500k')",
+    )
 
     args = parser.parse_args()
 

@@ -50,7 +50,9 @@ def build_comparison_panel(comparison: ComparisonResult, console_width: int = 12
     lat_delta_ms = v2.latency_ms - v1.latency_ms
     lat_delta_pct = (lat_delta_ms / v1.latency_ms * 100.0) if v1.latency_ms > 0 else 0.0
     lat_color = "green" if lat_delta_ms <= 0 else "red"
-    lat_str = f"Latency: [{lat_color}]{v2.latency_ms:.1f}ms ({lat_delta_ms:+.1f}ms, {lat_delta_pct:+.1f}%)[/{lat_color}]"
+    lat_str = (
+        f"Latency: [{lat_color}]{v2.latency_ms:.1f}ms ({lat_delta_ms:+.1f}ms, {lat_delta_pct:+.1f}%)[/{lat_color}]"
+    )
 
     # Cost badge with delta
     cost_delta = v2.cost_usd - v1.cost_usd

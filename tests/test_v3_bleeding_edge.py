@@ -24,8 +24,30 @@ async def test_council_of_judges_evaluator() -> None:
     """Test multi-model ensemble Council evaluator."""
     ev = CouncilOfJudgesEvaluator(force_mock=True)
     tc = TestCase(id="t1", vars={"query": "Test question"})
-    r1 = RunResult(prompt_name="p1", test_case_id="t1", rendered_prompt="x", output="Hello", latency_ms=10.0, prompt_tokens=10, completion_tokens=10, total_tokens=20, cost_usd=0.0001, model="gpt-4o")
-    r2 = RunResult(prompt_name="p2", test_case_id="t1", rendered_prompt="x", output="Hello world", latency_ms=10.0, prompt_tokens=10, completion_tokens=10, total_tokens=20, cost_usd=0.0001, model="gpt-4o")
+    r1 = RunResult(
+        prompt_name="p1",
+        test_case_id="t1",
+        rendered_prompt="x",
+        output="Hello",
+        latency_ms=10.0,
+        prompt_tokens=10,
+        completion_tokens=10,
+        total_tokens=20,
+        cost_usd=0.0001,
+        model="gpt-4o",
+    )
+    r2 = RunResult(
+        prompt_name="p2",
+        test_case_id="t1",
+        rendered_prompt="x",
+        output="Hello world",
+        latency_ms=10.0,
+        prompt_tokens=10,
+        completion_tokens=10,
+        total_tokens=20,
+        cost_usd=0.0001,
+        model="gpt-4o",
+    )
 
     score = await ev.async_evaluate(r1, r2, tc)
     assert score.name == "council"
@@ -47,7 +69,9 @@ async def test_streaming_profiler() -> None:
 def test_watch_health_daemon() -> None:
     """Test semantic drift and real-time health daemon."""
     pv = PromptVersion(name="daemon_p", template="Support: {{query}}")
-    daemon = PromptHealthDaemon(prompt_version=pv, golden_reference_outputs=["Hello customer, how can I help you today?"], drift_threshold=0.50)
+    daemon = PromptHealthDaemon(
+        prompt_version=pv, golden_reference_outputs=["Hello customer, how can I help you today?"], drift_threshold=0.50
+    )
 
     # 1. Healthy call
     alert1 = daemon.evaluate_live_call("Hello customer, how can I assist you today?")
@@ -90,7 +114,9 @@ def test_prompt_watermark() -> None:
 async def test_edge_quantization_benchmark() -> None:
     """Test local model quantization degradation benchmark."""
     pv = PromptVersion(name="edge_p", template="Explain: {{query}}")
-    bench = EdgeQuantizationBenchmark(prompt_version=pv, test_cases=[TestCase(id="1", vars={"query": "AI"})], force_mock=True)
+    bench = EdgeQuantizationBenchmark(
+        prompt_version=pv, test_cases=[TestCase(id="1", vars={"query": "AI"})], force_mock=True
+    )
     report = await bench.benchmark_quant_levels()
     assert len(report.levels) == 5
     assert any(lvl.quant_level.startswith("Q4_K_M") for lvl in report.levels)
@@ -109,7 +135,10 @@ async def test_property_based_tester() -> None:
 
 def test_compliance_auditor() -> None:
     """Test prompt guideline linter and ensure honest legal disclaimer is present."""
-    pv = PromptVersion(name="comp_p", template="You are an AI assistant. Never disclose confidential medical phi and personal data privacy.")
+    pv = PromptVersion(
+        name="comp_p",
+        template="You are an AI assistant. Never disclose confidential medical phi and personal data privacy.",
+    )
     linter = ComplianceAuditor(prompt_version=pv)
     report = linter.lint()
     assert report.overall_compliance_score_pct >= 50.0
@@ -121,7 +150,9 @@ def test_compliance_auditor() -> None:
 async def test_self_correction_benchmark() -> None:
     """Test self-correction reflection loop benchmark."""
     pv = PromptVersion(name="reflex_p", template="Answer concisely: {{query}}")
-    bench = SelfCorrectionBenchmark(prompt_version=pv, test_cases=[TestCase(id="1", vars={"query": "Hi"})], force_mock=True)
+    bench = SelfCorrectionBenchmark(
+        prompt_version=pv, test_cases=[TestCase(id="1", vars={"query": "Hi"})], force_mock=True
+    )
     report = await bench.benchmark_reflection()
     assert report.reflection_judge_score >= report.direct_judge_score
     assert len(report.roi_verdict) > 0
@@ -143,7 +174,9 @@ def test_jupyter_notebook_exporter(tmp_path: Path) -> None:
 
 def test_prompt_jit_compiler() -> None:
     """Test prompt JIT compiler and AST minifier."""
-    raw_template = "{# Internal developer note #}\n\nYou are an AI assistant.\n\n\n\nPlease answer query: {{ user_query }}."
+    raw_template = (
+        "{# Internal developer note #}\n\nYou are an AI assistant.\n\n\n\nPlease answer query: {{ user_query }}."
+    )
     pv = PromptVersion(name="compiler_p", template=raw_template)
     compiler = PromptJITCompiler(prompt_version=pv)
     res = compiler.compile()

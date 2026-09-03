@@ -59,7 +59,11 @@ class MockProvider(BaseLLMProvider):
         """Synthesize context-aware output based on prompt cues."""
 
         # 1. DSPy Meta-Prompt Optimization requests
-        if "meta-prompt optimization" in prompt_lower or "mipro" in prompt_lower or "optimize an llm prompt" in prompt_lower:
+        if (
+            "meta-prompt optimization" in prompt_lower
+            or "mipro" in prompt_lower
+            or "optimize an llm prompt" in prompt_lower
+        ):
             return (
                 "```prompt\n"
                 "You are an enterprise AI assistant. Answer user queries accurately and concisely using bullet points.\n"
@@ -69,7 +73,11 @@ class MockProvider(BaseLLMProvider):
             )
 
         # 2. RAG Faithfulness requests
-        if "factual grounding" in prompt_lower or "claims_evaluation" in prompt_lower or "hallucination detection" in prompt_lower:
+        if (
+            "factual grounding" in prompt_lower
+            or "claims_evaluation" in prompt_lower
+            or "hallucination detection" in prompt_lower
+        ):
             return (
                 "[CLAIMS_EVALUATION]\n"
                 "- Claim 1: [GROUNDED] - Directly entailed by provided context document.\n"
@@ -78,17 +86,37 @@ class MockProvider(BaseLLMProvider):
             )
 
         # 3. RAG Answer Relevance requests
-        if "relevance & conciseness" in prompt_lower or "user query" in prompt_lower and "model response" in prompt_lower and "penalize" in prompt_lower:
+        if (
+            "relevance & conciseness" in prompt_lower
+            or "user query" in prompt_lower
+            and "model response" in prompt_lower
+            and "penalize" in prompt_lower
+        ):
             return (
                 "[REASONING] The response directly and completely answers the user's inquiry with zero irrelevant filler.\n"
                 "[SCORE] 0.95"
             )
 
         # 4. LLM-as-a-Judge requests
-        if "judge" in prompt_lower or "rubric" in prompt_lower or "score the following" in prompt_lower or "[v1_score]" in prompt_lower or "candidate response (v2)" in prompt_lower:
+        if (
+            "judge" in prompt_lower
+            or "rubric" in prompt_lower
+            or "score the following" in prompt_lower
+            or "[v1_score]" in prompt_lower
+            or "candidate response (v2)" in prompt_lower
+        ):
             import re
-            v1_match = re.search(r"---\s*BASELINE RESPONSE \(v1\)\s*---\s*\n(.*?)(?=---\s*CANDIDATE RESPONSE|$)", raw_prompt, re.DOTALL | re.IGNORECASE)
-            v2_match = re.search(r"---\s*CANDIDATE RESPONSE \(v2\)\s*---\s*\n(.*?)(?=Evaluate and compare|$)", raw_prompt, re.DOTALL | re.IGNORECASE)
+
+            v1_match = re.search(
+                r"---\s*BASELINE RESPONSE \(v1\)\s*---\s*\n(.*?)(?=---\s*CANDIDATE RESPONSE|$)",
+                raw_prompt,
+                re.DOTALL | re.IGNORECASE,
+            )
+            v2_match = re.search(
+                r"---\s*CANDIDATE RESPONSE \(v2\)\s*---\s*\n(.*?)(?=Evaluate and compare|$)",
+                raw_prompt,
+                re.DOTALL | re.IGNORECASE,
+            )
 
             v1_text = v1_match.group(1).strip() if v1_match else ""
             v2_text = v2_match.group(1).strip() if v2_match else ""
@@ -114,7 +142,9 @@ class MockProvider(BaseLLMProvider):
             )
 
         # 5. Synthetic Test Generation requests
-        if "generate" in prompt_lower and ("test" in prompt_lower or "jsonl" in prompt_lower or "cases" in prompt_lower):
+        if "generate" in prompt_lower and (
+            "test" in prompt_lower or "jsonl" in prompt_lower or "cases" in prompt_lower
+        ):
             cases = []
             categories = ["edge_case", "boundary", "injection", "happy_path", "multilingual"]
             for idx in range(1, 10):

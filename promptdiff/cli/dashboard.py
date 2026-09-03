@@ -10,6 +10,7 @@ from typing import Any, Optional
 
 try:
     import streamlit as st
+
     STREAMLIT_INSTALLED = True
 except ImportError:
     STREAMLIT_INSTALLED = False
@@ -76,7 +77,10 @@ def _get_mock_diff_report() -> dict[str, Any]:
                 "test_case": {
                     "id": "tc_01",
                     "description": "Password reset inquiry with security check",
-                    "vars": {"query": "How do I reset my account password?", "context": "Password resets require 2FA authentication via Settings > Security."},
+                    "vars": {
+                        "query": "How do I reset my account password?",
+                        "context": "Password resets require 2FA authentication via Settings > Security.",
+                    },
                 },
                 "v1_result": {
                     "output": "Dear customer, to reset your password, please contact support at support@example.com or visit settings.",
@@ -99,15 +103,28 @@ def _get_mock_diff_report() -> dict[str, Any]:
                 "scores": {
                     "similarity": {"v1_score": 1.0, "v2_score": 0.88, "passed": True, "message": "88% Semantic Match"},
                     "llm_judge": {"v1_score": 4.0, "v2_score": 4.8, "passed": True, "message": "Judge: 4.8/5.0"},
-                    "faithfulness": {"v1_score": 0.9, "v2_score": 1.0, "passed": True, "message": "100% Grounded in Context"},
-                    "security": {"v1_score": 1.0, "v2_score": 1.0, "passed": True, "message": "Clean (0 PII, 0 Injections)"},
+                    "faithfulness": {
+                        "v1_score": 0.9,
+                        "v2_score": 1.0,
+                        "passed": True,
+                        "message": "100% Grounded in Context",
+                    },
+                    "security": {
+                        "v1_score": 1.0,
+                        "v2_score": 1.0,
+                        "passed": True,
+                        "message": "Clean (0 PII, 0 Injections)",
+                    },
                 },
             },
             {
                 "test_case": {
                     "id": "tc_02",
                     "description": "Refund request within 30-day window",
-                    "vars": {"query": "I want a refund for order #9821.", "context": "Refunds are eligible within 30 days of purchase upon submitting invoice."},
+                    "vars": {
+                        "query": "I want a refund for order #9821.",
+                        "context": "Refunds are eligible within 30 days of purchase upon submitting invoice.",
+                    },
                 },
                 "v1_result": {
                     "output": "Refunds are processed manually by our finance department. Please send credit card details.",
@@ -130,8 +147,18 @@ def _get_mock_diff_report() -> dict[str, Any]:
                 "scores": {
                     "similarity": {"v1_score": 1.0, "v2_score": 0.82, "passed": True, "message": "82% Semantic Match"},
                     "llm_judge": {"v1_score": 3.5, "v2_score": 4.6, "passed": True, "message": "Judge: 4.6/5.0"},
-                    "faithfulness": {"v1_score": 0.85, "v2_score": 1.0, "passed": True, "message": "100% Grounded in Context"},
-                    "security": {"v1_score": 1.0, "v2_score": 1.0, "passed": True, "message": "Clean (0 PII, 0 Injections)"},
+                    "faithfulness": {
+                        "v1_score": 0.85,
+                        "v2_score": 1.0,
+                        "passed": True,
+                        "message": "100% Grounded in Context",
+                    },
+                    "security": {
+                        "v1_score": 1.0,
+                        "v2_score": 1.0,
+                        "passed": True,
+                        "message": "Clean (0 PII, 0 Injections)",
+                    },
                 },
             },
         ],
@@ -188,13 +215,15 @@ def render_streamlit_app() -> None:
     # Determine report type
     is_arena = "leaderboard" in report_data
 
-    tabs = st.tabs([
-        "📊 Executive Summary",
-        "🔍 Side-by-Side Diff Inspector",
-        "🏆 Multi-Model Arena",
-        "🛡️ Security & Guardrails Audit",
-        "🧠 Auto-Prompt Optimizer Studio",
-    ])
+    tabs = st.tabs(
+        [
+            "📊 Executive Summary",
+            "🔍 Side-by-Side Diff Inspector",
+            "🏆 Multi-Model Arena",
+            "🛡️ Security & Guardrails Audit",
+            "🧠 Auto-Prompt Optimizer Studio",
+        ]
+    )
 
     # TAB 1: Executive Summary
     with tabs[0]:
@@ -242,11 +271,14 @@ def render_streamlit_app() -> None:
             v2_latencies = [c.get("v2_result", {}).get("latency_ms", 0) for c in comparisons]
 
             import pandas as pd
-            df_chart = pd.DataFrame({
-                "Test Case": case_ids,
-                "v1 Baseline (ms)": v1_latencies,
-                "v2 Candidate (ms)": v2_latencies,
-            })
+
+            df_chart = pd.DataFrame(
+                {
+                    "Test Case": case_ids,
+                    "v1 Baseline (ms)": v1_latencies,
+                    "v2 Candidate (ms)": v2_latencies,
+                }
+            )
             st.bar_chart(df_chart.set_index("Test Case"))
 
     # TAB 2: Side-by-Side Diff Inspector
@@ -268,10 +300,14 @@ def render_streamlit_app() -> None:
 
                     c_left, c_right = st.columns(2)
                     with c_left:
-                        st.markdown(f"**Baseline (v1)** — `{v1_res.get('model', '')}` ({v1_res.get('latency_ms', 0):.0f}ms, ${v1_res.get('cost_usd', 0):.6f})")
+                        st.markdown(
+                            f"**Baseline (v1)** — `{v1_res.get('model', '')}` ({v1_res.get('latency_ms', 0):.0f}ms, ${v1_res.get('cost_usd', 0):.6f})"
+                        )
                         st.markdown(f'<div class="diff-box">{v1_res.get("output", "")}</div>', unsafe_allow_html=True)
                     with c_right:
-                        st.markdown(f"**Candidate (v2)** — `{v2_res.get('model', '')}` ({v2_res.get('latency_ms', 0):.0f}ms, ${v2_res.get('cost_usd', 0):.6f})")
+                        st.markdown(
+                            f"**Candidate (v2)** — `{v2_res.get('model', '')}` ({v2_res.get('latency_ms', 0):.0f}ms, ${v2_res.get('cost_usd', 0):.6f})"
+                        )
                         st.markdown(f'<div class="diff-box">{v2_res.get("output", "")}</div>', unsafe_allow_html=True)
 
                     st.markdown("**Evaluator Scores:**")
@@ -293,7 +329,9 @@ def render_streamlit_app() -> None:
             st.dataframe(leaderboard, use_container_width=True)
         else:
             st.info("Load an `arena_report.json` or run `promptdiff arena` to populate the Multi-Model leaderboard.")
-            st.code("promptdiff arena --prompts prompts/v1.txt,prompts/v2.txt --models gpt-4o,claude-3-5-sonnet,gemini-2.0-flash --mock")
+            st.code(
+                "promptdiff arena --prompts prompts/v1.txt,prompts/v2.txt --models gpt-4o,claude-3-5-sonnet,gemini-2.0-flash --mock"
+            )
 
     # TAB 4: Security & Guardrails
     with tabs[3]:
@@ -304,13 +342,15 @@ def render_streamlit_app() -> None:
             sec_score = comp.get("scores", {}).get("security", {})
             if sec_score:
                 details = sec_score.get("details", {})
-                sec_findings.append({
-                    "Test Case": comp.get("test_case", {}).get("id"),
-                    "Risk Level": details.get("risk_level", "CLEAN"),
-                    "PII Leaks Found": len(details.get("v2_pii_findings", [])),
-                    "Prompt Injection Breach": details.get("v2_injection_breach", False),
-                    "Message": sec_score.get("message", "Clean"),
-                })
+                sec_findings.append(
+                    {
+                        "Test Case": comp.get("test_case", {}).get("id"),
+                        "Risk Level": details.get("risk_level", "CLEAN"),
+                        "PII Leaks Found": len(details.get("v2_pii_findings", [])),
+                        "Prompt Injection Breach": details.get("v2_injection_breach", False),
+                        "Message": sec_score.get("message", "Clean"),
+                    }
+                )
         if sec_findings:
             st.dataframe(sec_findings, use_container_width=True)
         else:
@@ -320,7 +360,9 @@ def render_streamlit_app() -> None:
     with tabs[4]:
         st.subheader("🧠 Auto-Prompt Optimizer Studio (DSPy Style)")
         st.markdown("Reflectively optimize failing prompts using Meta-LLM reasoning feedback.")
-        st.code("promptdiff optimize prompts/system_v1.txt --inputs testcases.jsonl --output prompts/system_v3_optimized.txt")
+        st.code(
+            "promptdiff optimize prompts/system_v1.txt --inputs testcases.jsonl --output prompts/system_v3_optimized.txt"
+        )
 
 
 if __name__ == "__main__" and STREAMLIT_INSTALLED:

@@ -109,7 +109,7 @@ class ModelCascadeRouter:
                 if "llm_judge" in comp.scores:
                     t2_score = float(comp.scores["llm_judge"].v2_score)
                 blended_scores.append(t2_score)
-                cascaded_cost += (t1_res.cost_usd + t2_res.cost_usd)
+                cascaded_cost += t1_res.cost_usd + t2_res.cost_usd
 
         t1_pct = (routed_t1 / total * 100.0) if total > 0 else 70.0
         avg_quality = (sum(blended_scores) / len(blended_scores)) if blended_scores else 4.7

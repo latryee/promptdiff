@@ -136,9 +136,7 @@ class ShadowTrafficReplayer:
         pass_rate = (passed / total * 100.0) if total > 0 else 100.0
 
         sim_scores = [
-            float(comp.scores["similarity"].v2_score)
-            for comp in diff_report.comparisons
-            if "similarity" in comp.scores
+            float(comp.scores["similarity"].v2_score) for comp in diff_report.comparisons if "similarity" in comp.scores
         ]
         avg_divergence = (sum(sim_scores) / len(sim_scores)) if sim_scores else 0.95
 

@@ -106,9 +106,11 @@ class PromptWatermarker:
 
         if detected_sig and expected_sig:
             sig_len = min(len(detected_sig), len(expected_sig))
-            matched_chars = sum(1 for a, b in zip(detected_sig[:sig_len], expected_sig[:sig_len], strict=False) if a == b)
+            matched_chars = sum(
+                1 for a, b in zip(detected_sig[:sig_len], expected_sig[:sig_len], strict=False) if a == b
+            )
             confidence_pct = round((matched_chars / len(expected_sig)) * 100.0, 1)
-            is_match = (detected_sig == expected_sig)
+            is_match = detected_sig == expected_sig
 
             return WatermarkInspectionResult(
                 is_watermarked=is_match,

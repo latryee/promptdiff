@@ -30,9 +30,7 @@ def log_to_wandb(
     try:
         import wandb
     except ImportError:
-        logger.warning(
-            "Weights & Biases is not installed. To enable W&B logging, install with `pip install wandb`."
-        )
+        logger.warning("Weights & Biases is not installed. To enable W&B logging, install with `pip install wandb`.")
         return False
 
     try:
@@ -96,9 +94,7 @@ def log_to_wandb(
         table = wandb.Table(columns=table_columns)
 
         for comp in report.comparisons:
-            scores_repr = ", ".join(
-                f"{k}: {s.v2_score}" for k, s in comp.scores.items()
-            )
+            scores_repr = ", ".join(f"{k}: {s.v2_score}" for k, s in comp.scores.items())
             passed = all(s.passed for s in comp.scores.values())
             table.add_data(
                 comp.test_case.id,

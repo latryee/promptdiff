@@ -1,5 +1,17 @@
 """promptdiff: Enterprise-grade LLM Prompt & Model Regression Testing Framework."""
 
+import sys
+
+# Ensure UTF-8 console output on Windows to prevent UnicodeEncodeError on international codepages
+if sys.platform == "win32":
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 __version__ = "3.4.0"
 __author__ = "promptdiff team"
 
@@ -15,6 +27,10 @@ from promptdiff.core.models import (
 )
 from promptdiff.sdk import (
     async_compare,
+    attack_tree,
+    attribute_hallucinations,
+    benchmark_needle_matrix,
+    benchmark_reflexion,
     cache_sim,
     canary,
     cascade,
@@ -22,25 +38,41 @@ from promptdiff.sdk import (
     compile_prompt,
     compliance_audit,
     council,
+    detect_drift,
+    detect_watermark,
+    diff_ast,
     distill,
     edge_quant,
     export_bundle,
+    export_executive_report,
     export_notebook,
     fuzz,
+    generate_hard_negatives,
     history,
     inspect_watermark,
+    launch_studio,
     lsp_diagnostics,
+    mcts_optimize,
     mutate,
     mutation_score,
     optimize,
+    optimize_prefix_cache,
     personas,
     profile_stream,
+    profile_streaming,
     property_test,
     reflex_benchmark,
     saliency,
+    saliency_heatmap,
+    sanitize_input,
+    scaffold_editor_extensions,
+    select_exemplars_mmr,
     shadow_replay,
     shrink,
+    simulate_cascade,
     sla_stress,
+    synthesize_dpo,
+    test_hypothesis,
     tune,
     watermark,
 )
@@ -83,5 +115,25 @@ __all__ = [
     "reflex_benchmark",
     "export_notebook",
     "compile_prompt",
+    "mcts_optimize",
+    "attribute_hallucinations",
+    "attack_tree",
+    "profile_streaming",
+    "simulate_cascade",
+    "launch_studio",
+    "test_hypothesis",
+    "generate_hard_negatives",
+    "synthesize_dpo",
+    "select_exemplars_mmr",
+    "saliency_heatmap",
+    "optimize_prefix_cache",
+    "detect_drift",
+    "diff_ast",
+    "sanitize_input",
+    "detect_watermark",
+    "benchmark_reflexion",
+    "benchmark_needle_matrix",
+    "scaffold_editor_extensions",
+    "export_executive_report",
     "__version__",
 ]

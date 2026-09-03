@@ -172,6 +172,7 @@ class PromptTuner:
                         judge_scores.append(round(mock_score, 2))
                     else:
                         from promptdiff.core.models import RunResult
+
                         res_obj = RunResult(
                             prompt_name="candidate",
                             test_case_id=tc.id,
@@ -227,11 +228,7 @@ class PromptTuner:
             judge_ev = LLMJudgeEvaluator(model_name=self.model_name, force_mock=self.force_mock)
 
         # Generate grid
-        grid = [
-            HyperparameterConfig(temperature=t, top_p=p)
-            for t in self.temperatures
-            for p in self.top_ps
-        ]
+        grid = [HyperparameterConfig(temperature=t, top_p=p) for t in self.temperatures for p in self.top_ps]
         total_points = len(grid)
         results: list[TuneCandidateResult] = []
 

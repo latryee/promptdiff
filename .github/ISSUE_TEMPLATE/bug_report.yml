@@ -1,0 +1,51 @@
+name: Bug Report
+description: Report an issue, crash, or regression in promptdiff
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please ensure you have checked existing issues first.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Provide the command line invocation or Python code to reproduce the issue.
+      placeholder: |
+        1. promptdiff test ...
+        2. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log Output & Traceback
+      description: Copy and paste relevant terminal logs or tracebacks here.
+      render: shell
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment Info
+      description: OS version, Python version, and promptdiff version (`promptdiff --version` or `python -V`).
+      placeholder: Windows 11 / Ubuntu 22.04 / macOS 14, Python 3.11, promptdiff 3.4.0
+    validations:
+      required: true

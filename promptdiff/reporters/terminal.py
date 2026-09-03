@@ -58,7 +58,9 @@ def render_terminal_report(
     # Cost row (Green for reduction, Red for inflation)
     cost_sign = "+" if v.cost_delta_pct > 0 else ""
     cost_color = "red" if v.cost_delta_pct > 0 else "green"
-    cost_status = f"[{cost_color}]{cost_sign}{v.cost_delta_pct:.1f}% ({v.total_cost_v2 - v.total_cost_v1:+.6f}$)[/{cost_color}]"
+    cost_status = (
+        f"[{cost_color}]{cost_sign}{v.cost_delta_pct:.1f}% ({v.total_cost_v2 - v.total_cost_v1:+.6f}$)[/{cost_color}]"
+    )
     summary_table.add_row(
         "Total Token Cost",
         f"${v.total_cost_v1:.6f}",
@@ -108,7 +110,9 @@ def render_terminal_report(
         "Test Cases Passed",
         f"{report.total_cases} total",
         f"[green]{passed_cases} passed[/green]",
-        f"[red]{report.total_cases - passed_cases} failed[/red]" if passed_cases < report.total_cases else "[green]0 failed[/green]",
+        f"[red]{report.total_cases - passed_cases} failed[/red]"
+        if passed_cases < report.total_cases
+        else "[green]0 failed[/green]",
     )
 
     console.print()
@@ -117,7 +121,9 @@ def render_terminal_report(
     # 3. Optional Cost Forecasting Panel
     if forecast:
         fc = calculate_forecast(v.total_cost_v1, v.total_cost_v2, report.total_cases, forecast)
-        savings_color = "bold green" if fc.monthly_savings_usd > 0 else ("bold red" if fc.monthly_delta_cost > 0 else "bold yellow")
+        savings_color = (
+            "bold green" if fc.monthly_savings_usd > 0 else ("bold red" if fc.monthly_delta_cost > 0 else "bold yellow")
+        )
         forecast_panel = Panel(
             f"[bold yellow]💰 Production Volume Cost Impact Forecast ({fc.daily_volume:,} reqs/day)[/bold yellow]\n\n"
             f"• [bold]Baseline Projected Monthly Cost:[/bold] ${fc.v1_monthly_cost:,.2f}\n"
@@ -239,7 +245,9 @@ def render_arena_terminal_report(report: ArenaReport, console: Console | None = 
     leaderboard_table.add_column("Avg Tokens", justify="right", style="blue")
 
     for s in report.leaderboard:
-        rank_badge = "🥇 #1" if s.rank == 1 else ("🥈 #2" if s.rank == 2 else ("🥉 #3" if s.rank == 3 else f"#{s.rank}"))
+        rank_badge = (
+            "🥇 #1" if s.rank == 1 else ("🥈 #2" if s.rank == 2 else ("🥉 #3" if s.rank == 3 else f"#{s.rank}"))
+        )
         leaderboard_table.add_row(
             rank_badge,
             s.name,

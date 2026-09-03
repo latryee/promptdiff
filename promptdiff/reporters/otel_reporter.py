@@ -58,21 +58,25 @@ def export_to_opentelemetry(
 
         for ev_name, sc in comp.scores.items():
             if isinstance(sc.v2_score, (int, float)):
-                attributes.append({
-                    "key": f"promptdiff.score.{ev_name}",
-                    "value": {"doubleValue": float(sc.v2_score)},
-                })
+                attributes.append(
+                    {
+                        "key": f"promptdiff.score.{ev_name}",
+                        "value": {"doubleValue": float(sc.v2_score)},
+                    }
+                )
 
-        spans.append({
-            "traceId": f"{int(time.time()):016x}{idx:016x}",
-            "spanId": f"{idx:016x}",
-            "name": f"promptdiff/{tc.id}",
-            "kind": 1,  # SPAN_KIND_INTERNAL
-            "startTimeUnixNano": str(now_ns - int(v2_res.latency_ms * 1_000_000)),
-            "endTimeUnixNano": str(now_ns),
-            "attributes": attributes,
-            "status": {"code": 1 if all(s.passed for s in comp.scores.values()) else 2},
-        })
+        spans.append(
+            {
+                "traceId": f"{int(time.time()):016x}{idx:016x}",
+                "spanId": f"{idx:016x}",
+                "name": f"promptdiff/{tc.id}",
+                "kind": 1,  # SPAN_KIND_INTERNAL
+                "startTimeUnixNano": str(now_ns - int(v2_res.latency_ms * 1_000_000)),
+                "endTimeUnixNano": str(now_ns),
+                "attributes": attributes,
+                "status": {"code": 1 if all(s.passed for s in comp.scores.values()) else 2},
+            }
+        )
 
     payload = {
         "resourceSpans": [
@@ -126,18 +130,20 @@ def export_to_langfuse(
     events = []
 
     for comp in report.comparisons:
-        events.append({
-            "name": f"promptdiff_regression_{comp.test_case.id}",
-            "metadata": {
-                "v1_model": comp.v1_result.model,
-                "v2_model": comp.v2_result.model,
-                "v1_cost": comp.v1_result.cost_usd,
-                "v2_cost": comp.v2_result.cost_usd,
-                "v1_latency": comp.v1_result.latency_ms,
-                "v2_latency": comp.v2_result.latency_ms,
-                "passed": all(s.passed for s in comp.scores.values()),
-            },
-        })
+        events.append(
+            {
+                "name": f"promptdiff_regression_{comp.test_case.id}",
+                "metadata": {
+                    "v1_model": comp.v1_result.model,
+                    "v2_model": comp.v2_result.model,
+                    "v1_cost": comp.v1_result.cost_usd,
+                    "v2_cost": comp.v2_result.cost_usd,
+                    "v1_latency": comp.v1_result.latency_ms,
+                    "v2_latency": comp.v2_result.latency_ms,
+                    "passed": all(s.passed for s in comp.scores.values()),
+                },
+            }
+        )
 
     try:
         with httpx.Client(timeout=8.0, auth=(pk, sk)) as client:

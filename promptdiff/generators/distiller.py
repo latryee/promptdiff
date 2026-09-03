@@ -31,21 +31,25 @@ class FineTuningDistiller:
                 judge_score = float(comp.scores["llm_judge"].v2_score)
 
             if all_passed and judge_score >= self.min_judge_score:
-                user_content = str(comp.test_case.vars.get("query") or comp.test_case.vars.get("input") or comp.test_case.description)
+                user_content = str(
+                    comp.test_case.vars.get("query") or comp.test_case.vars.get("input") or comp.test_case.description
+                )
                 assistant_content = comp.v2_result.output
 
-                dataset.append({
-                    "messages": [
-                        {"role": "system", "content": comp.v2_result.rendered_prompt.split("\nQuery:")[0]},
-                        {"role": "user", "content": user_content},
-                        {"role": "assistant", "content": assistant_content},
-                    ],
-                    "metadata": {
-                        "test_case_id": comp.test_case.id,
-                        "judge_score": judge_score,
-                        "cost_usd": comp.v2_result.cost_usd,
-                    },
-                })
+                dataset.append(
+                    {
+                        "messages": [
+                            {"role": "system", "content": comp.v2_result.rendered_prompt.split("\nQuery:")[0]},
+                            {"role": "user", "content": user_content},
+                            {"role": "assistant", "content": assistant_content},
+                        ],
+                        "metadata": {
+                            "test_case_id": comp.test_case.id,
+                            "judge_score": judge_score,
+                            "cost_usd": comp.v2_result.cost_usd,
+                        },
+                    }
+                )
 
         return dataset
 

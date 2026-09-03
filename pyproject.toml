@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "promptdiff"
-version = "3.0.0"
+version = "3.4.0"
 description = "Enterprise-grade async LLM Prompt Regression Testing, DSPy Auto-Optimizer, RAG Evaluators, Security Guardrails, and Streamlit Dashboard"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -14,8 +14,9 @@ authors = [
 ]
 keywords = ["llm", "prompt-engineering", "testing", "regression", "diff", "eval", "cli", "ai-engineering", "mlops", "llm-judge", "dspy", "rag", "streamlit"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
+    "Framework :: Pytest",
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
     "License :: OSI Approved :: MIT License",
@@ -23,8 +24,10 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Testing",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
 ]
 dependencies = [
     "typer>=0.12.0",
@@ -41,6 +44,8 @@ dependencies = [
 Homepage = "https://github.com/latryee/promptdiff"
 Repository = "https://github.com/latryee/promptdiff"
 Issues = "https://github.com/latryee/promptdiff/issues"
+Documentation = "https://github.com/latryee/promptdiff#readme"
+Changelog = "https://github.com/latryee/promptdiff/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 semantic = [
@@ -80,6 +85,9 @@ promptdiff = "promptdiff.pytest_plugin"
 
 [tool.setuptools.packages.find]
 include = ["promptdiff*"]
+
+[tool.setuptools.package-data]
+promptdiff = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

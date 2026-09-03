@@ -32,9 +32,7 @@ def log_to_mlflow(
     try:
         import mlflow
     except ImportError:
-        logger.warning(
-            "MLflow is not installed. To enable MLflow logging, install with `pip install mlflow`."
-        )
+        logger.warning("MLflow is not installed. To enable MLflow logging, install with `pip install mlflow`.")
         return False
 
     try:
@@ -116,7 +114,9 @@ def log_to_mlflow(
                 )
                 mlflow.log_artifact(str(report_json_path), artifact_path="promptdiff_reports")
 
-            logger.info(f"Successfully logged evaluation run {run.info.run_id} to MLflow experiment '{experiment_name}'")
+            logger.info(
+                f"Successfully logged evaluation run {run.info.run_id} to MLflow experiment '{experiment_name}'"
+            )
             return True
 
     except Exception as e:

@@ -60,6 +60,11 @@ class CompressionResult:
     projected_monthly_savings_usd: float
     output_path: Optional[str] = None
 
+    @property
+    def reduction_pct(self) -> float:
+        """Alias for token_reduction_pct."""
+        return self.token_reduction_pct
+
 
 def estimate_tokens(text: str) -> int:
     """Rough estimation of token count (~4 characters per token)."""
@@ -97,8 +102,18 @@ class PromptCompressor:
         for line in lines:
             trimmed = line.strip()
             # Strip common polite fluff
-            trimmed = re.sub(r"^(?:Please|Kindly|Make sure to|Be sure to|You should|Your task is to)\s+", "", trimmed, flags=re.IGNORECASE)
-            trimmed = re.sub(r"^(?:You are an AI assistant(?: designed to)?|You are a helpful assistant that)\s*", "", trimmed, flags=re.IGNORECASE)
+            trimmed = re.sub(
+                r"^(?:Please|Kindly|Make sure to|Be sure to|You should|Your task is to)\s+",
+                "",
+                trimmed,
+                flags=re.IGNORECASE,
+            )
+            trimmed = re.sub(
+                r"^(?:You are an AI assistant(?: designed to)?|You are a helpful assistant that)\s*",
+                "",
+                trimmed,
+                flags=re.IGNORECASE,
+            )
             if trimmed:
                 cleaned_lines.append(trimmed)
         return "\n".join(cleaned_lines)
@@ -140,7 +155,9 @@ class PromptCompressor:
                 break
 
         if progress_cb:
-            progress_cb(2, 3, f"Synthesizing compressed prompt ({int(self.target_reduction * 100)}% target reduction)...")
+            progress_cb(
+                2, 3, f"Synthesizing compressed prompt ({int(self.target_reduction * 100)}% target reduction)..."
+            )
 
         # 2. Generate Candidate Compression
         if self.force_mock:

@@ -127,7 +127,11 @@ def generate_interactive_bundle_html(
     pass_rate = round((passed_cases / total * 100.0) if total > 0 else 100.0, 1)
 
     fc = calculate_forecast(v.total_cost_v1, v.total_cost_v2, total, forecast_volume)
-    savings_text = f"+${fc.monthly_savings_usd:,.2f}/mo Savings" if fc.monthly_savings_usd > 0 else f"${fc.monthly_delta_cost:+,.2f}/mo"
+    savings_text = (
+        f"+${fc.monthly_savings_usd:,.2f}/mo Savings"
+        if fc.monthly_savings_usd > 0
+        else f"${fc.monthly_delta_cost:+,.2f}/mo"
+    )
 
     # Statistical significance on latency
     v1_lats = [float(comp.v1_result.latency_ms) for comp in report.comparisons]
@@ -140,12 +144,11 @@ def generate_interactive_bundle_html(
     for comp in report.comparisons:
         tc = comp.test_case
         all_passed = all(s.passed for s in comp.scores.values())
-        badge = '<span class="badge badge-pass">PASS</span>' if all_passed else '<span class="badge badge-fail">FAIL</span>'
-
-        scores_badges = " ".join(
-            f'<span class="tag">{k}: {s.v2_score}</span>'
-            for k, s in comp.scores.items()
+        badge = (
+            '<span class="badge badge-pass">PASS</span>' if all_passed else '<span class="badge badge-fail">FAIL</span>'
         )
+
+        scores_badges = " ".join(f'<span class="tag">{k}: {s.v2_score}</span>' for k, s in comp.scores.items())
 
         card_html = f"""
         <div class="case-card">

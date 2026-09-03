@@ -40,10 +40,7 @@ async def test_async_runner_concurrency() -> None:
         concurrency=4,
     )
 
-    test_cases = [
-        TestCase(id=f"case_{i}", vars={"name": f"User_{i}"})
-        for i in range(12)
-    ]
+    test_cases = [TestCase(id=f"case_{i}", vars={"name": f"User_{i}"}) for i in range(12)]
 
     report = await runner.run(test_cases)
     assert len(report.comparisons) == 12
@@ -152,8 +149,12 @@ async def test_arena_runner_multi_model() -> None:
     """Test Multi-Model Arena runner across 3 models."""
     variants = {
         "gpt-4o": PromptVersion(name="gpt-4o", template="Answer {{q}} concisely", model="mock-gpt-4o"),
-        "claude-3-5": PromptVersion(name="claude-3-5", template="Answer {{q}} in bullets", model="mock-claude-3-5-sonnet"),
-        "gemini-flash": PromptVersion(name="gemini-flash", template="Answer {{q}} with steps", model="mock-gemini-2.0-flash"),
+        "claude-3-5": PromptVersion(
+            name="claude-3-5", template="Answer {{q}} in bullets", model="mock-claude-3-5-sonnet"
+        ),
+        "gemini-flash": PromptVersion(
+            name="gemini-flash", template="Answer {{q}} with steps", model="mock-gemini-2.0-flash"
+        ),
     }
     providers = {k: MockProvider(model_name=k) for k in variants}
 

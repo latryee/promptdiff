@@ -31,6 +31,7 @@ def _emit_fallback_warning() -> None:
         _FALLBACK_WARNING_EMITTED = True
         try:
             from rich.console import Console
+
             Console(stderr=True).print(
                 "[bold yellow]⚠️  [SimilarityEvaluator] sentence-transformers not installed. "
                 "Falling back to textual token-overlap (difflib). "
@@ -50,8 +51,18 @@ def _get_embedding_model(model_name: str = "all-MiniLM-L6-v2") -> Any | None:
         return _EMBEDDING_MODEL
 
     try:
-        from sentence_transformers import SentenceTransformer
-        _EMBEDDING_MODEL = SentenceTransformer(model_name)
+        import os
+        import warnings
+
+        os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+        logging.getLogger("sentence_transformers").setLevel(logging.ERROR)
+        logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            from sentence_transformers import SentenceTransformer
+
+            _EMBEDDING_MODEL = SentenceTransformer(model_name)
         _EMBEDDING_MODEL_LOADED = True
         return _EMBEDDING_MODEL
     except Exception as e:
@@ -100,7 +111,9 @@ class SimilarityEvaluator(BaseEvaluator):
     """Measures semantic and textual preservation between prompt versions."""
 
     name: str = "similarity"
-    description: str = "Measures semantic cosine similarity (1.0 = Identical, 0.0 = Dissimilar) using sentence-transformers"
+    description: str = (
+        "Measures semantic cosine similarity (1.0 = Identical, 0.0 = Dissimilar) using sentence-transformers"
+    )
 
     def __init__(self, model_name: str = "all-MiniLM-L6-v2", threshold: float = 0.50):
         self.model_name = model_name
