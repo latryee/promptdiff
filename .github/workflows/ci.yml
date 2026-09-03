@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: write
+
 jobs:
   lint:
     name: Code Quality & Type Check
@@ -78,6 +81,15 @@ jobs:
           mkdir -p .github/badges
           genbadge coverage -i reports/coverage.xml -o .github/badges/coverage.svg
           genbadge tests -i reports/junit.xml -o .github/badges/tests.svg
+
+      - name: Commit updated badges
+        if: github.ref == 'refs/heads/main' && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .github/badges/coverage.svg .github/badges/tests.svg
+          git commit -m "chore(badges): update dynamic coverage and test badges [skip ci]" || echo "No badge changes"
+          git push || echo "No push needed"
 
       - name: Test promptdiff regression CLI (Mock mode)
         run: promptdiff test examples/prompts/support_bot_v1.txt examples/prompts/support_bot_v2.txt --inputs examples/testcases.jsonl --eval "json_validity,latency,cost,similarity" --mock --export-markdown regression-report.md --export-html regression-report.html

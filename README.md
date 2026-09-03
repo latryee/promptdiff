@@ -6,13 +6,13 @@
 
 *Catch silent quality regressions, schema breakages, latency spikes, and cost inflation before merging prompt changes.*
 
-[![PyPI version](https://img.shields.io/pypi/v/promptdiff.svg?color=blue)](https://pypi.org/project/promptdiff/)
-[![Python versions](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://pypi.org/project/promptdiff/)
+[![Version](https://img.shields.io/badge/version-v3.4.0-blue.svg)](https://github.com/latryee/promptdiff)
+[![Python versions](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://github.com/latryee/promptdiff)
 [![CI](https://github.com/latryee/promptdiff/actions/workflows/ci.yml/badge.svg)](https://github.com/latryee/promptdiff/actions)
 [![Tests](https://raw.githubusercontent.com/latryee/promptdiff/main/.github/badges/tests.svg)](https://github.com/latryee/promptdiff/actions)
 [![Coverage](https://raw.githubusercontent.com/latryee/promptdiff/main/.github/badges/coverage.svg)](https://github.com/latryee/promptdiff/actions)
 [![Pytest Plugin](https://img.shields.io/badge/pytest--plugin-enabled-blueviolet.svg)](https://docs.pytest.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Type Checked: mypy](https://img.shields.io/badge/mypy-strict-blue.svg)](http://mypy-lang.org/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
