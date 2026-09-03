@@ -70,7 +70,14 @@ jobs:
 
       - name: Run test suite with coverage
         run: |
-          pytest --cov=promptdiff --cov-report=xml --cov-report=term-missing
+          pytest --junitxml=reports/junit.xml --cov=promptdiff --cov-report=xml:reports/coverage.xml --cov-report=term-missing
+
+      - name: Generate dynamic test and coverage badges
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+        run: |
+          mkdir -p .github/badges
+          genbadge coverage -i reports/coverage.xml -o .github/badges/coverage.svg
+          genbadge tests -i reports/junit.xml -o .github/badges/tests.svg
 
       - name: Test promptdiff regression CLI (Mock mode)
         run: |

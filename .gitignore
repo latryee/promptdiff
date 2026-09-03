@@ -20,6 +20,8 @@ ENV/
 .coverage
 .coverage.*
 htmlcov/
+reports/
+coverage.xml
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
