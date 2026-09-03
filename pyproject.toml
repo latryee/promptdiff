@@ -64,6 +64,10 @@ tui = [
 javascript = [
     "esprima>=4.0.1",
 ]
+docs = [
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.5.0",
+]
 all = [
     "sentence-transformers>=2.2.0",
     "tiktoken>=0.7.0",
