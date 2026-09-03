@@ -85,6 +85,7 @@ from promptdiff.sdk import (
     synthesize_dpo,
     test_hypothesis,
     tune,
+    verify_watermark,
     watermark,
 )
 
@@ -155,5 +156,6 @@ __all__ = [
     "benchmark_needle_matrix",
     "scaffold_editor_extensions",
     "export_executive_report",
+    "verify_watermark",
     "__version__",
 ]
