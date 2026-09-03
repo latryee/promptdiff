@@ -170,6 +170,24 @@ def promptdiff_eval() -> Callable[..., DiffReport]:
             concurrency=concurrency,
         )
 
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop is not None and loop.is_running():
+            try:
+                import nest_asyncio
+
+                nest_asyncio.apply(loop)
+                return loop.run_until_complete(runner.run(test_cases))
+            except ImportError:
+                raise RuntimeError(
+                    "promptdiff_eval is a synchronous fixture and cannot be called from an already running event loop "
+                    "(e.g., inside an async test). Use the async 'prompt_diff' fixture with "
+                    "'await prompt_diff.compare(...)' instead, or install 'nest_asyncio'."
+                )
+
         return asyncio.run(runner.run(test_cases))
 
     return _eval
