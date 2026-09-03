@@ -1615,6 +1615,34 @@ def cache_impact_cmd(
     console.print(rec_panel)
 
 
+@app.command(name="replay-traces")
+def replay_traces_cmd(
+    v1: str = typer.Argument(..., help="Baseline prompt template or file path"),
+    v2: str = typer.Argument(..., help="Candidate prompt template or file path"),
+    traces: str = typer.Option(..., "--traces", "-t", help="Path to production traces (.json or .jsonl)"),
+    limit: int = typer.Option(50, "--limit", "-l", help="Maximum trace queries to replay"),
+    model: str = typer.Option("gpt-4o", "--model", "-m", help="Target LLM model"),
+    mock: bool = typer.Option(True, "--mock", help="Run offline in deterministic mock mode"),
+) -> None:
+    """Replay production OpenTelemetry / Langfuse traces as regression test cases."""
+    from promptdiff.production.trace_replay import ProductionTraceReplayer
+
+    p1 = load_prompt_file(v1, version_name="v1").template
+    p2 = load_prompt_file(v2, version_name="v2").template
+
+    replayer = ProductionTraceReplayer(mask_pii=True)
+    report = replayer.ingest_traces(traces, limit=limit)
+
+    console.print(
+        f"[bold green]✓ Ingested {report.total_spans_read} production spans ({report.valid_test_cases} test cases extracted, {report.masked_pii_count} PII fields masked)[/bold green]"
+    )
+
+    diff_report = replayer.replay_sync(p1, p2, traces, model=model, mock=mock, limit=limit)
+    console.print(
+        f"[bold cyan]Completed shadow replay of {len(diff_report.comparisons)} production queries. Verdict: {'PASS' if diff_report.verdict.passed else 'REGRESSION'}[/bold cyan]"
+    )
+
+
 @app.command(name="install-hook")
 def install_hook_cmd(
     directory: str = typer.Option(".", "--dir", "-d", help="Git repository root directory"),

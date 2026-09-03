@@ -884,3 +884,31 @@ def compute_bradley_terry_ratings(matches: list[Any]) -> Any:
 
     parsed = [m if isinstance(m, PairwiseMatch) else PairwiseMatch(**m) for m in matches]
     return _bt(parsed)
+
+
+def replay_production_traces(
+    v1: str,
+    v2: str,
+    traces: Any,
+    model: str = "gpt-4o",
+    mock: bool = True,
+    limit: Optional[int] = None,
+) -> Any:
+    """Replay production traces from OpenTelemetry or Langfuse across prompt revisions.
+
+    Args:
+        v1: Baseline prompt template or file path.
+        v2: Candidate prompt template or file path.
+        traces: Path to trace dataset JSON/JSONL, or list of trace dicts.
+        model: Target LLM model name.
+        mock: Force deterministic offline mock execution.
+        limit: Max traces to evaluate.
+
+    Returns:
+        DiffReport of regression comparisons on production queries.
+    """
+    from promptdiff.production.trace_replay import replay_production_traces as _replay
+
+    p1 = load_prompt_file(v1, version_name="v1").template
+    p2 = load_prompt_file(v2, version_name="v2").template
+    return _replay(p1, p2, traces=traces, model=model, mock=mock, limit=limit)
