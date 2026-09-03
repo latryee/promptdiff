@@ -110,6 +110,7 @@ def _run_test_suite(
     rubric: str | None,
     forecast: str | None,
     estimate: bool = False,
+    db_retention_days: int | None = None,
 ) -> None:
     """Core test execution logic shared between `promptdiff test` and `promptdiff run`."""
     m1 = model_v1 or model
@@ -260,6 +261,20 @@ def _run_test_suite(
         export_to_langfuse(report)
         console.print("[bold green][+] Langfuse telemetry exported successfully.[/bold green]")
 
+    try:
+        from promptdiff.core.db import TelemetryDatabase
+
+        telemetry_db = TelemetryDatabase()
+        telemetry_db.record_run(report)
+        if db_retention_days is not None:
+            pruned = telemetry_db.prune_old_runs(db_retention_days)
+            if pruned > 0:
+                console.print(
+                    f"[dim]Auto-pruned {pruned} historical telemetry run(s) older than {db_retention_days} days.[/dim]"
+                )
+    except Exception:
+        pass
+
     if fail_on_regression and not report.verdict.passed:
         console.print(
             "[bold red][!] CI/CD Quality Gate: Regression threshold violated. Exiting with code 1.[/bold red]"
@@ -314,6 +329,9 @@ def test_cmd(
     estimate: bool = typer.Option(
         False, "--estimate", help="Pre-execution local token and cost estimation with confirmation prompt"
     ),
+    db_retention_days: int | None = typer.Option(
+        None, "--db-retention-days", help="Automatically prune telemetry database runs older than N days"
+    ),
 ) -> None:
     """Run regression comparison between two prompt versions across test cases."""
     _run_test_suite(
@@ -345,6 +363,7 @@ def test_cmd(
         rubric=rubric,
         forecast=forecast,
         estimate=estimate,
+        db_retention_days=db_retention_days,
     )
 
 
@@ -1567,6 +1586,29 @@ def db_hotspots_cmd() -> None:
     for h in hotspots:
         table.add_row(h.test_case_id, str(h.failure_count))
     console.print(table)
+
+
+@db_app.command(name="prune")
+def db_prune_cmd(
+    days: int = typer.Option(30, "--days", "-d", help="Retention window in days (records older than this are deleted)"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation prompt"),
+) -> None:
+    """Prune historical evaluation telemetry records older than N days."""
+    from promptdiff.core.db import TelemetryDatabase
+
+    if not yes:
+        confirm = typer.confirm(
+            f"Are you sure you want to delete evaluation records older than {days} days?", default=True
+        )
+        if not confirm:
+            console.print("[yellow]Pruning aborted.[/yellow]")
+            raise typer.Exit(code=0)
+
+    db = TelemetryDatabase()
+    count = db.prune_old_runs(retention_days=days)
+    console.print(
+        f"[bold green]✓ Successfully pruned {count} historical evaluation run(s) older than {days} days.[/bold green]"
+    )
 
 
 @app.command(name="cache-impact")

@@ -187,3 +187,34 @@ class TelemetryDatabase:
                     )
                 )
             return hotspots
+
+    def prune_old_runs(self, retention_days: int) -> int:
+        """Delete historical evaluation runs and test executions older than retention_days.
+
+        Args:
+            retention_days: Number of days of historical records to keep.
+
+        Returns:
+            Number of evaluation runs pruned.
+        """
+        if retention_days <= 0:
+            return 0
+
+        cutoff_timestamp = time.time() - (retention_days * 86400.0)
+        with self._get_connection() as conn:
+            conn.execute(
+                """
+                DELETE FROM test_case_executions
+                WHERE run_id IN (
+                    SELECT run_id FROM evaluation_runs WHERE timestamp < ?
+                )
+                """,
+                (cutoff_timestamp,),
+            )
+            cursor = conn.execute(
+                "DELETE FROM evaluation_runs WHERE timestamp < ?",
+                (cutoff_timestamp,),
+            )
+            deleted_runs = cursor.rowcount
+            conn.commit()
+            return max(0, deleted_runs)

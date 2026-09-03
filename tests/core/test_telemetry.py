@@ -150,3 +150,52 @@ def test_telemetry_database_concurrent_writes(tmp_path: Path) -> None:
     assert len(results) == 15
     recent_runs = db.get_recent_runs(limit=50)
     assert len(recent_runs) == 15
+
+
+def test_telemetry_database_pruning(tmp_path: Path) -> None:
+    """Verify pruning deletes historical runs older than specified retention window."""
+    import time
+
+    db_file = tmp_path / "prune_test.db"
+    db = TelemetryDatabase(db_path=str(db_file))
+
+    # Insert an old run (45 days old)
+    old_time = time.time() - (45 * 86400.0)
+    with db._get_connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO evaluation_runs
+            (run_id, timestamp, v1_name, v2_name, passed, cost_delta_pct, latency_delta_pct, total_cases)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            ("run_old", old_time, "v1", "v2", 1, 0.0, 0.0, 1),
+        )
+        conn.execute(
+            """
+            INSERT INTO test_case_executions
+            (run_id, test_case_id, passed, v1_latency_ms, v2_latency_ms, v1_cost_usd, v2_cost_usd)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            ("run_old", "tc_1", 1, 10.0, 10.0, 0.001, 0.001),
+        )
+        # Insert a fresh run (today)
+        now = time.time()
+        conn.execute(
+            """
+            INSERT INTO evaluation_runs
+            (run_id, timestamp, v1_name, v2_name, passed, cost_delta_pct, latency_delta_pct, total_cases)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            ("run_fresh", now, "v1", "v2", 1, 0.0, 0.0, 1),
+        )
+        conn.commit()
+
+    assert len(db.get_recent_runs(limit=10)) == 2
+
+    # Prune runs older than 30 days
+    pruned = db.prune_old_runs(retention_days=30)
+    assert pruned == 1
+
+    remaining = db.get_recent_runs(limit=10)
+    assert len(remaining) == 1
+    assert remaining[0].run_id == "run_fresh"
