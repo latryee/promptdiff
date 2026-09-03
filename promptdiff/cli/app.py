@@ -1662,6 +1662,85 @@ def install_hook_cmd(
         raise typer.Exit(code=1)
 
 
+@app.command(name="doctor")
+def doctor_cmd() -> None:
+    """Perform comprehensive environment diagnostics (API keys, dependencies, SQLite)."""
+    import importlib.metadata
+    import os
+    import sqlite3
+
+    console.print(Panel("[bold cyan]PromptDiff Environment & Health Doctor[/bold cyan]", border_style="cyan"))
+
+    # 1. Core System & Database
+    sys_table = Table(title="Core Runtime & Database", box=None, show_header=True)
+    sys_table.add_column("Component", style="bold white")
+    sys_table.add_column("Status", style="green")
+    sys_table.add_column("Details", style="dim")
+
+    sys_table.add_row("Python Version", f"[green]✓ {sys.version.split()[0]}[/green]", sys.executable)
+    sys_table.add_row("SQLite Version", f"[green]✓ {sqlite3.sqlite_version}[/green]", "Local disk cache engine")
+    sys_table.add_row("Operating System", f"[green]✓ {sys.platform}[/green]", sys.platform)
+    console.print(sys_table)
+    console.print()
+
+    # 2. LLM Provider API Keys
+    key_table = Table(title="LLM Provider Authentication", box=None, show_header=True)
+    key_table.add_column("Provider Key", style="bold white")
+    key_table.add_column("Configured", style="bold")
+    key_table.add_column("Environment Variable", style="dim")
+
+    keys = [
+        ("OpenAI", "OPENAI_API_KEY"),
+        ("Anthropic", "ANTHROPIC_API_KEY"),
+        ("Google Gemini", "GEMINI_API_KEY"),
+        ("DeepSeek", "DEEPSEEK_API_KEY"),
+        ("Mistral", "MISTRAL_API_KEY"),
+        ("Watermark Secret", "PROMPTDIFF_WATERMARK_KEY"),
+    ]
+
+    for label, env_var in keys:
+        val = os.getenv(env_var)
+        if val:
+            masked = f"[green]✓ Configured[/green] ({val[:4]}...{val[-2:] if len(val) > 6 else ''})"
+        else:
+            masked = "[yellow]○ Missing (Mock mode only)[/yellow]"
+        key_table.add_row(label, masked, env_var)
+
+    console.print(key_table)
+    console.print()
+
+    # 3. Optional Dependencies
+    pkg_table = Table(title="Optional Extensions & ML Packages", box=None, show_header=True)
+    pkg_table.add_column("Package", style="bold white")
+    pkg_table.add_column("Status", style="bold")
+    pkg_table.add_column("Feature Enabled", style="dim")
+
+    optional_pkgs = [
+        ("tiktoken", "Exact token counting & tokenizer pricing", "pip install promptdiff[tokenizer]"),
+        (
+            "sentence-transformers",
+            "Semantic similarity & vector embedding evaluations",
+            "pip install promptdiff[semantic]",
+        ),
+        ("mlflow", "Enterprise experiment tracking & telemetry logging", "pip install promptdiff[mlops]"),
+        ("wandb", "Weights & Biases artifact & run tracking", "pip install promptdiff[mlops]"),
+        ("streamlit", "Interactive web visualizer dashboard", "pip install promptdiff[ui]"),
+        ("textual", "Interactive terminal UI (TUI) dashboard", "pip install promptdiff[tui]"),
+    ]
+
+    for pkg_name, feat, install_cmd in optional_pkgs:
+        try:
+            ver = importlib.metadata.version(pkg_name)
+            status = f"[green]✓ Installed (v{ver})[/green]"
+        except importlib.metadata.PackageNotFoundError:
+            status = f"[dim yellow]○ Not installed[/dim yellow] ([dim]{install_cmd}[/dim])"
+        pkg_table.add_row(pkg_name, status, feat)
+
+    console.print(pkg_table)
+    console.print()
+    console.print("[bold green]✓ Diagnostic complete.[/bold green] Use '--mock' flag anytime for zero-key evaluation.")
+
+
 def main() -> int:
     """Main execution wrapper."""
     try:

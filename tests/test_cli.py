@@ -23,6 +23,17 @@ def test_cli_pricing():
     assert "gpt-4o" in result.output
 
 
+def test_cli_doctor(monkeypatch):
+    """Test promptdiff doctor environment health diagnostic CLI command."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-proj-testkey123456789")
+    result = runner.invoke(app, ["doctor"])
+    assert result.exit_code == 0
+    assert "Environment & Health Doctor" in result.output
+    assert "Python Version" in result.output
+    assert "SQLite Version" in result.output
+    assert "Configured" in result.output
+
+
 def test_cli_init(tmp_path: Path):
     target_dir = tmp_path / "scaffold"
     result = runner.invoke(app, ["init", str(target_dir)])
