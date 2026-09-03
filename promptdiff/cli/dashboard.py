@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, Optional
 
@@ -39,6 +40,22 @@ def launch_dashboard(port: int = 8501, host: str = "localhost", report_path: Opt
 
     print(f"[+] Launching promptdiff Streamlit Web Dashboard at http://{host}:{port} ...")
     subprocess.run(cmd)
+
+
+def stream_live_progress(total_cases: int = 5, delay: float = 0.05) -> Iterator[dict[str, Any]]:
+    """Yield live progress events for UI/dashboard streaming."""
+    import time
+
+    for i in range(1, total_cases + 1):
+        pct = int(i / total_cases * 100)
+        yield {
+            "step": i,
+            "total": total_cases,
+            "pct": pct,
+            "test_case_id": f"tc_{i:02d}",
+            "status": "evaluating" if i < total_cases else "completed",
+        }
+        time.sleep(delay)
 
 
 def _get_mock_diff_report() -> dict[str, Any]:

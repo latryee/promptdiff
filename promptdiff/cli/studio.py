@@ -225,6 +225,33 @@ class StudioRequestHandler(http.server.BaseHTTPRequestHandler):
 
             self.wfile.write(b'data: {"done": true}\n\n')
             self.wfile.flush()
+        elif parsed.path == "/api/stream-progress":
+            # Server-Sent Events (SSE) Live Evaluation Progress Stream
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+
+            import time
+
+            total_cases = 5
+            for i in range(1, total_cases + 1):
+                progress_data = {
+                    "step": i,
+                    "total": total_cases,
+                    "pct": int(i / total_cases * 100),
+                    "test_case_id": f"tc_{i:02d}",
+                    "status": "evaluating" if i < total_cases else "completed",
+                }
+                self.wfile.write(f"data: {json.dumps(progress_data)}\n\n".encode())
+                self.wfile.flush()
+                time.sleep(0.04)
+
+            self.wfile.write(b'data: {"done": true}\n\n')
+            self.wfile.flush()
+            self.close_connection = True
         else:
             self.send_response(404)
             self.end_headers()
