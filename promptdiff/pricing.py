@@ -6,9 +6,12 @@ Meta Llama, Mistral, and local/free providers, plus production scale cost projec
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from typing import Union
+
+logger = logging.getLogger("promptdiff.pricing")
 
 
 @dataclass(frozen=True)
@@ -139,6 +142,46 @@ def calculate_cost(
     output_cost = completion_tokens * pricing.output_per_token
     total = input_cost + output_cost
     return round(total, 6)
+
+
+_TIKTOKEN_WARNED = False
+
+
+def estimate_tokens(text: str, model_name: str = "gpt-4o") -> int:
+    """Estimate token count for a given text.
+
+    Uses `tiktoken` when installed (with appropriate model encoding), otherwise
+    logs a warning and falls back to a regex word-count heuristic.
+    """
+    global _TIKTOKEN_WARNED
+    try:
+        import tiktoken
+
+        try:
+            encoding = tiktoken.encoding_for_model(model_name)
+        except (KeyError, ValueError):
+            encoding = tiktoken.get_encoding("cl100k_base")
+        return max(1, len(encoding.encode(text)))
+    except ImportError:
+        if not _TIKTOKEN_WARNED:
+            logger.warning(
+                "tiktoken is not installed; falling back to regex-based token estimation. "
+                "Install with `pip install 'promptdiff[tokenizer]'` for exact token counts."
+            )
+            _TIKTOKEN_WARNED = True
+        words = len(re.findall(r"\w+|[^\w\s]", text, re.UNICODE))
+        return max(1, int(words * 1.1))
+
+
+def calculate_text_cost(
+    model_name: str,
+    prompt_text: str,
+    completion_text: str,
+) -> float:
+    """Calculate cost in USD directly from prompt and completion text using estimated tokens."""
+    prompt_tokens = estimate_tokens(prompt_text, model_name=model_name)
+    completion_tokens = estimate_tokens(completion_text, model_name=model_name)
+    return calculate_cost(model_name, prompt_tokens, completion_tokens)
 
 
 def parse_volume_string(vol: Union[str, int, float]) -> int:

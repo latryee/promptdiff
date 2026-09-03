@@ -17,14 +17,8 @@ from typing import Optional
 from promptdiff.core.models import PromptVersion, TestCase
 from promptdiff.core.runner import PromptDiffRunner
 from promptdiff.evaluators.registry import get_evaluators
-from promptdiff.pricing import calculate_cost
+from promptdiff.pricing import calculate_cost, estimate_tokens
 from promptdiff.providers.registry import get_provider
-
-
-def estimate_tokens(text: str) -> int:
-    """Rough token estimation for prompt length."""
-    words = len(re.findall(r"\w+|[^\w\s]", text, re.UNICODE))
-    return max(1, int(words * 1.1))
 
 
 @dataclass

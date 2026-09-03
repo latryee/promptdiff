@@ -48,6 +48,9 @@ Documentation = "https://github.com/latryee/promptdiff#readme"
 Changelog = "https://github.com/latryee/promptdiff/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
+tokenizer = [
+    "tiktoken>=0.7.0",
+]
 semantic = [
     "sentence-transformers>=2.2.0",
 ]
@@ -60,6 +63,7 @@ tui = [
 ]
 all = [
     "sentence-transformers>=2.2.0",
+    "tiktoken>=0.7.0",
     "streamlit>=1.30.0",
     "textual>=0.50.0",
     "pandas>=2.0.0",

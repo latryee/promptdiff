@@ -71,3 +71,48 @@ def test_pricing_sync_script_diff_and_formatting() -> None:
     # Test empty diff message
     empty_msg = format_diff_table([])
     assert "in sync" in empty_msg
+
+
+def test_estimate_tokens_regex_fallback(caplog) -> None:
+    """Test token estimation falling back to regex word count when tiktoken is unavailable."""
+    import logging
+    import sys
+    from unittest.mock import patch
+
+    import promptdiff.pricing as pricing
+
+    # Reset warned flag to test warning output
+    pricing._TIKTOKEN_WARNED = False
+
+    with patch.dict(sys.modules, {"tiktoken": None}):
+        with caplog.at_level(logging.WARNING):
+            tok_count = pricing.estimate_tokens("Hello world this is an estimation test.")
+            assert tok_count > 0
+            assert any("tiktoken is not installed" in rec.message for rec in caplog.records)
+
+
+def test_estimate_tokens_with_tiktoken() -> None:
+    """Test token estimation when tiktoken is available."""
+    import sys
+    from unittest.mock import MagicMock, patch
+
+    import promptdiff.pricing as pricing
+
+    mock_enc = MagicMock()
+    mock_enc.encode.return_value = [100, 200, 300, 400]
+    mock_tiktoken = MagicMock()
+    mock_tiktoken.encoding_for_model.return_value = mock_enc
+
+    with patch.dict(sys.modules, {"tiktoken": mock_tiktoken}):
+        tok_count = pricing.estimate_tokens("Mocked token text", model_name="gpt-4o")
+        assert tok_count == 4
+        mock_tiktoken.encoding_for_model.assert_called_with("gpt-4o")
+
+
+def test_calculate_text_cost() -> None:
+    """Test calculate_text_cost using prompt and completion strings."""
+    from promptdiff.pricing import calculate_text_cost
+
+    cost = calculate_text_cost("gpt-4o", prompt_text="Short prompt query", completion_text="Short response output")
+    assert cost > 0.0
+
