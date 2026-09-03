@@ -28,7 +28,16 @@ We take the security of PromptDiff seriously. If you discover a vulnerability or
 - Potential impact and severity assessment
 - Any suggested fixes or mitigations
 
-### Response Timeline
-- **Initial acknowledgment:** within 48 hours
-- **Assessment & reproduction:** within 5 business days
-- **Patch & disclosure coordination:** coordinated with reporter prior to public release
+### Response Timeline & Triage SLAs
+
+PromptDiff maintains explicit Service Level Agreements (SLAs) for vulnerability triage, remediation, and patch distribution:
+
+| Severity | CVSS v3.1 Range | Initial Acknowledgment | Root-Cause Confirmation | Security Patch Release |
+| :--- | :---: | :---: | :---: | :---: |
+| **Critical** | 9.0 – 10.0 | **< 24 hours** | **< 48 hours** | **< 72 hours** |
+| **High** | 7.0 – 8.9 | **< 48 hours** | **< 4 business days** | **< 7 business days** |
+| **Medium** | 4.0 – 6.9 | **< 5 business days** | **< 10 business days** | Next minor release |
+| **Low** | 0.1 – 3.9 | **< 10 business days** | Best effort | Next minor release |
+
+- **Emergency Hotfixes:** Critical vulnerabilities (e.g. sandbox escapes, credential leakage, remote code execution) receive expedited emergency hotfixes released to PyPI outside the standard release cycle.
+- **CVE Attribution:** Reporters of validated security issues will be credited in GitHub Security Advisories and release notes.
