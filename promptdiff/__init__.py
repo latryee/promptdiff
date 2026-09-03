@@ -37,6 +37,7 @@ from promptdiff.core.models import (
     TestCase,
 )
 from promptdiff.sdk import (
+    analyze_cache_impact,
     async_compare,
     attack_tree,
     attribute_hallucinations,
@@ -107,6 +108,7 @@ __all__ = [
     "RunResult",
     "TestCase",
     "TelemetryDatabase",
+    "analyze_cache_impact",
     "async_compare",
     "compare",
     "optimize",

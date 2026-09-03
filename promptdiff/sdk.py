@@ -788,3 +788,27 @@ def export_executive_report(report: DiffReport, project_name: str = "Enterprise 
 
     exporter = ExecutiveReportExporter()
     return exporter.generate(report, project_name=project_name)
+
+
+def analyze_cache_impact(
+    v1: str,
+    v2: str,
+    model: str = "claude-3-5-sonnet",
+    daily_volume: int = 10_000,
+) -> Any:
+    """Analyze KV-cache prefix divergence and calculate financial cache invalidation impact.
+
+    Args:
+        v1: Path to prompt file or raw template string for baseline.
+        v2: Path to prompt file or raw template string for candidate.
+        model: Target LLM model name (defaults to 'claude-3-5-sonnet').
+        daily_volume: Estimated daily request volume to compute monthly financial delta.
+
+    Returns:
+        CacheBreakpointResult with shared prefix tokens, breakpoint index, and monthly cash impact.
+    """
+    from promptdiff.optimizer.cache_impact import analyze_cache_impact as _analyze
+
+    p1 = load_prompt_file(v1, version_name="v1").template
+    p2 = load_prompt_file(v2, version_name="v2").template
+    return _analyze(p1, p2, model=model, daily_volume=daily_volume)

@@ -1569,6 +1569,52 @@ def db_hotspots_cmd() -> None:
     console.print(table)
 
 
+@app.command(name="cache-impact")
+def cache_impact_cmd(
+    v1: str = typer.Argument(..., help="Baseline prompt file or template string"),
+    v2: str = typer.Argument(..., help="Candidate prompt file or template string"),
+    model: str = typer.Option("claude-3-5-sonnet", "--model", "-m", help="Target LLM model"),
+    daily_volume: int = typer.Option(10_000, "--volume", "-v", help="Estimated daily request volume"),
+) -> None:
+    """Analyze KV-cache prefix divergence and calculate financial cache invalidation impact."""
+    from promptdiff.optimizer.cache_impact import analyze_cache_impact
+
+    p1 = load_prompt_file(v1, version_name="v1").template
+    p2 = load_prompt_file(v2, version_name="v2").template
+
+    res = analyze_cache_impact(p1, p2, model=model, daily_volume=daily_volume)
+
+    table = Table(title=f"⚡ KV-Cache Prefix Caching Impact ({res.model_name})", border_style="cyan")
+    table.add_column("Property", style="bold white")
+    table.add_column("Value", style="cyan")
+
+    table.add_row("v1 Token Count", str(res.v1_tokens))
+    table.add_row("v2 Token Count", str(res.v2_tokens))
+    table.add_row("Shared Prefix Tokens", f"{res.common_prefix_tokens} tokens")
+    table.add_row("Cache Divergence Index", f"Token #{res.breakpoint_token_idx}")
+    table.add_row("Minimum Cache Threshold", f"{res.min_cache_threshold_tokens} tokens")
+    table.add_row(
+        "Prefix Cache Preserved",
+        "[green]YES[/green]" if res.cache_preserved else "[red]NO (Invalidated)[/red]",
+    )
+    table.add_row("Lost Cached Tokens / Req", f"{res.lost_cached_tokens} tokens")
+    table.add_row("Cost Delta / Request", f"${res.cost_delta_per_request_usd:.6f}")
+    table.add_row("Monthly Cash Impact", f"${res.monthly_financial_impact_usd:.2f} / month")
+
+    console.print()
+    console.print(table)
+
+    panel_style = "green" if res.cache_preserved else "yellow"
+    rec_panel = Panel(
+        res.recommendation,
+        title="[bold]Cache Optimization Insight[/bold]",
+        border_style=panel_style,
+        padding=(1, 2),
+    )
+    console.print()
+    console.print(rec_panel)
+
+
 @app.command(name="install-hook")
 def install_hook_cmd(
     directory: str = typer.Option(".", "--dir", "-d", help="Git repository root directory"),
