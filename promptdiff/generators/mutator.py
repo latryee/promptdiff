@@ -81,7 +81,7 @@ class DatasetMutator:
         mutated_vars: dict[str, Any] = copy.deepcopy(tc.vars)
         mutation_type = "standard"
 
-        mode = mutation_idx % 4
+        mode = mutation_idx % 6
 
         # Mode 0: Typo & Colloquial Slang
         if mode == 0 and self.include_typos:
@@ -97,22 +97,42 @@ class DatasetMutator:
                 if isinstance(v, str) and len(v) > 3:
                     mutated_vars[k] = v + random.choice(ADVERSARIAL_SUFFIXES)
 
-        # Mode 2: Extreme Boundary & Empty / Length
+        # Mode 2: Extreme Boundary (Empty & Oversized)
         elif mode == 2 and self.include_boundary:
             mutation_type = "boundary_stress"
             for k, v in mutated_vars.items():
                 if isinstance(v, str):
-                    if random.random() > 0.5:
-                        mutated_vars[k] = f"{v} " + ("Repeated info: " + v + ". ") * 4  # Long input
+                    if mutation_idx % 2 == 0:
+                        mutated_vars[k] = ""  # Empty input edge-case
                     else:
-                        mutated_vars[k] = f"   {v.upper()}   "  # Whitespace / casing
+                        mutated_vars[k] = f"{v} " * 60  # Extreme oversized input
 
-        # Mode 3: Negation / Rephrasing
-        else:
+        # Mode 3: Multilingual Transformation
+        elif mode == 3:
+            mutation_type = "multilingual_edge"
+            ml_prefixes = [
+                "¿Por favor responda en español? ",
+                "Bitte antworten Sie auf Deutsch: ",
+                "日本語で回答してください： ",
+                "يرجى الرد باللغة العربية: ",
+            ]
+            for k, v in mutated_vars.items():
+                if isinstance(v, str):
+                    mutated_vars[k] = random.choice(ml_prefixes) + v
+
+        # Mode 4: Negation / Rephrasing
+        elif mode == 4:
             mutation_type = "negation_constraint"
             for k, v in mutated_vars.items():
                 if isinstance(v, str):
                     mutated_vars[k] = f"I am specifically asking about: {v}. Please do NOT provide generic boilerplate."
+
+        # Mode 5: Whitespace & Casing
+        else:
+            mutation_type = "whitespace_casing"
+            for k, v in mutated_vars.items():
+                if isinstance(v, str):
+                    mutated_vars[k] = f"   {v.upper()}   \n"
 
         return TestCase(
             id=f"{tc.id}_mut_{mutation_idx}_{mutation_type}",
@@ -135,6 +155,25 @@ class DatasetMutator:
                 mutated_list.append(self.mutate_single_testcase(tc, m))
 
         return mutated_list
+
+    def augment_with_synthetic_adversarial(
+        self,
+        prompt_template: str = "",
+        model_name: str = "gpt-4o",
+        force_mock: bool = True,
+    ) -> list[TestCase]:
+        """Integrate with SyntheticTestGenerator to augment dataset with adversarial edge cases."""
+        from promptdiff.generators.synthetic import SyntheticTestGenerator
+
+        gen = SyntheticTestGenerator(
+            prompt_template=prompt_template,
+            model_name=model_name,
+            force_mock=force_mock,
+            mode="adversarial",
+        )
+        edge_cases = gen.generate_adversarial_edge_cases()
+        mutated_base = self.generate_mutations()
+        return mutated_base + edge_cases
 
     def save_to_jsonl(self, testcases: list[TestCase], output_path: str) -> str:
         """Export mutated test cases to JSONL file."""

@@ -60,6 +60,47 @@ def test_dataset_mutator() -> None:
 
 
 @pytest.mark.asyncio
+async def test_synthetic_adversarial_edge_cases_and_mutator_integration() -> None:
+    """Test synthetic adversarial edge-case generation (empty, oversized, multilingual) and mutator integration."""
+    from promptdiff.generators.synthetic import SyntheticTestGenerator
+
+    gen = SyntheticTestGenerator(
+        prompt_template="Answer question: {{query}} for customer {{customer_id}}",
+        force_mock=True,
+        mode="adversarial",
+    )
+    edge_cases = gen.generate_adversarial_edge_cases()
+    assert len(edge_cases) >= 8
+
+    # Verify empty string case
+    empty_case = next(c for c in edge_cases if c.id == "edge_case_empty")
+    assert empty_case.vars["query"] == ""
+
+    # Verify oversized case
+    oversized_case = next(c for c in edge_cases if c.id == "edge_case_oversized")
+    assert len(oversized_case.vars["query"]) > 2000
+
+    # Verify multilingual cases
+    es_case = next(c for c in edge_cases if "multilingual_es" in c.id)
+    assert "¿" in es_case.vars["query"]
+
+    # Verify generation with adversarial mode
+    batch = await gen.generate(count=15)
+    assert len(batch) == 15
+    assert any("adversarial" in c.tags or "edge_case" in c.tags for c in batch)
+
+    # Verify integration with mutator
+    seed_cases = [TestCase(id="tc_seed", vars={"query": "Help me login"})]
+    mutator = DatasetMutator(seed_testcases=seed_cases, multiplier=2)
+    augmented = mutator.augment_with_synthetic_adversarial(
+        prompt_template="Answer: {{query}}",
+        force_mock=True,
+    )
+    assert len(augmented) > 2
+    assert any(c.id == "edge_case_empty" for c in augmented)
+
+
+@pytest.mark.asyncio
 async def test_jailbreak_fuzzer() -> None:
     """Test adversarial jailbreak red-teaming fuzzer with 20 distinct attack vectors."""
     pv = PromptVersion(
