@@ -54,3 +54,35 @@ async def test_provider_streaming_and_profiler_integration() -> None:
     assert report.total_tokens > 0
     assert report.ttft_ms >= 0.0
     assert report.model_name == "mock-gpt-4o"
+
+
+@pytest.mark.asyncio
+async def test_mock_provider_deterministic_seed() -> None:
+    """Test MockProvider seed parameter guarantees deterministic, reproducible output and latency."""
+    p_seed1 = MockProvider(model_name="mock-gpt-4o", seed=42, simulate_delay=False)
+    p_seed2 = MockProvider(model_name="mock-gpt-4o", seed=42, simulate_delay=False)
+    p_diff_seed = MockProvider(model_name="mock-gpt-4o", seed=99, simulate_delay=False)
+
+    prompt = "Generic test prompt for deterministic evaluation."
+
+    # Identical seeds must produce strictly identical outputs, tokens, latency, and hashes
+    res1 = await p_seed1.generate(prompt)
+    res2 = await p_seed2.generate(prompt)
+
+    assert res1.output == res2.output
+    assert res1.latency_ms == res2.latency_ms
+    assert res1.prompt_tokens == res2.prompt_tokens
+    assert res1.completion_tokens == res2.completion_tokens
+    assert res1.raw_response["hash"] == res2.raw_response["hash"]
+    assert res1.raw_response["seed"] == 42
+
+    # Different seeds must produce different hashes and outputs for generic prompts
+    res_diff = await p_diff_seed.generate(prompt)
+    assert res1.raw_response["hash"] != res_diff.raw_response["hash"]
+    assert res1.output != res_diff.output
+    assert res_diff.raw_response["seed"] == 99
+
+    # Registry passes seed keyword argument
+    registry_provider = get_provider("mock-gpt-4o", seed=12345)
+    assert isinstance(registry_provider, MockProvider)
+    assert registry_provider.seed == 12345

@@ -15,9 +15,16 @@ from promptdiff.providers.base import BaseLLMProvider, ProviderResponse
 class MockProvider(BaseLLMProvider):
     """Mock Provider that deterministically responds based on prompt contents."""
 
-    def __init__(self, model_name: str = "mock-gpt-4o", simulate_delay: bool = True, **kwargs: Any):
+    def __init__(
+        self,
+        model_name: str = "mock-gpt-4o",
+        simulate_delay: bool = True,
+        seed: Optional[int] = None,
+        **kwargs: Any,
+    ):
         super().__init__(model_name, **kwargs)
         self.simulate_delay = simulate_delay
+        self.seed = seed
 
     async def generate(
         self,
@@ -28,8 +35,9 @@ class MockProvider(BaseLLMProvider):
     ) -> ProviderResponse:
         start_time = time.perf_counter()
 
-        # Seed deterministic pseudo-random generator with prompt hash
-        h = int(hashlib.sha256(prompt.encode("utf-8")).hexdigest(), 16)
+        # Seed deterministic pseudo-random generator with prompt hash and optional seed
+        prompt_data = f"{prompt}:seed={self.seed}" if self.seed is not None else prompt
+        h = int(hashlib.sha256(prompt_data.encode("utf-8")).hexdigest(), 16)
         base_latency = 120 + (h % 150)  # 120ms - 270ms
 
         if self.simulate_delay:
@@ -44,7 +52,8 @@ class MockProvider(BaseLLMProvider):
         total_tokens = prompt_tokens + completion_tokens
 
         elapsed_ms = (time.perf_counter() - start_time) * 1000.0
-        reported_latency = base_latency + (elapsed_ms % 20)
+        # If seed is fixed, guarantee fully reproducible latency
+        reported_latency = float(base_latency) if self.seed is not None else base_latency + (elapsed_ms % 20)
 
         return ProviderResponse(
             output=output_text,
@@ -53,7 +62,7 @@ class MockProvider(BaseLLMProvider):
             total_tokens=total_tokens,
             latency_ms=round(reported_latency, 2),
             model=self.model_name,
-            raw_response={"mock": True, "hash": h},
+            raw_response={"mock": True, "hash": h, "seed": self.seed},
         )
 
     async def generate_stream(
