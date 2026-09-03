@@ -182,6 +182,8 @@ class ArenaModelSummary(BaseModel):
     avg_tokens: float
     avg_eval_scores: dict[str, float] = Field(default_factory=dict)
     rank: int = 1
+    p_value: float | None = None
+    confidence_interval: tuple[float, float] | None = None
 
 
 class ArenaReport(BaseModel):

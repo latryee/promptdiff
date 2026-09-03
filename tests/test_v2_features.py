@@ -209,6 +209,9 @@ async def test_arena_runner_multi_model() -> None:
     assert len(report.leaderboard) == 3
     assert report.total_cases == 2
     assert report.leaderboard[0].rank == 1
+    for summary in report.leaderboard:
+        assert summary.p_value is not None
+        assert summary.confidence_interval is not None
 
 
 @pytest.mark.asyncio

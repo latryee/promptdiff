@@ -20,6 +20,7 @@ from promptdiff.core.models import (
     RunResult,
     TestCase,
 )
+from promptdiff.core.statistics import bootstrap_ci, permutation_test_p_value
 from promptdiff.diff.json_diff import compute_json_diff
 from promptdiff.diff.text_diff import compute_word_diff
 from promptdiff.evaluators.assertions import evaluate_assertions, parse_assertion_list
@@ -376,6 +377,9 @@ class ArenaRunner:
 
             # Average eval scores when compared to baseline
             avg_eval: dict[str, float] = {}
+            p_val: float | None = None
+            conf_int: tuple[float, float] | None = None
+
             if name != self.baseline_name:
                 for ev in self.evaluators:
                     scores_list = [comp.scores.get(name, {}).get(ev.name) for comp in comparisons]
@@ -385,6 +389,20 @@ class ArenaRunner:
                     if valid_scores:
                         avg_eval[ev.name] = round(sum(valid_scores) / len(valid_scores), 3)
 
+                # Statistical hypothesis testing against baseline
+                baseline_runs = [
+                    comp.results[self.baseline_name] for comp in comparisons if self.baseline_name in comp.results
+                ]
+                if len(baseline_runs) == len(runs) and len(runs) > 0:
+                    base_lat = [r.latency_ms for r in baseline_runs]
+                    curr_lat = [r.latency_ms for r in runs]
+                    p_val = permutation_test_p_value(base_lat, curr_lat)
+                    deltas = [c - b for b, c in zip(base_lat, curr_lat, strict=False)]
+                    conf_int = bootstrap_ci(deltas)
+            else:
+                p_val = 1.0
+                conf_int = (0.0, 0.0)
+
             summaries.append(
                 ArenaModelSummary(
                     name=name,
@@ -393,6 +411,8 @@ class ArenaRunner:
                     avg_latency_ms=round(avg_lat, 2),
                     avg_tokens=round(avg_tok, 1),
                     avg_eval_scores=avg_eval,
+                    p_value=p_val,
+                    confidence_interval=conf_int,
                 )
             )
 
