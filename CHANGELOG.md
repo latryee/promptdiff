@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Council of Judges Evaluator**: Swarm-consensus multi-model evaluation (`CouncilOfJudgesEvaluator`) aggregating verdicts across diverse LLM judges.
 - **Streaming TTFT Profiler**: Real-time profiling for Time-To-First-Token (TTFT), token inter-arrival jitter, and throughput distributions.
 - **Semantic Drift Watch Daemon**: Automated drift watcher monitoring prompt outputs over time.
-- **Prompt Watermarking**: Cryptographic watermark injection and verification for LLM prompt provenance.
+- **Prompt Watermarking**: Cryptographic watermark injection (HMAC-SHA256 zero-width steganography) and constant-time verification for LLM prompt provenance and tamper detection.
 - **Edge Quantization Parity**: Benchmark quantization drift (FP16 vs INT8 vs INT4) on locally served models.
 - **Property-Based Invariant Testing**: Automated hypothesis-style invariant fuzzing for prompt output constraints.
 - **EU AI Act Compliance Auditor**: Static & behavioral risk categorization adhering to EU AI Act transparency rules.

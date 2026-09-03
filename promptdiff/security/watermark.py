@@ -61,7 +61,12 @@ class WatermarkInspectionResult:
 class PromptWatermarker:
     """Embeds and verifies invisible zero-entropy cryptographic watermarks in prompt templates."""
 
-    def __init__(self, secret_key: Optional[str] = None, organization: str = "PromptDiff Organization"):
+    def __init__(
+        self,
+        secret_key: Optional[str] = None,
+        organization: str = "PromptDiff Organization",
+        signature_length: int = 16,
+    ):
         key = secret_key or os.getenv("PROMPTDIFF_WATERMARK_KEY")
         if not key:
             raise ValueError(
@@ -70,12 +75,13 @@ class PromptWatermarker:
             )
         self.secret_key = key
         self.organization = organization
+        self.signature_length = max(8, min(signature_length, 64))
 
     def _generate_signature(self, prompt_text: str) -> str:
         """Compute HMAC-SHA256 signature prefix for the clean text."""
         clean_text, _ = strip_watermark(prompt_text)
         h = hmac.new(self.secret_key.encode("utf-8"), clean_text.encode("utf-8"), hashlib.sha256)
-        return h.hexdigest()[:8]
+        return h.hexdigest()[: self.signature_length]
 
     def inject_watermark(self, prompt_text: str) -> str:
         """Inject invisible zero-width HMAC fingerprint into prompt template."""
@@ -110,7 +116,7 @@ class PromptWatermarker:
                 1 for a, b in zip(detected_sig[:sig_len], expected_sig[:sig_len], strict=False) if a == b
             )
             confidence_pct = round((matched_chars / len(expected_sig)) * 100.0, 1)
-            is_match = detected_sig == expected_sig
+            is_match = hmac.compare_digest(detected_sig, expected_sig)
 
             return WatermarkInspectionResult(
                 is_watermarked=is_match,
