@@ -344,6 +344,28 @@ def test_cli_check_with_custom_config(tmp_path: Path) -> None:
     assert "AMBIGUOUS_INSTRUCTION" in result.stdout
 
 
+def test_lsp_hover_and_inline_diagnostics(tmp_path: Path) -> None:
+    """Test LSP hover tooltips and inline diagnostic range structures."""
+    prompt_file = tmp_path / "hover_prompt.txt"
+    prompt_file.write_text("Line 1: System prompt\nLine 2: Answer {{query with no closing", encoding="utf-8")
+
+    server = PromptLanguageServer(model_name="gpt-4o")
+    hover = server.get_hover(str(prompt_file), line=0, character=5)
+
+    assert hover.line == 0
+    assert hover.character == 5
+    assert hover.tokens > 0
+    assert hover.estimated_cost_usd > 0
+    assert "PromptDiff Telemetry" in hover.markdown_content
+
+    inline = server.get_inline_diagnostics(str(prompt_file))
+    assert len(inline) >= 1
+    diag = next(d for d in inline if d["code"] == "UNCLOSED_VARIABLE")
+    assert "range" in diag
+    assert diag["range"]["start"]["line"] == 1
+    assert diag["severity"] == 1  # ERROR
+
+
 def test_fastapi_server_app() -> None:
     """Test FastAPI application initialization."""
     app = create_app()

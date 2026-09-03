@@ -58,6 +58,21 @@ class PromptDiagnostic:
     severity: str  # ERROR, WARNING, INFORMATION, HINT
     message: str
     code: str
+    end_line: int | None = None
+    end_character: int | None = None
+    source: str = "promptdiff"
+
+
+@dataclass
+class PromptHoverInfo:
+    """Hover information tooltip for language clients with tokens and estimated cost."""
+
+    line: int
+    character: int
+    tokens: int
+    estimated_cost_usd: float
+    model_name: str
+    markdown_content: str
 
 
 class PromptLanguageServer:
@@ -194,6 +209,66 @@ class PromptLanguageServer:
                     )
 
         return diagnostics
+
+    def get_hover(
+        self,
+        content_or_path: str,
+        line: int,
+        character: int,
+    ) -> PromptHoverInfo:
+        """Provide hover tooltip with token count and estimated cost for line or prompt."""
+        path = Path(content_or_path)
+        if path.is_file():
+            text = path.read_text(encoding="utf-8")
+        else:
+            text = content_or_path
+
+        lines = text.split("\n")
+        pricing = get_model_pricing(self.model_name)
+
+        target_line = lines[line] if 0 <= line < len(lines) else text
+        line_tokens = max(1, int(len(re.findall(r"\w+|[^\w\s]", target_line, re.UNICODE)) * 1.1))
+        line_cost = line_tokens * pricing.input_per_token
+
+        total_tokens = max(1, int(len(re.findall(r"\w+|[^\w\s]", text, re.UNICODE)) * 1.1))
+        total_cost = total_tokens * pricing.input_per_token
+
+        md = (
+            f"**PromptDiff Telemetry** ({self.model_name})\n\n"
+            f"- **Line Tokens**: ~{line_tokens} (${line_cost:.6f}/call)\n"
+            f"- **Total Prompt Tokens**: ~{total_tokens} (${total_cost:.6f}/call)\n"
+            f"- **Pricing**: ${pricing.input_per_million:.2f}/1M input tokens"
+        )
+        return PromptHoverInfo(
+            line=line,
+            character=character,
+            tokens=line_tokens,
+            estimated_cost_usd=round(line_cost, 6),
+            model_name=self.model_name,
+            markdown_content=md,
+        )
+
+    def get_inline_diagnostics(self, file_path: str) -> list[dict[str, Any]]:
+        """Return LSP-compliant inline diagnostic structures with ranges."""
+        diags = self.analyze_file(file_path)
+        results: list[dict[str, Any]] = []
+        for d in diags:
+            results.append(
+                {
+                    "range": {
+                        "start": {"line": d.line, "character": d.character},
+                        "end": {
+                            "line": d.end_line if d.end_line is not None else d.line,
+                            "character": d.end_character if d.end_character is not None else d.character + 1,
+                        },
+                    },
+                    "severity": 1 if d.severity == "ERROR" else (2 if d.severity == "WARNING" else 3),
+                    "code": d.code,
+                    "source": d.source,
+                    "message": d.message,
+                }
+            )
+        return results
 
     def print_diagnostics_cli(self, file_path: str) -> None:
         """Render LSP diagnostics to stdout."""
