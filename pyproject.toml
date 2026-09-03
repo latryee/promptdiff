@@ -124,6 +124,8 @@ source = ["promptdiff"]
 omit = [
     "promptdiff/ui/*",
     "promptdiff/tui/*",
+    "promptdiff/cli/*",
+    "promptdiff/lsp/*",
     "promptdiff/reporters/mlflow_reporter.py",
     "promptdiff/reporters/wandb_reporter.py",
     "promptdiff/reporters/otel_reporter.py",

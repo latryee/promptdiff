@@ -70,7 +70,7 @@ jobs:
 
       - name: Run test suite with coverage
         run: |
-          pytest --junitxml=reports/junit.xml --cov=promptdiff --cov-report=xml:reports/coverage.xml --cov-report=term-missing --cov-fail-under=58
+          pytest --junitxml=reports/junit.xml --cov=promptdiff --cov-report=xml:reports/coverage.xml --cov-report=term-missing --cov-fail-under=60
 
       - name: Generate dynamic test and coverage badges
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
@@ -80,13 +80,7 @@ jobs:
           genbadge tests -i reports/junit.xml -o .github/badges/tests.svg
 
       - name: Test promptdiff regression CLI (Mock mode)
-        run: |
-          promptdiff test examples/prompts/support_bot_v1.txt examples/prompts/support_bot_v2.txt \
-            --inputs examples/testcases.jsonl \
-            --eval "json_validity,latency,cost,similarity" \
-            --mock \
-            --export-markdown regression-report.md \
-            --export-html regression-report.html
+        run: promptdiff test examples/prompts/support_bot_v1.txt examples/prompts/support_bot_v2.txt --inputs examples/testcases.jsonl --eval "json_validity,latency,cost,similarity" --mock --export-markdown regression-report.md --export-html regression-report.html
 
       - name: Upload regression test report artifact
         uses: actions/upload-artifact@v4
