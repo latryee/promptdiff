@@ -11,7 +11,7 @@ from typing import Any
 
 import httpx
 
-from promptdiff.providers.base import BaseLLMProvider, ProviderResponse, execute_with_resilience
+from promptdiff.providers.base import BaseLLMProvider, ProviderResponse, with_retry
 
 
 class OpenAIProvider(BaseLLMProvider):
@@ -30,6 +30,7 @@ class OpenAIProvider(BaseLLMProvider):
         self.base_url = (base_url or os.getenv("OPENAI_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
         self.timeout = timeout
 
+    @with_retry()
     async def _call_api(
         self,
         payload: dict[str, Any],
@@ -77,8 +78,7 @@ class OpenAIProvider(BaseLLMProvider):
         }
 
         start_time = time.perf_counter()
-        data = await execute_with_resilience(
-            self._call_api,
+        data = await self._call_api(
             payload=payload,
             headers=headers,
         )

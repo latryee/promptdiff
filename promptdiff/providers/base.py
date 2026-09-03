@@ -58,6 +58,33 @@ def is_retryable_exception(exc: BaseException) -> bool:
 
 
 T = TypeVar("T")
+F = TypeVar("F", bound=Callable[..., Any])
+
+
+def with_retry(
+    max_attempts: int = 5,
+    min_wait: float = 1.0,
+    max_wait: float = 60.0,
+) -> Callable[[F], F]:
+    """Centralized decorator to retry asynchronous provider functions with exponential backoff and jitter."""
+
+    def decorator(func: F) -> F:
+        from functools import wraps
+
+        @wraps(func)
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            return await execute_with_resilience(
+                func,
+                *args,
+                max_attempts=max_attempts,
+                min_wait=min_wait,
+                max_wait=max_wait,
+                **kwargs,
+            )
+
+        return wrapper  # type: ignore[return-value]
+
+    return decorator
 
 
 async def execute_with_resilience(

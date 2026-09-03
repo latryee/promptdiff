@@ -35,4 +35,3 @@ def test_diff_report_schema_sync_with_examples() -> None:
         "examples/schema.json has drifted from DiffReport.model_json_schema()! "
         "Update examples/schema.json to match the updated Pydantic model."
     )
-

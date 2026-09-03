@@ -91,3 +91,24 @@ async def test_base_provider_generate_stream() -> None:
     assert len(chunks) > 0
     reconstructed = "".join(chunks)
     assert len(reconstructed) > 0
+
+
+@pytest.mark.asyncio
+async def test_with_retry_decorator_retries_transient_failures() -> None:
+    """Test @with_retry decorator retries on retryable exceptions."""
+    from promptdiff.providers.base import with_retry
+
+    attempts = 0
+
+    @with_retry(max_attempts=3, min_wait=0.01, max_wait=0.05)
+    async def flaky_api(call_id: str) -> str:
+        nonlocal attempts
+        attempts += 1
+        if attempts < 3:
+            mock_resp = httpx.Response(status_code=429, request=httpx.Request("POST", "http://test.api"))
+            raise httpx.HTTPStatusError("rate limit exceeded", request=mock_resp.request, response=mock_resp)
+        return f"success-{call_id}"
+
+    res = await flaky_api("test-123")
+    assert res == "success-test-123"
+    assert attempts == 3

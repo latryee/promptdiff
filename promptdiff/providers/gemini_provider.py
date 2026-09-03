@@ -11,7 +11,7 @@ from typing import Any
 
 import httpx
 
-from promptdiff.providers.base import BaseLLMProvider, ProviderResponse, execute_with_resilience
+from promptdiff.providers.base import BaseLLMProvider, ProviderResponse, with_retry
 
 
 class GeminiProvider(BaseLLMProvider):
@@ -28,6 +28,7 @@ class GeminiProvider(BaseLLMProvider):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY", "")
         self.timeout = timeout
 
+    @with_retry()
     async def _call_api(
         self,
         url: str,
@@ -71,8 +72,7 @@ class GeminiProvider(BaseLLMProvider):
             payload["systemInstruction"] = {"parts": [{"text": system_prompt}]}
 
         start_time = time.perf_counter()
-        data = await execute_with_resilience(
-            self._call_api,
+        data = await self._call_api(
             url=url,
             payload=payload,
         )

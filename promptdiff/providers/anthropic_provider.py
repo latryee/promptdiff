@@ -11,7 +11,7 @@ from typing import Any
 
 import httpx
 
-from promptdiff.providers.base import BaseLLMProvider, ProviderResponse, execute_with_resilience
+from promptdiff.providers.base import BaseLLMProvider, ProviderResponse, with_retry
 
 
 class AnthropicProvider(BaseLLMProvider):
@@ -28,6 +28,7 @@ class AnthropicProvider(BaseLLMProvider):
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
         self.timeout = timeout
 
+    @with_retry()
     async def _call_api(
         self,
         payload: dict[str, Any],
@@ -72,8 +73,7 @@ class AnthropicProvider(BaseLLMProvider):
         }
 
         start_time = time.perf_counter()
-        data = await execute_with_resilience(
-            self._call_api,
+        data = await self._call_api(
             payload=payload,
             headers=headers,
         )
