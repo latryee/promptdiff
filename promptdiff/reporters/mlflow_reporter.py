@@ -97,10 +97,12 @@ def log_to_mlflow(
                 )
 
             # 5. Log Tags
+            import promptdiff
+
             mlflow.set_tags(
                 {
                     "framework": "promptdiff",
-                    "version": "2.0.0",
+                    "version": promptdiff.__version__,
                     "status": v.status,
                 }
             )

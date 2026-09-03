@@ -78,13 +78,15 @@ def export_to_opentelemetry(
             }
         )
 
+    import promptdiff
+
     payload = {
         "resourceSpans": [
             {
                 "resource": {
                     "attributes": [
                         {"key": "service.name", "value": {"stringValue": service_name}},
-                        {"key": "service.version", "value": {"stringValue": "3.0.0"}},
+                        {"key": "service.version", "value": {"stringValue": promptdiff.__version__}},
                     ]
                 },
                 "scopeSpans": [

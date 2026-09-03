@@ -124,3 +124,56 @@ def test_terminal_report_rendering():
     out = c.export_text()
     assert "Execution & Regression Summary" in out
     assert "NO REGRESSIONS DETECTED" in out
+
+
+def test_reporters_version_synchronization_with_pyproject():
+    """Ensure MLflow and OpenTelemetry reporters use dynamic promptdiff.__version__ matching pyproject.toml."""
+    import sys
+    from unittest.mock import MagicMock, patch
+
+    import tomllib
+
+    import promptdiff
+    from promptdiff.reporters.mlflow_reporter import log_to_mlflow
+    from promptdiff.reporters.otel_reporter import export_to_opentelemetry
+
+    # 1. Read pyproject.toml version
+    pyproject_path = Path(__file__).parents[2] / "pyproject.toml"
+    with open(pyproject_path, "rb") as f:
+        pyproject_data = tomllib.load(f)
+    expected_version = pyproject_data["project"]["version"]
+
+    assert promptdiff.__version__ == expected_version, "promptdiff.__version__ does not match pyproject.toml"
+
+    report = sample_report()
+
+    # 2. Test OpenTelemetry reporter service.version
+    captured_payload = {}
+
+    def mock_post(url, headers=None, json=None):
+        nonlocal captured_payload
+        captured_payload = json
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        return mock_resp
+
+    with patch("httpx.Client.post", side_effect=mock_post):
+        success = export_to_opentelemetry(report, endpoint="http://mock-collector:4318/v1/traces")
+        assert success is True
+
+    otel_attrs = captured_payload["resourceSpans"][0]["resource"]["attributes"]
+    version_attr = next(attr for attr in otel_attrs if attr["key"] == "service.version")
+    assert version_attr["value"]["stringValue"] == promptdiff.__version__
+    assert version_attr["value"]["stringValue"] == expected_version
+
+    # 3. Test MLflow reporter tag version
+    mock_mlflow = MagicMock()
+    with patch.dict(sys.modules, {"mlflow": mock_mlflow}):
+        success = log_to_mlflow(report, experiment_name="test-exp")
+        assert success is True
+
+    mock_mlflow.set_tags.assert_called_once()
+    logged_tags = mock_mlflow.set_tags.call_args[0][0]
+    assert logged_tags["version"] == promptdiff.__version__
+    assert logged_tags["version"] == expected_version
+
