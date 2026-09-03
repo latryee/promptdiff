@@ -851,3 +851,36 @@ def cascaded_judge(
     from promptdiff.evaluators.cascaded_judge import cascaded_judge as _judge
 
     return _judge(v1_output, v2_output, query=query, confidence_threshold=confidence_threshold, force_mock=force_mock)
+
+
+def compute_elo_ratings(matches: list[Any], k_factor: float = 32.0) -> Any:
+    """Compute ELO ratings from pairwise prompt matches.
+
+    Args:
+        matches: List of PairwiseMatch objects (or dicts).
+        k_factor: ELO sensitivity factor.
+
+    Returns:
+        ArenaTournamentResult with ranked prompt leaderboard and confidence intervals.
+    """
+    from promptdiff.core.arena_elo import PairwiseMatch
+    from promptdiff.core.arena_elo import compute_elo_ratings as _elo
+
+    parsed = [m if isinstance(m, PairwiseMatch) else PairwiseMatch(**m) for m in matches]
+    return _elo(parsed, k_factor=k_factor)
+
+
+def compute_bradley_terry_ratings(matches: list[Any]) -> Any:
+    """Compute Maximum-Likelihood Bradley-Terry continuous skill ratings from pairwise matches.
+
+    Args:
+        matches: List of PairwiseMatch objects (or dicts).
+
+    Returns:
+        ArenaTournamentResult with converged latent probabilities and ELO-scaled leaderboard.
+    """
+    from promptdiff.core.arena_elo import PairwiseMatch
+    from promptdiff.core.arena_elo import compute_bradley_terry_ratings as _bt
+
+    parsed = [m if isinstance(m, PairwiseMatch) else PairwiseMatch(**m) for m in matches]
+    return _bt(parsed)
