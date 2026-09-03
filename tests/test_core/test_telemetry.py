@@ -1,16 +1,9 @@
-"""Test suite for Platform capabilities: Git Hook Installer, SQLite Telemetry Database,
-
-and Studio SSE Streaming.
-"""
+"""Tests migrated to feature-focused test suite."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from typer.testing import CliRunner
-
-from promptdiff.cli.app import app
-from promptdiff.cli.hooks import GitHookInstaller
 from promptdiff.core.db import TelemetryDatabase
 from promptdiff.core.models import (
     ComparisonResult,
@@ -20,21 +13,6 @@ from promptdiff.core.models import (
     RunResult,
     TestCase,
 )
-
-
-def test_git_hook_installer(tmp_path: Path) -> None:
-    """Test installing and verifying the pre-commit Git hook."""
-    git_dir = tmp_path / ".git"
-    git_dir.mkdir()
-
-    installer = GitHookInstaller(repo_root=str(tmp_path))
-    assert installer.is_installed() is False
-
-    path = installer.install_pre_commit()
-    assert Path(path).exists()
-    assert installer.is_installed() is True
-    content = Path(path).read_text(encoding="utf-8")
-    assert "promptdiff check" in content
 
 
 def test_telemetry_database(tmp_path: Path) -> None:
@@ -119,25 +97,3 @@ def test_telemetry_database(tmp_path: Path) -> None:
     assert len(hotspots) == 1
     assert hotspots[0].test_case_id == "tc_billing_1"
     assert hotspots[0].failure_count == 1
-
-
-def test_cli_db_commands(tmp_path: Path) -> None:
-    """Test CLI commands: promptdiff db stats and promptdiff db hotspots."""
-    runner = CliRunner()
-
-    res_stats = runner.invoke(app, ["db", "stats"])
-    assert res_stats.exit_code == 0
-
-    res_hotspots = runner.invoke(app, ["db", "hotspots"])
-    assert res_hotspots.exit_code == 0
-
-
-def test_cli_install_hook(tmp_path: Path) -> None:
-    """Test CLI command: promptdiff install-hook."""
-    runner = CliRunner()
-    git_dir = tmp_path / ".git"
-    git_dir.mkdir()
-
-    res = runner.invoke(app, ["install-hook", "--dir", str(tmp_path)])
-    assert res.exit_code == 0
-    assert "Successfully installed" in res.stdout
