@@ -6,6 +6,7 @@ using SHA-256 hashed SQLite persistent cache.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import sqlite3
@@ -122,3 +123,19 @@ class DiskCache:
             cursor.execute("SELECT count(*) FROM prompt_cache")
             row = cursor.fetchone()
             return row[0] if row else 0
+
+    async def async_get(self, hash_key: str) -> RunResult | None:
+        """Asynchronously retrieve cached result without blocking the event loop."""
+        return await asyncio.to_thread(self.get, hash_key)
+
+    async def async_set(self, hash_key: str, result: RunResult) -> None:
+        """Asynchronously store run result in cache without blocking the event loop."""
+        await asyncio.to_thread(self.set, hash_key, result)
+
+    async def async_clear(self) -> int:
+        """Asynchronously clear entire cache without blocking the event loop."""
+        return await asyncio.to_thread(self.clear)
+
+    async def async_count(self) -> int:
+        """Asynchronously get number of cached entries without blocking the event loop."""
+        return await asyncio.to_thread(self.count)

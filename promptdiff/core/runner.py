@@ -74,7 +74,7 @@ class PromptDiffRunner:
 
         # 1. Check disk cache
         if self.cache.enabled:
-            cached_result = self.cache.get(cache_key)
+            cached_result = await self.cache.async_get(cache_key)
             if cached_result:
                 cached_result.test_case_id = test_case.id
                 cached_result.prompt_name = prompt_version.name
@@ -126,7 +126,7 @@ class PromptDiffRunner:
 
         # 3. Store in cache if successful
         if self.cache.enabled and not run_result.error:
-            self.cache.set(cache_key, run_result)
+            await self.cache.async_set(cache_key, run_result)
 
         return run_result
 
@@ -261,7 +261,7 @@ class ArenaRunner:
         )
 
         if self.cache.enabled:
-            cached = self.cache.get(cache_key)
+            cached = await self.cache.async_get(cache_key)
             if cached:
                 cached.test_case_id = test_case.id
                 cached.prompt_name = variant_name
@@ -308,7 +308,7 @@ class ArenaRunner:
                 )
 
         if self.cache.enabled and not run_res.error:
-            self.cache.set(cache_key, run_res)
+            await self.cache.async_set(cache_key, run_res)
 
         return run_res
 

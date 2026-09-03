@@ -1,5 +1,7 @@
 """Unit tests for SQLite persistent disk cache."""
 
+import pytest
+
 from promptdiff.core.cache import DiskCache
 from promptdiff.core.models import RunResult
 
@@ -56,3 +58,36 @@ def test_cache_get_set_clear(tmp_cache: DiskCache):
     assert cleared == 1
     assert tmp_cache.count() == 0
     assert tmp_cache.get(key) is None
+
+
+@pytest.mark.asyncio
+async def test_cache_async_methods(tmp_cache: DiskCache) -> None:
+    """Verify asynchronous non-blocking cache operations."""
+    key = DiskCache.compute_key("async prompt", model="gpt-4o")
+    assert await tmp_cache.async_get(key) is None
+
+    result = RunResult(
+        prompt_name="v1",
+        test_case_id="tc_async",
+        rendered_prompt="async prompt",
+        output="Async result text",
+        latency_ms=110.0,
+        prompt_tokens=12,
+        completion_tokens=18,
+        total_tokens=30,
+        cost_usd=0.0001,
+        model="gpt-4o",
+    )
+
+    await tmp_cache.async_set(key, result)
+    assert await tmp_cache.async_count() == 1
+
+    cached = await tmp_cache.async_get(key)
+    assert cached is not None
+    assert cached.output == "Async result text"
+    assert cached.cached is True
+
+    cleared = await tmp_cache.async_clear()
+    assert cleared == 1
+    assert await tmp_cache.async_count() == 0
+    assert await tmp_cache.async_get(key) is None
