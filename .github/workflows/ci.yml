@@ -38,6 +38,11 @@ jobs:
         run: |
           mypy promptdiff
 
+      - name: Verify JSON Schema Sync
+        run: |
+          python -c "from promptdiff.core.models import DiffReport; import json, pathlib, sys; current = json.loads(pathlib.Path('examples/schema.json').read_text(encoding='utf-8')); expected = DiffReport.model_json_schema(); sys.exit(0 if current == expected else 1)"
+
+
   test:
     name: Test (${{ matrix.os }} - Py${{ matrix.python-version }})
     needs: [lint]

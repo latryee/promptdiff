@@ -1,26 +1,411 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "SupportTicketExtraction",
-  "type": "object",
-  "properties": {
-    "category": {
-      "type": "string"
+  "$defs": {
+    "ComparisonResult": {
+      "description": "Side-by-side comparison of two prompt version executions.",
+      "properties": {
+        "test_case": {
+          "$ref": "#/$defs/TestCase"
+        },
+        "v1_result": {
+          "$ref": "#/$defs/RunResult"
+        },
+        "v2_result": {
+          "$ref": "#/$defs/RunResult"
+        },
+        "scores": {
+          "additionalProperties": {
+            "$ref": "#/$defs/EvaluatorScore"
+          },
+          "title": "Scores",
+          "type": "object"
+        },
+        "text_diff": {
+          "items": {
+            "$ref": "#/$defs/DiffChunk"
+          },
+          "title": "Text Diff",
+          "type": "array"
+        },
+        "json_diff": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Json Diff"
+        },
+        "is_json": {
+          "default": false,
+          "title": "Is Json",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "test_case",
+        "v1_result",
+        "v2_result"
+      ],
+      "title": "ComparisonResult",
+      "type": "object"
     },
-    "sentiment": {
-      "type": "string"
+    "DiffChunk": {
+      "description": "A diff chunk between two output strings.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "equal",
+            "insert",
+            "delete",
+            "replace"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "v1_text": {
+          "default": "",
+          "title": "V1 Text",
+          "type": "string"
+        },
+        "v2_text": {
+          "default": "",
+          "title": "V2 Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "DiffChunk",
+      "type": "object"
     },
-    "summary": {
-      "type": "string"
+    "EvaluatorScore": {
+      "description": "Result of an evaluation metric comparison.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "v1_score": {
+          "title": "V1 Score"
+        },
+        "v2_score": {
+          "title": "V2 Score"
+        },
+        "delta": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delta"
+        },
+        "delta_pct": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delta Pct"
+        },
+        "passed": {
+          "default": true,
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "message": {
+          "default": "",
+          "title": "Message",
+          "type": "string"
+        },
+        "details": {
+          "additionalProperties": true,
+          "title": "Details",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "v1_score",
+        "v2_score"
+      ],
+      "title": "EvaluatorScore",
+      "type": "object"
     },
-    "urgency": {
-      "type": "string"
+    "RegressionVerdict": {
+      "description": "Overall run status and list of failed assertions.",
+      "properties": {
+        "passed": {
+          "default": true,
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "status": {
+          "default": "PASSED",
+          "enum": [
+            "PASSED",
+            "REGRESSION_DETECTED",
+            "ERROR"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "failed_assertions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Failed Assertions",
+          "type": "array"
+        },
+        "total_cost_v1": {
+          "default": 0.0,
+          "title": "Total Cost V1",
+          "type": "number"
+        },
+        "total_cost_v2": {
+          "default": 0.0,
+          "title": "Total Cost V2",
+          "type": "number"
+        },
+        "cost_delta_pct": {
+          "default": 0.0,
+          "title": "Cost Delta Pct",
+          "type": "number"
+        },
+        "avg_latency_v1": {
+          "default": 0.0,
+          "title": "Avg Latency V1",
+          "type": "number"
+        },
+        "avg_latency_v2": {
+          "default": 0.0,
+          "title": "Avg Latency V2",
+          "type": "number"
+        },
+        "latency_delta_pct": {
+          "default": 0.0,
+          "title": "Latency Delta Pct",
+          "type": "number"
+        },
+        "summary_metrics": {
+          "additionalProperties": true,
+          "title": "Summary Metrics",
+          "type": "object"
+        }
+      },
+      "title": "RegressionVerdict",
+      "type": "object"
     },
-    "confidence": {
-      "type": "number"
+    "RunResult": {
+      "description": "Output and performance telemetry from an LLM run.",
+      "properties": {
+        "prompt_name": {
+          "title": "Prompt Name",
+          "type": "string"
+        },
+        "test_case_id": {
+          "title": "Test Case Id",
+          "type": "string"
+        },
+        "rendered_prompt": {
+          "title": "Rendered Prompt",
+          "type": "string"
+        },
+        "output": {
+          "title": "Output",
+          "type": "string"
+        },
+        "latency_ms": {
+          "title": "Latency Ms",
+          "type": "number"
+        },
+        "prompt_tokens": {
+          "title": "Prompt Tokens",
+          "type": "integer"
+        },
+        "completion_tokens": {
+          "title": "Completion Tokens",
+          "type": "integer"
+        },
+        "total_tokens": {
+          "title": "Total Tokens",
+          "type": "integer"
+        },
+        "cost_usd": {
+          "title": "Cost Usd",
+          "type": "number"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "cached": {
+          "default": false,
+          "title": "Cached",
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        },
+        "timestamp": {
+          "title": "Timestamp",
+          "type": "number"
+        }
+      },
+      "required": [
+        "prompt_name",
+        "test_case_id",
+        "rendered_prompt",
+        "output",
+        "latency_ms",
+        "prompt_tokens",
+        "completion_tokens",
+        "total_tokens",
+        "cost_usd",
+        "model"
+      ],
+      "title": "RunResult",
+      "type": "object"
     },
-    "action_required": {
-      "type": "boolean"
+    "TestCase": {
+      "description": "Represents a single input scenario for prompt regression testing.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "vars": {
+          "additionalProperties": true,
+          "title": "Vars",
+          "type": "object"
+        },
+        "expected_output": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Output"
+        },
+        "schema": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Schema"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        }
+      },
+      "title": "TestCase",
+      "type": "object"
     }
   },
-  "required": ["category", "sentiment", "summary"]
+  "description": "Complete serialized evaluation and regression report.",
+  "properties": {
+    "run_id": {
+      "title": "Run Id",
+      "type": "string"
+    },
+    "timestamp": {
+      "default": "",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "v1_name": {
+      "title": "V1 Name",
+      "type": "string"
+    },
+    "v2_name": {
+      "title": "V2 Name",
+      "type": "string"
+    },
+    "model_v1": {
+      "title": "Model V1",
+      "type": "string"
+    },
+    "model_v2": {
+      "title": "Model V2",
+      "type": "string"
+    },
+    "comparisons": {
+      "items": {
+        "$ref": "#/$defs/ComparisonResult"
+      },
+      "title": "Comparisons",
+      "type": "array"
+    },
+    "verdict": {
+      "$ref": "#/$defs/RegressionVerdict"
+    },
+    "evaluators": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Evaluators",
+      "type": "array"
+    },
+    "total_cases": {
+      "title": "Total Cases",
+      "type": "integer"
+    },
+    "aggregate_stats": {
+      "additionalProperties": true,
+      "title": "Aggregate Stats",
+      "type": "object"
+    }
+  },
+  "required": [
+    "v1_name",
+    "v2_name",
+    "model_v1",
+    "model_v2",
+    "comparisons",
+    "verdict",
+    "evaluators",
+    "total_cases"
+  ],
+  "title": "DiffReport",
+  "type": "object"
 }
