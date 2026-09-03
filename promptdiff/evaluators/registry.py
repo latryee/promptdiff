@@ -19,6 +19,7 @@ from promptdiff.evaluators.length_drift import LengthDriftEvaluator
 from promptdiff.evaluators.llm_judge import LLMJudgeEvaluator
 from promptdiff.evaluators.multilingual import MultilingualConsistencyEvaluator
 from promptdiff.evaluators.regex_match import RegexMatchEvaluator
+from promptdiff.evaluators.schema_breaking import SchemaBreakingChangeEvaluator
 from promptdiff.evaluators.schema_repair import SchemaRepairEvaluator
 from promptdiff.evaluators.security import SecurityEvaluator
 from promptdiff.evaluators.similarity import SimilarityEvaluator
@@ -58,6 +59,9 @@ EVALUATOR_MAP: dict[str, type[BaseEvaluator]] = {
     "citation": CitationEvaluator,
     "cite": CitationEvaluator,
     "schema_repair": SchemaRepairEvaluator,
+    "schema_breaking": SchemaBreakingChangeEvaluator,
+    "breaking_changes": SchemaBreakingChangeEvaluator,
+    "schema_diff": SchemaBreakingChangeEvaluator,
     "vision": VisionDiffEvaluator,
     "council": CouncilOfJudgesEvaluator,
     "swarm_judge": CouncilOfJudgesEvaluator,

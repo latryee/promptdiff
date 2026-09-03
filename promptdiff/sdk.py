@@ -812,3 +812,18 @@ def analyze_cache_impact(
     p1 = load_prompt_file(v1, version_name="v1").template
     p2 = load_prompt_file(v2, version_name="v2").template
     return _analyze(p1, p2, model=model, daily_volume=daily_volume)
+
+
+def detect_schema_breaking_changes(v1_json: str, v2_json: str) -> Any:
+    """Analyze two JSON string payloads for backward-incompatible structural regressions.
+
+    Args:
+        v1_json: Baseline JSON string.
+        v2_json: Candidate JSON string.
+
+    Returns:
+        SchemaBreakingReport with compatibility boolean, breaking diffs list, and summary.
+    """
+    from promptdiff.evaluators.schema_breaking import detect_schema_breaking_changes as _detect
+
+    return _detect(v1_json, v2_json)
