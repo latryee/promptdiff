@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from typing import Any, Optional, TypeVar
 
@@ -108,3 +108,21 @@ class BaseLLMProvider(ABC):
     ) -> ProviderResponse:
         """Execute prompt against model and return normalized response."""
         raise NotImplementedError
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.0,
+        max_tokens: Optional[int] = 2048,
+    ) -> AsyncIterator[str]:
+        """Stream response chunks asynchronously. Default implementation chunks generate() output."""
+        resp = await self.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        words = resp.output.split(" ")
+        for i, word in enumerate(words):
+            yield word if i == 0 else f" {word}"

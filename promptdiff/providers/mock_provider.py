@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 import time
+from collections.abc import AsyncIterator
 from typing import Any, Optional
 
 from promptdiff.providers.base import BaseLLMProvider, ProviderResponse
@@ -54,6 +55,27 @@ class MockProvider(BaseLLMProvider):
             model=self.model_name,
             raw_response={"mock": True, "hash": h},
         )
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.0,
+        max_tokens: Optional[int] = 2048,
+    ) -> AsyncIterator[str]:
+        """Stream chunks asynchronously with simulated network delay."""
+        resp = await self.generate(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        words = resp.output.split(" ")
+        for i, word in enumerate(words):
+            chunk = word if i == 0 else f" {word}"
+            if self.simulate_delay:
+                await asyncio.sleep(0.005)
+            yield chunk
 
     def _synthesize_output(self, raw_prompt: str, prompt_lower: str, seed: int) -> str:
         """Synthesize context-aware output based on prompt cues."""

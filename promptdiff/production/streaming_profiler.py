@@ -15,6 +15,8 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Optional
 
+from promptdiff.providers.base import BaseLLMProvider
+
 
 @dataclass
 class TokenArrival:
@@ -212,3 +214,20 @@ class AsyncStreamingProfiler:
                 yield f" {w}"
 
         return await self.profile_stream(_generator(), model_name=model_name)
+
+    async def profile_provider_stream(
+        self,
+        provider: BaseLLMProvider,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.0,
+        max_tokens: Optional[int] = 2048,
+    ) -> StreamingProfileReport:
+        """Profile live token stream directly from a BaseLLMProvider instance."""
+        stream_iter = provider.generate_stream(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        return await self.profile_stream(stream_iter, model_name=provider.model_name)

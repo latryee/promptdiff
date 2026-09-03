@@ -30,3 +30,27 @@ def test_provider_registry():
     # Prefix mock
     p_mock2 = get_provider("mock-claude-3-5")
     assert isinstance(p_mock2, MockProvider)
+
+
+@pytest.mark.asyncio
+async def test_provider_streaming_and_profiler_integration() -> None:
+    """Test async generator streaming across providers and profiler integration."""
+    from promptdiff.production.streaming_profiler import AsyncStreamingProfiler
+
+    provider = MockProvider(model_name="mock-gpt-4o", simulate_delay=False)
+    chunks = []
+    async for chunk in provider.generate_stream("Extract customer ticket and output as JSON."):
+        chunks.append(chunk)
+
+    assert len(chunks) > 0
+    full_text = "".join(chunks)
+    assert "{" in full_text and "}" in full_text
+
+    profiler = AsyncStreamingProfiler(target_ttft_sla_ms=500.0)
+    report = await profiler.profile_provider_stream(
+        provider=provider,
+        prompt="Explain microservices in one sentence.",
+    )
+    assert report.total_tokens > 0
+    assert report.ttft_ms >= 0.0
+    assert report.model_name == "mock-gpt-4o"
