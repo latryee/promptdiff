@@ -58,6 +58,8 @@ class CompressionResult:
     compressed_judge_score: float
     quality_retained_pct: float
     projected_monthly_savings_usd: float
+    quality_regression_detected: bool = False
+    warning_message: Optional[str] = None
     output_path: Optional[str] = None
 
     @property
@@ -85,6 +87,7 @@ class PromptCompressor:
         target_reduction: float = 0.30,  # 30% reduction by default
         evaluators: Optional[list[BaseEvaluator]] = None,
         force_mock: bool = False,
+        min_quality_threshold: float = 90.0,
     ):
         self.prompt_version = prompt_version
         self.test_cases = test_cases
@@ -94,6 +97,7 @@ class PromptCompressor:
         self.target_reduction = target_reduction
         self.evaluators = evaluators or get_evaluators(["llm_judge", "json_validity", "similarity"])
         self.force_mock = force_mock
+        self.min_quality_threshold = min_quality_threshold
 
     def _apply_rule_based_compression(self, text: str) -> str:
         """Heuristic rule-based compression pass."""
@@ -206,6 +210,17 @@ class PromptCompressor:
         reduction_pct = (tokens_saved / orig_tokens * 100.0) if orig_tokens > 0 else 0.0
         quality_retained = (cand_judge / base_judge * 100.0) if base_judge > 0 else 100.0
 
+        # Quality regression guard
+        regression_detected = quality_retained < self.min_quality_threshold
+        warning_msg: Optional[str] = None
+        if regression_detected:
+            warning_msg = (
+                f"Quality regression guard triggered: compressed prompt retained only "
+                f"{quality_retained:.1f}% quality (threshold: {self.min_quality_threshold:.1f}%). "
+                f"Candidate score: {cand_judge:.2f} vs Baseline: {base_judge:.2f}."
+            )
+            logger.warning(warning_msg)
+
         # Cost forecast (based on 100k daily volume)
         v = cand_report.verdict
         fc = calculate_forecast(v.total_cost_v1, v.total_cost_v2, cand_report.total_cases, 100_000)
@@ -221,6 +236,8 @@ class PromptCompressor:
             compressed_judge_score=round(cand_judge, 2),
             quality_retained_pct=round(quality_retained, 1),
             projected_monthly_savings_usd=fc.monthly_savings_usd,
+            quality_regression_detected=regression_detected,
+            warning_message=warning_msg,
         )
 
     def save(self, template: str, output_path: str = "prompts/system_shrunk.txt") -> str:
