@@ -97,3 +97,56 @@ def test_telemetry_database(tmp_path: Path) -> None:
     assert len(hotspots) == 1
     assert hotspots[0].test_case_id == "tc_billing_1"
     assert hotspots[0].failure_count == 1
+
+
+def test_telemetry_database_concurrent_writes(tmp_path: Path) -> None:
+    """Verify SQLite WAL mode allows concurrent writes without database lock errors."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    db_file = tmp_path / "concurrent_telemetry.db"
+    db = TelemetryDatabase(db_path=str(db_file))
+
+    # Verify WAL mode is active
+    with db._get_connection() as conn:
+        cursor = conn.execute("PRAGMA journal_mode")
+        mode = cursor.fetchone()[0]
+        assert str(mode).lower() == "wal"
+
+    def write_worker(idx: int) -> str:
+        worker_db = TelemetryDatabase(db_path=str(db_file))
+        tc = TestCase(id=f"tc_{idx}", vars={"query": f"Query {idx}"})
+        r1 = RunResult(
+            prompt_name="v1",
+            test_case_id=f"tc_{idx}",
+            rendered_prompt="v1",
+            output="out",
+            latency_ms=50.0,
+            prompt_tokens=5,
+            completion_tokens=5,
+            total_tokens=10,
+            cost_usd=0.0001,
+            model="gpt-4o",
+        )
+        comp = ComparisonResult(test_case=tc, v1_result=r1, v2_result=r1)
+        rep = DiffReport(
+            run_id=f"run_concurrent_{idx:03d}",
+            v1_name="v1",
+            v2_name="v2",
+            model_v1="gpt-4o",
+            model_v2="gpt-4o",
+            comparisons=[comp],
+            verdict=RegressionVerdict(passed=True),
+            evaluators=["latency"],
+            total_cases=1,
+        )
+        worker_db.record_run(rep)
+        return rep.run_id
+
+    # Execute 15 concurrent writes across 5 worker threads
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = [executor.submit(write_worker, i) for i in range(15)]
+        results = [f.result() for f in futures]
+
+    assert len(results) == 15
+    recent_runs = db.get_recent_runs(limit=50)
+    assert len(recent_runs) == 15
