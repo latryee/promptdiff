@@ -58,6 +58,15 @@ class CouncilOfJudgesEvaluator(BaseEvaluator):
         v2_result: RunResult,
         test_case: TestCase,
     ) -> EvaluatorScore:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop is not None and loop.is_running():
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                return pool.submit(asyncio.run, self.async_evaluate(v1_result, v2_result, test_case)).result()
         return asyncio.run(self.async_evaluate(v1_result, v2_result, test_case))
 
     async def async_evaluate(
