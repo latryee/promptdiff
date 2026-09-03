@@ -8,15 +8,12 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 import pytest
 
-from promptdiff.core.config import load_prompt_file
-from promptdiff.core.models import DiffReport
-from promptdiff.core.runner import PromptDiffRunner
-from promptdiff.evaluators.registry import get_evaluators
-from promptdiff.providers.registry import get_provider
+if TYPE_CHECKING:
+    from promptdiff.core.models import DiffReport
 
 
 def pytest_configure(config: Any) -> None:
@@ -148,9 +145,14 @@ def promptdiff_eval() -> Callable[..., DiffReport]:
         m1 = model_v1 or model
         m2 = model_v2 or model
 
+        from promptdiff.core.config import load_prompt_file
+        from promptdiff.core.runner import PromptDiffRunner
+        from promptdiff.evaluators.registry import get_evaluators
+        from promptdiff.providers.registry import get_provider
+        from promptdiff.sdk import _resolve_testcases
+
         p1 = load_prompt_file(v1, version_name="v1", model=m1)
         p2 = load_prompt_file(v2, version_name="v2", model=m2)
-        from promptdiff.sdk import _resolve_testcases
 
         test_cases = _resolve_testcases(dataset)
 

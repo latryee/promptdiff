@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 import promptdiff
 from promptdiff.core.models import DiffReport, RegressionVerdict, TestCase
 
@@ -199,3 +201,90 @@ def test_sdk_mmr_saliency_cache_drift_defense_ast(tmp_path: Path) -> None:
 
     exec_rep = promptdiff.export_executive_report(_dummy_report())
     assert exec_rep is not None
+
+
+def test_sdk_remaining_enterprise_functions(tmp_path: Path) -> None:
+    # Cache impact
+    ci = promptdiff.analyze_cache_impact("Prefix text {{q}}", "Prefix text with extra {{q}}")
+    assert ci is not None
+
+    # Schema breaking changes
+    sb = promptdiff.detect_schema_breaking_changes('{"a": 1}', '{"a": 2}')
+    assert sb is not None
+
+    # Cascaded judge
+    cj = promptdiff.cascaded_judge("Answer A", "Answer B")
+    assert cj is not None
+
+    # ELO and Bradley Terry
+    matches = [
+        {"prompt_a": "p1", "prompt_b": "p2", "winner": "p1"},
+        {"prompt_a": "p2", "prompt_b": "p3", "winner": "p2"},
+    ]
+    elo = promptdiff.compute_elo_ratings(matches)
+    assert elo is not None
+
+    bt = promptdiff.compute_bradley_terry_ratings(matches)
+    assert bt is not None
+
+    # Production trace replay
+    traces = [{"query": "What is enterprise?"}]
+    rep_traces = promptdiff.replay_production_traces("Help: {{query}}", "Assist: {{query}}", traces=traces, mock=True)
+    assert rep_traces is not None
+
+    # Compile prompt
+    comp = promptdiff.compile_prompt("Hello {{name}}")
+    assert comp is not None
+
+    # Verify watermark
+    wm_text = promptdiff.watermark("Secret prompt text", secret_key="k1")
+    ver = promptdiff.verify_watermark(wm_text, secret_key="k1")
+    assert ver.is_watermarked is True
+
+    # Profile streaming
+    prof = promptdiff.profile_streaming("Prompt", token_count=5)
+    assert prof is not None
+
+    # Simulate cascade
+    sim_c = promptdiff.simulate_cascade(["Query 1", "Query 2"])
+    assert sim_c is not None
+
+    # Test hypothesis
+    hypo = promptdiff.test_hypothesis([0.8, 0.9, 0.85], [0.82, 0.92, 0.88])
+    assert hypo is not None
+
+    # HTML bundle export
+    bundle_path = tmp_path / "bundle.html"
+    out_b = promptdiff.export_bundle(_dummy_report(), str(bundle_path))
+    assert Path(out_b).exists()
+
+    # Notebook export
+    nb_path = tmp_path / "report.ipynb"
+    out_nb = promptdiff.export_notebook(_dummy_report(), str(nb_path))
+    assert Path(out_nb).exists()
+
+
+@pytest.mark.asyncio
+async def test_sdk_compare_and_async_compare() -> None:
+    cases = [{"id": "c1", "vars": {"query": "hello world"}}]
+    rep = await promptdiff.async_compare(
+        v1="Hello: {{query}}",
+        v2="Hi: {{query}}",
+        dataset=cases,
+        mock=True,
+    )
+    assert isinstance(rep, DiffReport)
+    assert len(rep.comparisons) == 1
+
+    # Synchronous compare wrapper (in a thread to avoid event loop conflicts)
+    import concurrent.futures
+
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        sync_rep = pool.submit(
+            promptdiff.compare,
+            "Hello: {{query}}",
+            "Hi: {{query}}",
+            dataset=cases,
+            mock=True,
+        ).result()
+    assert isinstance(sync_rep, DiffReport)

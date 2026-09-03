@@ -8,6 +8,8 @@ from promptdiff.core.cache import DiskCache
 from promptdiff.core.models import PromptVersion, TestCase
 from promptdiff.providers.mock_provider import MockProvider
 
+pytest_plugins = ["promptdiff.pytest_plugin"]
+
 
 @pytest.fixture
 def tmp_cache(tmp_path: Path) -> DiskCache:

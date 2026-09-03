@@ -95,7 +95,7 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 pythonpath = ["."]
 asyncio_mode = "auto"
-addopts = "-v --strict-markers"
+addopts = "-p no:promptdiff -v --strict-markers"
 
 [tool.ruff]
 line-length = 120
@@ -126,9 +126,12 @@ omit = [
     "promptdiff/tui/*",
     "promptdiff/cli/*",
     "promptdiff/lsp/*",
+    "promptdiff/pytest_plugin.py",
     "promptdiff/reporters/mlflow_reporter.py",
     "promptdiff/reporters/wandb_reporter.py",
     "promptdiff/reporters/otel_reporter.py",
+    "promptdiff/reporters/pr_bot.py",
+    "promptdiff/reporters/notebook.py",
     "promptdiff/providers/openai_provider.py",
     "promptdiff/providers/anthropic_provider.py",
     "promptdiff/providers/gemini_provider.py",
