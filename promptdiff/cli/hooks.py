@@ -12,27 +12,35 @@ import stat
 from pathlib import Path
 
 PRE_COMMIT_SCRIPT_CONTENT = """#!/bin/sh
-# PromptDiff Automated Pre-Commit Hook
+# --- PROMPTDIFF PRE-COMMIT GATE START ---
 echo "⚡ Running PromptDiff Pre-Commit Gate..."
 
-# Find all staged prompt files
+# 1. Check staged Python files with ruff and mypy
+STAGED_PY=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\\.py$')
+if [ -n "$STAGED_PY" ]; then
+    echo "🔍 Checking staged Python files..."
+    if command -v ruff >/dev/null 2>&1; then
+        echo "Running ruff check --fix..."
+        ruff check --fix $STAGED_PY || { echo "❌ Ruff lint check failed!"; exit 1; }
+    fi
+    if command -v mypy >/dev/null 2>&1; then
+        echo "Running mypy on promptdiff..."
+        mypy promptdiff || { echo "❌ Mypy type check failed!"; exit 1; }
+    fi
+fi
+
+# 2. Find all staged prompt files
 STAGED_PROMPTS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\\.(prompt|txt|md)$' | grep -v 'README')
 
-if [ -z "$STAGED_PROMPTS" ]; then
-    exit 0
+if [ -n "$STAGED_PROMPTS" ]; then
+    echo "Scanning staged prompts: $STAGED_PROMPTS"
+    if command -v promptdiff >/dev/null 2>&1; then
+        promptdiff check $STAGED_PROMPTS || { echo "❌ PromptDiff pre-commit check failed! Commit aborted."; exit 1; }
+    fi
 fi
 
-echo "Scanning staged prompts: $STAGED_PROMPTS"
-promptdiff check $STAGED_PROMPTS
-
-EXIT_CODE=$?
-if [ $EXIT_CODE -ne 0 ]; then
-    echo "❌ PromptDiff pre-commit check failed! Commit aborted."
-    exit 1
-fi
-
-echo "✓ PromptDiff pre-commit check passed!"
-exit 0
+echo "✓ PromptDiff pre-commit checks passed!"
+# --- PROMPTDIFF PRE-COMMIT GATE END ---
 """
 
 
@@ -43,15 +51,25 @@ class GitHookInstaller:
         self.repo_root = Path(repo_root)
         self.hooks_dir = self.repo_root / ".git" / "hooks"
 
-    def install_pre_commit(self) -> str:
-        """Install pre-commit hook script."""
+    def install_pre_commit(self, force: bool = False) -> str:
+        """Install or merge pre-commit hook script."""
         if not (self.repo_root / ".git").exists():
             raise RuntimeError(f"Directory '{self.repo_root}' is not a Git repository.")
 
         self.hooks_dir.mkdir(parents=True, exist_ok=True)
         hook_path = self.hooks_dir / "pre-commit"
 
-        hook_path.write_text(PRE_COMMIT_SCRIPT_CONTENT, encoding="utf-8")
+        if hook_path.exists() and not force:
+            existing_content = hook_path.read_text(encoding="utf-8", errors="ignore")
+            if "# --- PROMPTDIFF PRE-COMMIT GATE START ---" in existing_content or "PromptDiff" in existing_content:
+                new_content = PRE_COMMIT_SCRIPT_CONTENT
+            else:
+                # Merge cleanly with existing user hook
+                new_content = existing_content.rstrip() + "\n\n" + PRE_COMMIT_SCRIPT_CONTENT
+        else:
+            new_content = PRE_COMMIT_SCRIPT_CONTENT
+
+        hook_path.write_text(new_content, encoding="utf-8")
 
         # Make executable on Unix/macOS
         if os.name != "nt":
