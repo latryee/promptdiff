@@ -1,33 +1,52 @@
-# Multi-stage production build for PromptDiff
-FROM python:3.11-slim as builder
+# Multi-stage production build for promptdiff
+FROM python:3.11-slim AS builder
 
-WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*
+WORKDIR /build
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
 COPY pyproject.toml README.md ./
 COPY promptdiff ./promptdiff
 
-RUN pip install --no-cache-dir build && python -m build --wheel
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install .
 
-# Final minimal production container
-FROM python:3.11-slim as runner
+# Production runtime image
+FROM python:3.11-slim AS runner
 
 WORKDIR /app
 
-# Create non-root user
-RUN groupadd -g 1000 promptdiff && \
-    useradd -u 1000 -g promptdiff -m -s /bin/bash promptdiff
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/opt/venv/bin:$PATH"
 
-COPY --from=builder /app/dist/*.whl /tmp/
-RUN pip install --no-cache-dir /tmp/*.whl && rm -rf /tmp/*.whl
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Non-root service user for production security
+RUN groupadd -g 1001 promptdiff && \
+    useradd -u 1001 -g promptdiff -s /bin/bash -m promptdiff
+
+COPY --from=builder /opt/venv /opt/venv
+
+RUN mkdir -p /app/prompts /app/.promptdiff && \
+    chown -R promptdiff:promptdiff /app
 
 USER promptdiff
 
-EXPOSE 8765 8000
-
-# Healthcheck checking the studio pricing API
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/api/pricing')" || exit 1
+EXPOSE 8765
 
 ENTRYPOINT ["promptdiff"]
-CMD ["studio", "--host", "0.0.0.0", "--port", "8765", "--no-browser"]
+CMD ["--help"]
