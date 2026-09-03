@@ -25,6 +25,7 @@ jobs:
           export-html: "action-test-report.html"
           export-markdown: "action-test-report.md"
           export-bundle: "action-test-bundle.html"
+          export-json: "action-test-report.json"
           fail-on-regression: "false"
 
       - name: Verify generated report artifacts
@@ -33,4 +34,5 @@ jobs:
           test -f action-test-report.html
           test -f action-test-report.md
           test -f action-test-bundle.html
+          test -f action-test-report.json
           echo "PromptDiff Action successfully executed and produced all expected artifacts."

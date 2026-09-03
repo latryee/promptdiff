@@ -45,6 +45,10 @@ inputs:
     description: 'Path to export standalone single-file HTML bundle'
     required: false
     default: 'promptdiff-bundle.html'
+  export-json:
+    description: 'Path to export JSON report'
+    required: false
+    default: 'promptdiff-report.json'
   fail-on-regression:
     description: 'Fail CI job if regression assertion is violated'
     required: false
@@ -98,6 +102,9 @@ runs:
         fi
         if [ -n "${{ inputs.export-bundle }}" ]; then
           ARGS="$ARGS --export-bundle \"${{ inputs.export-bundle }}\""
+        fi
+        if [ -n "${{ inputs.export-json }}" ]; then
+          ARGS="$ARGS --export-json \"${{ inputs.export-json }}\""
         fi
         if [ "${{ inputs.fail-on-regression }}" = "false" ]; then
           ARGS="$ARGS --no-fail-on-regression"
