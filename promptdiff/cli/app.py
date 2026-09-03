@@ -1147,11 +1147,14 @@ def serve_cmd(
 def check_cmd(
     paths: list[str] = typer.Argument(..., help="Prompt file(s) or directories to analyze"),
     model: str = typer.Option("gpt-4o", "--model", "-m", help="Target model for token cost calculations"),
+    config: str | None = typer.Option(
+        None, "--config", "-c", help="Path to .promptdifflintrc.yaml lint configuration file"
+    ),
 ) -> None:
-    """Statically lint and analyze prompt files (syntax, tokens, cost estimate, unclosed braces)."""
+    """Statically lint and analyze prompt files (syntax, tokens, cost estimate, unclosed braces, quality rules)."""
     from promptdiff.lsp.server import PromptLanguageServer
 
-    server = PromptLanguageServer(model_name=model)
+    server = PromptLanguageServer(model_name=model, config_path=config)
 
     has_errors = False
     files_to_check: list[Path] = []
@@ -1171,8 +1174,8 @@ def check_cmd(
     table = Table(title="Prompt Lint & Cost Diagnostics", header_style="bold cyan")
     table.add_column("File", style="bold")
     table.add_column("Line:Col", justify="right")
-    table.add_column("Severity")
-    table.add_column("Code", style="dim")
+    table.add_column("Severity", no_wrap=True)
+    table.add_column("Code", style="dim", no_wrap=True)
     table.add_column("Message")
 
     for f in files_to_check:

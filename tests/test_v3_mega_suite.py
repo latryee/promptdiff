@@ -300,6 +300,50 @@ def test_lsp_server(tmp_path: Path) -> None:
     assert any(d.code == "UNCLOSED_VARIABLE" for d in diags)
 
 
+def test_prompt_linter_advanced_rules(tmp_path: Path) -> None:
+    """Test ambiguous instructions, contradictory constraints, and missing few-shot rules."""
+    prompt_file = tmp_path / "bad_prompt.txt"
+    prompt_file.write_text(
+        "You are an assistant. Please do your best to answer.\n"
+        "Be concise and brief, but provide an exhaustive and detailed explanation.\n"
+        "Follow the few-shot examples below:\n",
+        encoding="utf-8",
+    )
+
+    server = PromptLanguageServer()
+    diags = server.analyze_file(str(prompt_file))
+    codes = {d.code for d in diags}
+
+    assert "AMBIGUOUS_INSTRUCTION" in codes
+    assert "CONTRADICTORY_CONSTRAINTS" in codes
+    assert "MISSING_FEW_SHOT" in codes
+
+
+def test_cli_check_with_custom_config(tmp_path: Path) -> None:
+    """Test promptdiff check command with .promptdifflintrc.yaml."""
+    from typer.testing import CliRunner
+
+    from promptdiff.cli.app import app
+
+    prompt_file = tmp_path / "test_prompt.txt"
+    prompt_file.write_text("Please try to help the user.", encoding="utf-8")
+
+    config_file = tmp_path / ".promptdifflintrc.yaml"
+    config_file.write_text(
+        "rules:\n"
+        "  ambiguous_instructions:\n"
+        "    enabled: true\n"
+        "    severity: 'WARNING'\n"
+        "    patterns: ['try to']\n",
+        encoding="utf-8",
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["check", str(prompt_file), "--config", str(config_file)])
+    assert result.exit_code == 0
+    assert "AMBIGUOUS_INSTRUCTION" in result.stdout
+
+
 def test_fastapi_server_app() -> None:
     """Test FastAPI application initialization."""
     app = create_app()

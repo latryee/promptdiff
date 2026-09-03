@@ -1,0 +1,29 @@
+# PromptDiff Static Prompt Linter Configuration (.promptdifflintrc.yaml)
+rules:
+  ambiguous_instructions:
+    enabled: true
+    severity: "WARNING"
+    patterns:
+      - "do your best"
+      - "try to"
+      - "be creative"
+      - "give a good answer"
+      - "as you see fit"
+      - "make it nice"
+
+  contradictory_constraints:
+    enabled: true
+    severity: "WARNING"
+    pairs:
+      - first: "concise|brief|short|terse"
+        second: "detailed|comprehensive|exhaustive|in-depth"
+      - first: "json only|only json"
+        second: "explain your reasoning|conversational"
+
+  missing_few_shot:
+    enabled: true
+    severity: "WARNING"
+    triggers:
+      - "few-shot"
+      - "examples below"
+      - "like the following examples"
