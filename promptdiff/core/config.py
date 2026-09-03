@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import csv
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,8 @@ import yaml
 from pydantic import BaseModel, Field
 
 from promptdiff.core.models import PromptVersion, TestCase
+
+logger = logging.getLogger("promptdiff.core.config")
 
 
 class ProjectConfig(BaseModel):
@@ -55,6 +58,15 @@ def load_prompt_file(
             temperature=temperature,
         )
     else:
+        has_path_separator = "/" in file_path or "\\" in file_path
+        has_file_extension = file_path.lower().endswith(
+            (".txt", ".md", ".prompt", ".yaml", ".yml", ".json", ".jinja", ".j2")
+        )
+        if has_path_separator or has_file_extension:
+            logger.warning(
+                f"Path '{file_path}' looks like a file path but not found, treating as literal prompt"
+            )
+
         # Treat as inline prompt string
         return PromptVersion(
             name=version_name,

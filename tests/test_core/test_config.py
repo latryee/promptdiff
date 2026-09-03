@@ -78,3 +78,22 @@ def test_load_project_config(tmp_path: Path):
     assert config.model == "claude-3-5-sonnet"
     assert config.temperature == 0.2
     assert "json_validity" in config.evaluators
+
+
+def test_load_prompt_file_missing_path_logs_warning(caplog) -> None:
+    """Ensure missing file-like paths log a clear warning while plain strings do not."""
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        # 1. Path-like string with extension
+        pv = load_prompt_file("prompts/non_existent_prompt.txt")
+        assert pv.template == "prompts/non_existent_prompt.txt"
+        assert any("looks like a file path but not found, treating as literal prompt" in r.message for r in caplog.records)
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        # 2. Pure literal prompt string without file extensions or path separators
+        pv_literal = load_prompt_file("You are a helpful customer support agent.")
+        assert pv_literal.template == "You are a helpful customer support agent."
+        assert len(caplog.records) == 0
+
