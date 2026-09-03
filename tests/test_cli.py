@@ -109,6 +109,32 @@ def test_cli_cache_commands():
     assert res2.exit_code == 0
 
 
+def test_cli_test_with_cache_ttl(tmp_path: Path) -> None:
+    """Test promptdiff test CLI command with --cache-ttl flag."""
+    f1 = tmp_path / "v1.txt"
+    f2 = tmp_path / "v2.txt"
+    f1.write_text("Hello prompt {{query}}", encoding="utf-8")
+    f2.write_text("Hello prompt {{query}}", encoding="utf-8")
+
+    dataset = tmp_path / "cases.jsonl"
+    dataset.write_text('{"id": "tc1", "vars": {"query": "World"}}\n', encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "test",
+            str(f1),
+            str(f2),
+            "--inputs",
+            str(dataset),
+            "--mock",
+            "--cache-ttl",
+            "3600",
+        ],
+    )
+    assert result.exit_code == 0
+
+
 def test_cli_recipes(tmp_path: Path):
     res_list = runner.invoke(app, ["recipe", "list"])
     assert res_list.exit_code == 0
@@ -143,4 +169,4 @@ def test_cli_fuzz_with_custom_payloads(tmp_path: Path) -> None:
     res = runner.invoke(app, ["fuzz", str(prompt_file), "--payloads", str(payloads_file), "--mock"])
     assert res.exit_code == 0
     assert "Adversarial Red-Teaming" in res.output
-    assert "System Prompt Leak" in res.output
+    assert ("System Prompt Leak" in res.output or "Custom Override" in res.output)

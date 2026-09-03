@@ -91,3 +91,48 @@ async def test_cache_async_methods(tmp_cache: DiskCache) -> None:
     assert cleared == 1
     assert await tmp_cache.async_count() == 0
     assert await tmp_cache.async_get(key) is None
+
+
+def test_cache_ttl_invalidation_and_pruning(tmp_path: pytest.TempPathFactory) -> None:
+    """Verify TTL-based cache expiration and automated pruning."""
+    import sqlite3
+    from pathlib import Path
+
+    cache_dir = Path(str(tmp_path)) / "ttl_cache"
+    cache = DiskCache(cache_dir=cache_dir, ttl=1)  # 1 second TTL
+
+    key = DiskCache.compute_key("ttl prompt", model="gpt-4o")
+    result = RunResult(
+        prompt_name="v1",
+        test_case_id="tc_ttl",
+        rendered_prompt="ttl prompt",
+        output="Fresh output",
+        latency_ms=100.0,
+        prompt_tokens=10,
+        completion_tokens=10,
+        total_tokens=20,
+        cost_usd=0.0001,
+        model="gpt-4o",
+    )
+
+    cache.set(key, result)
+    assert cache.get(key) is not None
+
+    # Manually backdate created_at in SQLite to simulate expiry
+    with sqlite3.connect(cache.db_path) as conn:
+        conn.execute("UPDATE prompt_cache SET created_at = '2020-01-01 00:00:00' WHERE hash_key = ?", (key,))
+        conn.commit()
+
+    # Accessing expired entry should return None and prune it
+    assert cache.get(key) is None
+    assert cache.count() == 0
+
+    # Test prune_expired
+    cache.set(key, result)
+    with sqlite3.connect(cache.db_path) as conn:
+        conn.execute("UPDATE prompt_cache SET created_at = '2020-01-01 00:00:00' WHERE hash_key = ?", (key,))
+        conn.commit()
+
+    pruned = cache.prune_expired()
+    assert pruned == 1
+    assert cache.count() == 0

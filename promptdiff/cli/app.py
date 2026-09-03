@@ -93,6 +93,7 @@ def _run_test_suite(
     assertions: list[str] | None,
     mock: bool,
     cache_enabled: bool,
+    cache_ttl: int | None,
     export_html: str | None,
     export_markdown: str | None,
     export_json: str | None,
@@ -143,7 +144,7 @@ def _run_test_suite(
         elif isinstance(ev, TrajectoryEvaluator):
             eval_list[idx] = TrajectoryEvaluator(model_name=m2, force_mock=mock)
 
-    cache = DiskCache(enabled=cache_enabled)
+    cache = DiskCache(enabled=cache_enabled, ttl=cache_ttl)
 
     runner = PromptDiffRunner(
         v1_prompt=v1_prompt,
@@ -239,6 +240,7 @@ def test_cmd(
     assertions: list[str] | None = typer.Option(None, "--assert", "-a", help="Regression assertion threshold"),
     mock: bool = typer.Option(False, "--mock", help="Use deterministic offline MockProvider"),
     cache_enabled: bool = typer.Option(True, "--cache/--no-cache", help="Enable or disable persistent disk cache"),
+    cache_ttl: int | None = typer.Option(None, "--cache-ttl", help="Cache entry time-to-live (TTL) in seconds"),
     export_html: str | None = typer.Option(
         None, "--export-html", help="Path to export standalone interactive HTML report"
     ),
@@ -278,6 +280,7 @@ def test_cmd(
         assertions=assertions,
         mock=mock,
         cache_enabled=cache_enabled,
+        cache_ttl=cache_ttl,
         export_html=export_html,
         export_markdown=export_markdown,
         export_json=export_json,
@@ -314,6 +317,7 @@ def run_cmd(
     assertions: list[str] | None = typer.Option(None, "--assert", "-a", help="Regression assertions"),
     mock: bool = typer.Option(False, "--mock", help="Use deterministic offline mock"),
     cache_enabled: bool = typer.Option(True, "--cache/--no-cache", help="Enable disk cache"),
+    cache_ttl: int | None = typer.Option(None, "--cache-ttl", help="Cache entry time-to-live (TTL) in seconds"),
     export_html: str | None = typer.Option(None, "--export-html", help="Export HTML report"),
     export_markdown: str | None = typer.Option(None, "--export-markdown", help="Export Markdown report"),
     export_json: str | None = typer.Option(None, "--export-json", help="Export JSON report"),
@@ -347,6 +351,7 @@ def run_cmd(
         assertions=assertions,
         mock=mock,
         cache_enabled=cache_enabled,
+        cache_ttl=cache_ttl,
         export_html=export_html,
         export_markdown=export_markdown,
         export_json=export_json,
