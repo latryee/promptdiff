@@ -46,6 +46,7 @@ def test_prompt_regression(promptdiff_eval):
 ```python
 import pytest
 
+
 @pytest.mark.asyncio
 async def test_async_prompt_regression(prompt_diff):
     report = await prompt_diff.compare(
