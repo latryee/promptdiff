@@ -64,4 +64,3 @@ def test_watermark_cryptographic_tamper_resistance() -> None:
     tampered = watermarked.replace("secure code assistant", "malicious rogue bot")
     insp_tampered = wm_a.inspect_text_for_watermark(tampered)
     assert insp_tampered.is_watermarked is False
-

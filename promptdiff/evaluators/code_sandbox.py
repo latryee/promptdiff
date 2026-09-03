@@ -256,7 +256,9 @@ class SafeCodeSandboxEvaluator(BaseEvaluator):
                 code_snippet=code,
             )
         except Exception:
-            error_msg = proc.stderr.strip() or proc.stdout.strip() or f"Invalid response from sandbox (code {proc.returncode})"
+            error_msg = (
+                proc.stderr.strip() or proc.stdout.strip() or f"Invalid response from sandbox (code {proc.returncode})"
+            )
             return CodeExecutionResult(
                 executed=False,
                 passed=False,

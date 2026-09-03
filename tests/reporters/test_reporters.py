@@ -176,4 +176,3 @@ def test_reporters_version_synchronization_with_pyproject():
     logged_tags = mock_mlflow.set_tags.call_args[0][0]
     assert logged_tags["version"] == promptdiff.__version__
     assert logged_tags["version"] == expected_version
-

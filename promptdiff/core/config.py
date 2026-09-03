@@ -63,9 +63,7 @@ def load_prompt_file(
             (".txt", ".md", ".prompt", ".yaml", ".yml", ".json", ".jinja", ".j2")
         )
         if has_path_separator or has_file_extension:
-            logger.warning(
-                f"Path '{file_path}' looks like a file path but not found, treating as literal prompt"
-            )
+            logger.warning(f"Path '{file_path}' looks like a file path but not found, treating as literal prompt")
 
         # Treat as inline prompt string
         return PromptVersion(

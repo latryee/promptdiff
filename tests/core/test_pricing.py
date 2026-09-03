@@ -115,4 +115,3 @@ def test_calculate_text_cost() -> None:
 
     cost = calculate_text_cost("gpt-4o", prompt_text="Short prompt query", completion_text="Short response output")
     assert cost > 0.0
-
