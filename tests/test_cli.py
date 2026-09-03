@@ -170,3 +170,42 @@ def test_cli_fuzz_with_custom_payloads(tmp_path: Path) -> None:
     assert res.exit_code == 0
     assert "Adversarial Red-Teaming" in res.output
     assert ("System Prompt Leak" in res.output or "Custom Override" in res.output)
+
+
+def test_cli_test_estimate_aborted(tmp_path: Path) -> None:
+    """Test --estimate pre-execution token/cost calculation with user aborting."""
+    f1 = tmp_path / "v1.txt"
+    f2 = tmp_path / "v2.txt"
+    f1.write_text("Hello prompt {{query}}", encoding="utf-8")
+    f2.write_text("Hello prompt {{query}}", encoding="utf-8")
+
+    dataset = tmp_path / "cases.jsonl"
+    dataset.write_text('{"id": "tc1", "vars": {"query": "World"}}\n', encoding="utf-8")
+
+    res = runner.invoke(
+        app,
+        ["test", str(f1), str(f2), "--inputs", str(dataset), "--mock", "--estimate"],
+        input="n\n",
+    )
+    assert res.exit_code == 0
+    assert "Pre-Execution Cost & Token Estimation" in res.output
+    assert "Execution aborted by user" in res.output
+
+
+def test_cli_test_estimate_proceed(tmp_path: Path) -> None:
+    """Test --estimate pre-execution token/cost calculation with user proceeding."""
+    f1 = tmp_path / "v1.txt"
+    f2 = tmp_path / "v2.txt"
+    f1.write_text("Hello prompt {{query}}", encoding="utf-8")
+    f2.write_text("Hello prompt {{query}}", encoding="utf-8")
+
+    dataset = tmp_path / "cases.jsonl"
+    dataset.write_text('{"id": "tc1", "vars": {"query": "World"}}\n', encoding="utf-8")
+
+    res = runner.invoke(
+        app,
+        ["test", str(f1), str(f2), "--inputs", str(dataset), "--mock", "--estimate"],
+        input="y\n",
+    )
+    assert res.exit_code == 0
+    assert "Pre-Execution Cost & Token Estimation" in res.output

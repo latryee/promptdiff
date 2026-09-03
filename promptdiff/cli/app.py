@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -108,6 +109,7 @@ def _run_test_suite(
     wandb_project: str,
     rubric: str | None,
     forecast: str | None,
+    estimate: bool = False,
 ) -> None:
     """Core test execution logic shared between `promptdiff test` and `promptdiff run`."""
     m1 = model_v1 or model
@@ -129,6 +131,50 @@ def _run_test_suite(
     except Exception as e:
         console.print(f"[bold red]Error loading dataset:[/bold red] {e}")
         raise typer.Exit(code=1)
+
+    if estimate:
+        from promptdiff.pricing import calculate_cost
+
+        total_v1_tokens = 0
+        total_v2_tokens = 0
+        for tc in test_cases:
+            r1 = v1_prompt.render(tc.vars)
+            r2 = v2_prompt.render(tc.vars)
+            toks_1 = max(1, int(len(re.findall(r"\w+|[^\w\s]", r1, re.UNICODE)) * 1.15))
+            toks_2 = max(1, int(len(re.findall(r"\w+|[^\w\s]", r2, re.UNICODE)) * 1.15))
+            total_v1_tokens += toks_1
+            total_v2_tokens += toks_2
+
+        est_completion_tokens = len(test_cases) * 150
+        cost_v1 = calculate_cost(m1, total_v1_tokens, est_completion_tokens)
+        cost_v2 = calculate_cost(m2, total_v2_tokens, est_completion_tokens)
+        total_est_cost = cost_v1 + cost_v2
+
+        est_table = Table(title="Pre-Execution Cost & Token Estimation", header_style="bold cyan")
+        est_table.add_column("Version", style="bold")
+        est_table.add_column("Model")
+        est_table.add_column("Input Tokens (Est.)", justify="right")
+        est_table.add_column("Output Tokens (Est.)", justify="right")
+        est_table.add_column("Est. Cost (USD)", justify="right")
+
+        est_table.add_row("v1", m1, f"~{total_v1_tokens:,}", f"~{est_completion_tokens:,}", f"${cost_v1:.6f}")
+        est_table.add_row("v2", m2, f"~{total_v2_tokens:,}", f"~{est_completion_tokens:,}", f"${cost_v2:.6f}")
+        est_table.add_row(
+            "Total Combined",
+            "-",
+            f"~{total_v1_tokens + total_v2_tokens:,}",
+            f"~{est_completion_tokens * 2:,}",
+            f"${total_est_cost:.6f}",
+            style="bold green",
+        )
+
+        console.print(est_table)
+        console.print(f"[bold yellow]Total Test Cases:[/bold yellow] {len(test_cases)}")
+
+        confirm = typer.confirm("Proceed with execution?", default=True)
+        if not confirm:
+            console.print("[yellow]Execution aborted by user.[/yellow]")
+            raise typer.Exit(code=0)
 
     p1 = get_provider(model_name=m1, force_mock=mock)
     p2 = get_provider(model_name=m2, force_mock=mock)
@@ -265,6 +311,9 @@ def test_cmd(
     forecast: str | None = typer.Option(
         None, "--forecast", "-f", help="Projected daily production request volume (e.g. '1M', '500k')"
     ),
+    estimate: bool = typer.Option(
+        False, "--estimate", help="Pre-execution local token and cost estimation with confirmation prompt"
+    ),
 ) -> None:
     """Run regression comparison between two prompt versions across test cases."""
     _run_test_suite(
@@ -295,6 +344,7 @@ def test_cmd(
         wandb_project=wandb_project,
         rubric=rubric,
         forecast=forecast,
+        estimate=estimate,
     )
 
 
@@ -336,6 +386,9 @@ def run_cmd(
     forecast: str | None = typer.Option(
         None, "--forecast", "-f", help="Projected daily production request volume (e.g. '1M', '500k')"
     ),
+    estimate: bool = typer.Option(
+        False, "--estimate", help="Pre-execution local token and cost estimation with confirmation prompt"
+    ),
 ) -> None:
     """Run regression comparison between prompt versions (alias for `promptdiff test`)."""
     _run_test_suite(
@@ -366,6 +419,7 @@ def run_cmd(
         wandb_project=wandb_project,
         rubric=rubric,
         forecast=forecast,
+        estimate=estimate,
     )
 
 
