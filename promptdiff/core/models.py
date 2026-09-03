@@ -83,6 +83,8 @@ class ConversationVersion(PromptVersion):
 class RunResult(BaseModel):
     """Output and performance telemetry from an LLM run."""
 
+    model_config = ConfigDict(frozen=True)
+
     prompt_name: str
     test_case_id: str
     rendered_prompt: str
@@ -101,6 +103,8 @@ class RunResult(BaseModel):
 class EvaluatorScore(BaseModel):
     """Result of an evaluation metric comparison."""
 
+    model_config = ConfigDict(frozen=True)
+
     name: str
     v1_score: Any
     v2_score: Any
@@ -114,6 +118,8 @@ class EvaluatorScore(BaseModel):
 class DiffChunk(BaseModel):
     """A diff chunk between two output strings."""
 
+    model_config = ConfigDict(frozen=True)
+
     kind: Literal["equal", "insert", "delete", "replace"]
     v1_text: str = ""
     v2_text: str = ""
@@ -121,6 +127,8 @@ class DiffChunk(BaseModel):
 
 class ComparisonResult(BaseModel):
     """Side-by-side comparison of two prompt version executions."""
+
+    model_config = ConfigDict(frozen=True)
 
     test_case: TestCase
     v1_result: RunResult
@@ -134,6 +142,8 @@ class ComparisonResult(BaseModel):
 class MultiComparisonResult(BaseModel):
     """Comparison across N arbitrary prompt/model variants."""
 
+    model_config = ConfigDict(frozen=True)
+
     test_case: TestCase
     results: dict[str, RunResult] = Field(default_factory=dict)
     scores: dict[str, dict[str, EvaluatorScore]] = Field(default_factory=dict)
@@ -142,6 +152,8 @@ class MultiComparisonResult(BaseModel):
 
 class AssertionRule(BaseModel):
     """Rule defining a pass/fail threshold for CI/CD regression checks."""
+
+    model_config = ConfigDict(frozen=True)
 
     metric: str
     operator: Literal["<=", ">=", "<", ">", "==", "!="]
@@ -171,6 +183,8 @@ class AssertionRule(BaseModel):
 class RegressionVerdict(BaseModel):
     """Overall run status and list of failed assertions."""
 
+    model_config = ConfigDict(frozen=True)
+
     passed: bool = True
     status: Literal["PASSED", "REGRESSION_DETECTED", "ERROR"] = "PASSED"
     failed_assertions: list[str] = Field(default_factory=list)
@@ -185,6 +199,8 @@ class RegressionVerdict(BaseModel):
 
 class DiffReport(BaseModel):
     """Complete serialized evaluation and regression report."""
+
+    model_config = ConfigDict(frozen=True)
 
     run_id: str = Field(default_factory=lambda: f"run_{uuid.uuid4().hex[:8]}")
     timestamp: str = ""
@@ -202,6 +218,8 @@ class DiffReport(BaseModel):
 class ArenaModelSummary(BaseModel):
     """Aggregate metrics for a single model/prompt in the Arena."""
 
+    model_config = ConfigDict(frozen=True)
+
     name: str
     model: str
     total_cost: float
@@ -215,6 +233,8 @@ class ArenaModelSummary(BaseModel):
 
 class ArenaReport(BaseModel):
     """Leaderboard report across N competing models/prompts."""
+
+    model_config = ConfigDict(frozen=True)
 
     run_id: str = Field(default_factory=lambda: f"arena_{uuid.uuid4().hex[:8]}")
     timestamp: str = ""

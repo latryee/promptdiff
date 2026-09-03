@@ -35,3 +35,41 @@ def test_diff_report_schema_sync_with_examples() -> None:
         "examples/schema.json has drifted from DiffReport.model_json_schema()! "
         "Update examples/schema.json to match the updated Pydantic model."
     )
+
+
+def test_result_models_frozen_immutability() -> None:
+    """Ensure DiffReport and RunResult cannot be mutated accidentally after instantiation."""
+    import pytest
+    from pydantic import ValidationError
+
+    from promptdiff.core.models import DiffReport, RegressionVerdict, RunResult
+
+    res = RunResult(
+        prompt_name="v1",
+        test_case_id="tc1",
+        rendered_prompt="test",
+        output="test output",
+        latency_ms=10.0,
+        prompt_tokens=5,
+        completion_tokens=5,
+        total_tokens=10,
+        cost_usd=0.001,
+        model="mock",
+    )
+
+    with pytest.raises(ValidationError):
+        res.cost_usd = 999.0  # type: ignore[misc]
+
+    report = DiffReport(
+        v1_name="v1",
+        v2_name="v2",
+        model_v1="mock",
+        model_v2="mock",
+        comparisons=[],
+        verdict=RegressionVerdict(passed=True),
+        evaluators=["latency"],
+        total_cases=0,
+    )
+
+    with pytest.raises(ValidationError):
+        report.v1_name = "mutated_v1"  # type: ignore[misc]

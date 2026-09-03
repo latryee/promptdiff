@@ -103,9 +103,8 @@ class DiskCache:
                             return None
 
                     data = json.loads(data_str)
-                    result = RunResult.model_validate(data)
-                    result.cached = True
-                    return result
+                    data["cached"] = True
+                    return RunResult.model_validate(data)
         except Exception as err:
             logger.warning("Cache read failed for key %s: %s", hash_key, err)
             return None

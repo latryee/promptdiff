@@ -77,9 +77,9 @@ class PromptDiffRunner:
         if self.cache.enabled:
             cached_result = await self.cache.async_get(cache_key)
             if cached_result:
-                cached_result.test_case_id = test_case.id
-                cached_result.prompt_name = prompt_version.name
-                return cached_result
+                return cached_result.model_copy(
+                    update={"test_case_id": test_case.id, "prompt_name": prompt_version.name}
+                )
 
         # 2. Execute via Provider under Semaphore limit
         async with self.semaphore:
@@ -283,9 +283,7 @@ class ArenaRunner:
         if self.cache.enabled:
             cached = await self.cache.async_get(cache_key)
             if cached:
-                cached.test_case_id = test_case.id
-                cached.prompt_name = variant_name
-                return cached
+                return cached.model_copy(update={"test_case_id": test_case.id, "prompt_name": variant_name})
 
         async with self.semaphore:
             try:
@@ -457,14 +455,13 @@ class ArenaRunner:
 
         # Sort leaderboard by lowest cost, then lowest latency
         summaries.sort(key=lambda s: (s.total_cost, s.avg_latency_ms))
-        for idx, s in enumerate(summaries):
-            s.rank = idx + 1
+        ranked_summaries = [s.model_copy(update={"rank": idx + 1}) for idx, s in enumerate(summaries)]
 
         return ArenaReport(
             timestamp=datetime.now(timezone.utc).isoformat(),
             variants=variant_names,
             models={name: pv.model for name, pv in self.variants.items()},
             total_cases=len(test_cases),
-            leaderboard=summaries,
+            leaderboard=ranked_summaries,
             comparisons=list(comparisons),
         )
