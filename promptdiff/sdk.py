@@ -827,3 +827,27 @@ def detect_schema_breaking_changes(v1_json: str, v2_json: str) -> Any:
     from promptdiff.evaluators.schema_breaking import detect_schema_breaking_changes as _detect
 
     return _detect(v1_json, v2_json)
+
+
+def cascaded_judge(
+    v1_output: str,
+    v2_output: str,
+    query: str = "",
+    confidence_threshold: float = 0.85,
+    force_mock: bool = True,
+) -> Any:
+    """Evaluate two candidate outputs using cost-aware two-tier cascaded judgment.
+
+    Args:
+        v1_output: Baseline output string.
+        v2_output: Candidate output string.
+        query: Optional user query input.
+        confidence_threshold: Minimum confidence required to avoid Tier 2 frontier escalation.
+        force_mock: Use local deterministic mock models.
+
+    Returns:
+        CascadedJudgeResult with winner, scores, tier_used (1 or 2), and cost_saved_pct.
+    """
+    from promptdiff.evaluators.cascaded_judge import cascaded_judge as _judge
+
+    return _judge(v1_output, v2_output, query=query, confidence_threshold=confidence_threshold, force_mock=force_mock)

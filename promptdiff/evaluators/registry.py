@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from promptdiff.evaluators.answer_relevance import AnswerRelevanceEvaluator
 from promptdiff.evaluators.base import BaseEvaluator
+from promptdiff.evaluators.cascaded_judge import CascadedLLMJudgeEvaluator
 from promptdiff.evaluators.citation import CitationEvaluator
 from promptdiff.evaluators.code_sandbox import SafeCodeSandboxEvaluator
 from promptdiff.evaluators.cost import CostEvaluator
@@ -42,6 +43,9 @@ EVALUATOR_MAP: dict[str, type[BaseEvaluator]] = {
     "llm_judge": LLMJudgeEvaluator,
     "judge": LLMJudgeEvaluator,
     "llm_as_a_judge": LLMJudgeEvaluator,
+    "cascaded_judge": CascadedLLMJudgeEvaluator,
+    "cascade_judge": CascadedLLMJudgeEvaluator,
+    "cost_judge": CascadedLLMJudgeEvaluator,
     "faithfulness": FaithfulnessEvaluator,
     "rag_faithfulness": FaithfulnessEvaluator,
     "groundedness": FaithfulnessEvaluator,
