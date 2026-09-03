@@ -59,7 +59,7 @@ ui = [
     "pandas>=2.0.0",
 ]
 tui = [
-    "textual>=0.50.0",
+    "textual>=8.2.8",
 ]
 javascript = [
     "esprima>=4.0.1",
@@ -72,7 +72,7 @@ all = [
     "sentence-transformers>=2.2.0",
     "tiktoken>=0.7.0",
     "streamlit>=1.30.0",
-    "textual>=0.50.0",
+    "textual>=8.2.8",
     "pandas>=2.0.0",
     "scipy>=1.10.0",
     "esprima>=4.0.1",
