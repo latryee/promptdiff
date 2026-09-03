@@ -99,6 +99,25 @@ promptdiff test prompts/system_v1.txt prompts/system_v2.txt \
 | `0` | **PASSED** | Quality assertions satisfied; safe to merge. |
 | `1` | **REGRESSION** | Regression threshold violated (e.g. cost jump, latency spike, schema break). CI pipeline fails. |
 
+### 🤖 Standalone Pull Request Commenter (`scripts/pr_commenter.py`)
+
+For non-composite CI environments (Jenkins, GitLab CI, Buildkite, or custom GitHub Actions steps), use the standalone PR commenting script:
+
+```bash
+# Run regression evaluation exporting report JSON
+promptdiff test prompts/system_v1.txt prompts/system_v2.txt \
+  --inputs datasets/testcases.jsonl \
+  --mock \
+  --export-json report.json
+
+# Post or update sticky Markdown evaluation comment on PR
+python scripts/pr_commenter.py \
+  --report report.json \
+  --repo "$GITHUB_REPOSITORY" \
+  --pr "$PR_NUMBER" \
+  --token "$GITHUB_TOKEN"
+```
+
 ---
 
 ## 📚 Curated Recipe Catalog
