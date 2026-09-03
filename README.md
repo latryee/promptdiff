@@ -195,13 +195,15 @@ pip install "promptdiff[all]"
 
 | Command / Tool | Extra Required | Description |
 | :--- | :---: | :--- |
+| `promptdiff cache-impact` | *Core* | KV-cache prefix breakpoint analyzer & monthly financial cash loss forecaster. |
+| `promptdiff replay-traces` | *Core* | Production OpenTelemetry & Langfuse shadow replayer with automated PII masking. |
+| `promptdiff arena` | *Core* | Evaluate $N$ prompt versions with Bayesian Bradley-Terry & ELO skill ratings. |
 | `promptdiff studio` | *Core* | Launch zero-dependency local-first visual diff web studio & playground. |
 | `promptdiff mcts` | *Core* | Active Monte Carlo Tree Search prompt optimizer with Pareto frontier. |
 | `promptdiff redteam` | *Core* | Multi-turn TAP adversarial red-teaming (steganography & CVSS risk matrix). |
 | `promptdiff cascade` | *Core* | Confidence-aware model cascade router & enterprise ROI forecaster. |
 | `promptdiff check` | *Core* | Static linting & token cost analysis for prompt templates. |
 | `promptdiff serve` | *Core* | Launch FastAPI REST API server & playground (`pip install fastapi uvicorn`). |
-| `promptdiff arena` | *Core* | Evaluate $N$ prompt versions across multiple LLMs with leaderboard rankings. |
 | `promptdiff diff` | *Core* | Instant side-by-side terminal syntax diff without calling model APIs. |
 | `promptdiff pricing` | *Core* | Query token pricing and cost calculations for 30+ providers. |
 | `promptdiff fuzz` | *Core* | Red-teaming security fuzzer scanning 20 distinct adversarial injection vectors. |
