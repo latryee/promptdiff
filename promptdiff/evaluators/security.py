@@ -7,6 +7,7 @@ and evaluates model resilience against Prompt Injection and Jailbreak attempts.
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from promptdiff.core.models import EvaluatorScore, RunResult, TestCase
 from promptdiff.evaluators.base import BaseEvaluator
@@ -164,3 +165,58 @@ class SecurityEvaluator(BaseEvaluator):
                 "v2_violations_count": v2_violations,
             },
         )
+
+
+def evaluate_pii_detector_accuracy(
+    test_samples: list[dict[str, Any]],
+) -> dict[str, float]:
+    """Calculate confusion matrix, precision, recall, FPR, and FNR for PII detector.
+
+    Each sample dict requires:
+      - 'text': str
+      - 'has_pii': bool
+      - 'expected_types': list[str] (optional)
+
+    Returns metrics dict containing:
+      - tp, fp, tn, fn
+      - precision, recall, f1
+      - false_positive_rate (FPR = FP / (FP + TN))
+      - false_negative_rate (FNR = FN / (FN + TP))
+    """
+    tp = 0
+    fp = 0
+    tn = 0
+    fn = 0
+
+    for sample in test_samples:
+        text = str(sample["text"])
+        expected_has_pii = bool(sample["has_pii"])
+        findings = detect_pii(text)
+        detected_has_pii = len(findings) > 0
+
+        if expected_has_pii and detected_has_pii:
+            tp += 1
+        elif not expected_has_pii and detected_has_pii:
+            fp += 1
+        elif not expected_has_pii and not detected_has_pii:
+            tn += 1
+        else:
+            fn += 1
+
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 1.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 1.0
+    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 1.0
+    fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
+    fnr = fn / (fn + tp) if (fn + tp) > 0 else 0.0
+
+    return {
+        "tp": float(tp),
+        "fp": float(fp),
+        "tn": float(tn),
+        "fn": float(fn),
+        "precision": round(precision, 4),
+        "recall": round(recall, 4),
+        "f1": round(f1, 4),
+        "false_positive_rate": round(fpr, 4),
+        "false_negative_rate": round(fnr, 4),
+    }
