@@ -61,6 +61,9 @@ ui = [
 tui = [
     "textual>=0.50.0",
 ]
+javascript = [
+    "esprima>=4.0.1",
+]
 all = [
     "sentence-transformers>=2.2.0",
     "tiktoken>=0.7.0",
@@ -68,6 +71,7 @@ all = [
     "textual>=0.50.0",
     "pandas>=2.0.0",
     "scipy>=1.10.0",
+    "esprima>=4.0.1",
 ]
 dev = [
     "pytest>=8.0.0",

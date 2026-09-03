@@ -8,6 +8,7 @@ calculating structural tree edit distance and identifying schema mutations
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -34,7 +35,7 @@ class ASTDiffResult:
 
 
 class ASTStructuredDiffer:
-    """Compares structured JSON outputs at the Abstract Syntax Tree level."""
+    """Compares structured JSON and JavaScript/TypeScript outputs at the Abstract Syntax Tree level."""
 
     def diff_json(self, json_str_1: str, json_str_2: str) -> ASTDiffResult:
         """Compare two JSON objects structurally."""
@@ -59,6 +60,56 @@ class ASTStructuredDiffer:
             tree_edit_distance=len(diffs),
             differences=diffs,
         )
+
+    def diff_javascript(self, js_str_1: str, js_str_2: str) -> ASTDiffResult:
+        """Compare two JavaScript/TypeScript code snippets structurally at the AST level."""
+        tree1 = self._parse_js_ast(js_str_1)
+        tree2 = self._parse_js_ast(js_str_2)
+
+        diffs: list[ASTDifference] = []
+        self._compare_nodes("", tree1, tree2, diffs)
+
+        schema_ok = not any(d.severity == "CRITICAL" for d in diffs)
+
+        return ASTDiffResult(
+            is_identical=len(diffs) == 0,
+            schema_compatible=schema_ok,
+            tree_edit_distance=len(diffs),
+            differences=diffs,
+        )
+
+    def _parse_js_ast(self, code: str) -> dict[str, Any]:
+        """Parse JS/TS code into structured dict using esprima if available, or syntactic fallback."""
+        try:
+            import esprima  # type: ignore[import-untyped]
+
+            tree = esprima.parseScript(code, tolerant=True)
+            return tree.toDict()  # type: ignore[no-any-return]
+        except ImportError:
+            return self._parse_js_fallback(code)
+        except Exception:
+            return self._parse_js_fallback(code)
+
+    def _parse_js_fallback(self, code: str) -> dict[str, Any]:
+        """Syntactic parser for JavaScript and TypeScript AST fallback."""
+        cleaned = re.sub(r"//.*?\n", "\n", code)
+        cleaned = re.sub(r"/\*.*?\*/", "", cleaned, flags=re.DOTALL)
+
+        functions = re.findall(r"(?:async\s+)?function\s+([a-zA-Z0-9_$]+)\s*\(([^)]*)\)", cleaned)
+        classes = re.findall(r"class\s+([a-zA-Z0-9_$]+)(?:\s+extends\s+([a-zA-Z0-9_$]+))?", cleaned)
+        variables = re.findall(r"(?:const|let|var)\s+([a-zA-Z0-9_$]+)", cleaned)
+        imports = re.findall(r"import\s+(?:\{([^}]+)\}|([a-zA-Z0-9_$]+))\s+from\s+['\"]([^'\"]+)['\"]", cleaned)
+
+        return {
+            "type": "Program",
+            "functions": {
+                f[0]: {"params": [p.strip().split(":")[0].strip() for p in f[1].split(",") if p.strip()]}
+                for f in functions
+            },
+            "classes": {c[0]: {"extends": c[1] or None} for c in classes},
+            "variables": sorted(set(variables)),
+            "imports": [{"imported": (i[0] or i[1]).strip(), "source": i[2]} for i in imports],
+        }
 
     def _compare_nodes(self, path: str, n1: Any, n2: Any, diffs: list[ASTDifference]) -> None:
         type1 = type(n1)
