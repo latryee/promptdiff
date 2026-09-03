@@ -1,0 +1,50 @@
+name: Sync LLM Model Pricing
+
+on:
+  schedule:
+    # Run every Monday at 06:00 UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-pricing:
+    name: Check & Sync Model Pricing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run pricing sync check
+        id: sync_check
+        run: |
+          python scripts/sync_pricing.py > pricing_diff.txt
+          cat pricing_diff.txt
+
+      - name: Create Pull Request on pricing updates
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore(pricing): update model pricing table from upstream"
+          title: "chore(pricing): update model pricing registry"
+          body: |
+            Automated weekly model pricing synchronization report:
+
+            ```
+            $(cat pricing_diff.txt)
+            ```
+
+            Please review price changes and merge manually.
+          branch: "chore/sync-model-pricing"
+          delete-branch: true

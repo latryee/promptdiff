@@ -42,3 +42,32 @@ def test_calculate_cost():
 
     # Zero tokens = 0.0
     assert calculate_cost("gpt-4o", 0, 0) == 0.0
+
+
+def test_pricing_sync_script_diff_and_formatting() -> None:
+    """Test pricing sync diff computation and table rendering."""
+    from promptdiff.pricing import ModelPrice
+    from scripts.sync_pricing import compute_pricing_diff, format_diff_table
+
+    local_table = {
+        "gpt-4o": ModelPrice(2.50, 10.00, "Local GPT-4o"),
+        "gemini-2.0-flash": ModelPrice(0.10, 0.40, "Local Gemini"),
+    }
+    remote_data = {
+        "gpt-4o": {"input_cost_per_token": 0.000003, "output_cost_per_token": 0.000012},  # $3.00 / $12.00
+        "gemini-2.0-flash": {"input_cost_per_token": 0.0000001, "output_cost_per_token": 0.0000004},  # $0.10 / $0.40
+    }
+
+    diffs = compute_pricing_diff(local_table, remote_data)
+    assert len(diffs) == 1
+    assert diffs[0].model == "gpt-4o"
+    assert diffs[0].remote_input == 3.00
+    assert diffs[0].status == "MODIFIED"
+
+    formatted = format_diff_table(diffs)
+    assert "gpt-4o" in formatted
+    assert "MODIFIED" in formatted
+
+    # Test empty diff message
+    empty_msg = format_diff_table([])
+    assert "in sync" in empty_msg
