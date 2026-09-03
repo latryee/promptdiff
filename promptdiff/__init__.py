@@ -19,6 +19,7 @@ from promptdiff.core.db import TelemetryDatabase
 from promptdiff.core.models import (
     ArenaReport,
     ComparisonResult,
+    ConversationVersion,
     DiffReport,
     MultiComparisonResult,
     PromptVersion,
@@ -81,6 +82,7 @@ from promptdiff.sdk import (
 __all__ = [
     "ArenaReport",
     "ComparisonResult",
+    "ConversationVersion",
     "DiffReport",
     "MultiComparisonResult",
     "PromptVersion",

@@ -53,6 +53,33 @@ class PromptVersion(BaseModel):
         return text
 
 
+class ConversationVersion(PromptVersion):
+    """Multi-turn conversation version consisting of ordered message turns."""
+
+    template: str = ""
+    messages: list[dict[str, Any]] = Field(default_factory=list)
+
+    def render_messages(self, variables: dict[str, Any]) -> list[dict[str, Any]]:
+        """Render all messages in the conversation template with variable substitution."""
+        rendered: list[dict[str, Any]] = []
+        for msg in self.messages:
+            content = str(msg.get("content", ""))
+            for key, value in variables.items():
+                content = content.replace(f"{{{{{key}}}}}", str(value))
+                content = re.sub(rf"(?<!\{{)\{{{re.escape(key)}\}}(?!\}})", str(value), content)
+            rendered.append({**msg, "content": content})
+        return rendered
+
+    def render(self, variables: dict[str, Any]) -> str:
+        """Render multi-turn conversation into a unified formatted dialogue transcript."""
+        rendered = self.render_messages(variables)
+        parts: list[str] = []
+        for m in rendered:
+            role = str(m.get("role", "user")).capitalize()
+            parts.append(f"{role}: {m.get('content', '')}")
+        return "\n".join(parts)
+
+
 class RunResult(BaseModel):
     """Output and performance telemetry from an LLM run."""
 
