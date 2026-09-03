@@ -64,7 +64,7 @@ class PromptHealthDaemon:
             return 0.0
         return len(w1.intersection(w2)) / math.sqrt(len(w1) * len(w2))
 
-    def evaluate_live_call(self, live_output: str) -> Optional[DriftAlert]:
+    async def evaluate_live_call(self, live_output: str) -> Optional[DriftAlert]:
         """Check a single live production output against golden reference vectors."""
         self.total_monitored += 1
 
@@ -83,12 +83,12 @@ class PromptHealthDaemon:
                 sample_output=live_output[:200],
                 alert_level="CRITICAL" if max_sim < (self.drift_threshold - 0.20) else "WARNING",
             )
-            self._dispatch_webhook(alert)
+            await self._dispatch_webhook(alert)
             return alert
 
         return None
 
-    def _dispatch_webhook(self, alert: DriftAlert) -> bool:
+    async def _dispatch_webhook(self, alert: DriftAlert) -> bool:
         if not self.webhook_url:
             return False
 
@@ -106,8 +106,8 @@ class PromptHealthDaemon:
             ],
         }
         try:
-            with httpx.Client(timeout=4.0) as client:
-                client.post(self.webhook_url, json=payload)
+            async with httpx.AsyncClient(timeout=4.0) as client:
+                await client.post(self.webhook_url, json=payload)
                 return True
         except Exception as e:
             logger.warning(f"Could not dispatch drift webhook: {e}")
