@@ -66,18 +66,13 @@ def verify_api_key_value(provided_key: str | None, expected_key: str | None = No
 def validate_bind_host(host: str, api_key: str | None = None) -> str:
     """Validate server bind interface and warn if binding to public IP without auth.
 
-    Returns the safe host to bind.
+    Returns the host after validation.
     """
     key = api_key if api_key is not None else os.getenv("PROMPTDIFF_API_KEY")
     is_localhost = host in ("127.0.0.1", "localhost", "::1")
 
     if not is_localhost and not key:
-        logger.warning(
-            "⚠️  GÜVENLİK UYARISI: Sunucu herkese açık IP'ye (%s) bind ediliyor ama API key tanımlı değil!",
-            host,
-        )
-        print(
-            f"\n[!] GÜVENLİK UYARISI: Sunucu herkese açık IP'ye ({host}) bind ediliyor ama API key tanımlı değil!\n",
-            flush=True,
-        )
+        msg = f"⚠️  GÜVENLİK UYARISI: Sunucu herkese açık IP'ye ({host}) bind ediliyor ama API key tanımlı değil!"
+        logger.warning(msg)
+        print(f"\n[!] {msg}\n", flush=True)
     return host

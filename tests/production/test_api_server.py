@@ -99,6 +99,33 @@ def test_launch_server_rebinding_warning_when_key_unset() -> None:
             assert mock_run.call_args[1]["host"] == "127.0.0.1"
 
 
+def test_validate_bind_host_public_warning() -> None:
+    """validate_bind_host emits a prominent warning when host is 0.0.0.0 and no API key."""
+    from promptdiff.cli._server_security import validate_bind_host
+
+    with patch.dict(os.environ, {}, clear=False):
+        os.environ.pop("PROMPTDIFF_API_KEY", None)
+        with patch("promptdiff.cli._server_security.logger.warning") as mock_warn:
+            res_host = validate_bind_host("0.0.0.0")
+            assert res_host == "0.0.0.0"
+            mock_warn.assert_called_once()
+            msg = mock_warn.call_args[0][0]
+            assert "Sunucu herkese açık IP'ye" in msg
+            assert "API key tanımlı değil" in msg
+
+
+def test_validate_bind_host_localhost_clean() -> None:
+    """validate_bind_host does not warn on loopback localhost interfaces."""
+    from promptdiff.cli._server_security import validate_bind_host
+
+    with patch.dict(os.environ, {}, clear=False):
+        os.environ.pop("PROMPTDIFF_API_KEY", None)
+        with patch("promptdiff.cli._server_security.logger.warning") as mock_warn:
+            assert validate_bind_host("127.0.0.1") == "127.0.0.1"
+            assert validate_bind_host("localhost") == "localhost"
+            mock_warn.assert_not_called()
+
+
 def test_cors_wildcard_origin_never_allows_credentials() -> None:
     """Wildcard origin must never have allow_credentials=True in response headers."""
     app = create_app(cors_origins=["*"], allow_credentials=True)

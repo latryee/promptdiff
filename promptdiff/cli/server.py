@@ -143,14 +143,20 @@ def launch_server(
     host: str = "127.0.0.1",
     port: int = 8000,
     cors_origins: list[str] | None = None,
+    allow_insecure_bind: bool = False,
 ) -> None:
     """Launch Uvicorn HTTP server."""
+    from promptdiff.cli._server_security import validate_bind_host
+
+    validate_bind_host(host)
+
     api_key = os.getenv("PROMPTDIFF_API_KEY")
     if not api_key and host not in ("127.0.0.1", "localhost", "::1"):
-        logger.warning(
-            "Security Warning: PROMPTDIFF_API_KEY is not set. Rebinding server to '127.0.0.1' for safety.",
-        )
-        host = "127.0.0.1"
+        if not allow_insecure_bind:
+            logger.warning(
+                "Security Warning: PROMPTDIFF_API_KEY is not set. Rebinding server to '127.0.0.1' for safety.",
+            )
+            host = "127.0.0.1"
 
     try:
         import uvicorn
