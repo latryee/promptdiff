@@ -90,6 +90,20 @@ class MCTSResult:
     tree_ascii: str
 
 
+MAX_ALLOWED_ITERATIONS: int = 500
+
+
+def validate_mcts_iterations(iterations: int) -> int:
+    """Validate that MCTS iteration count is strictly positive and does not exceed upper safety limits."""
+    if iterations <= 0:
+        raise ValueError(f"MCTS iterations must be a positive integer, got {iterations}")
+    if iterations > MAX_ALLOWED_ITERATIONS:
+        raise ValueError(
+            f"MCTS iterations ({iterations}) exceeds MAX_ALLOWED_ITERATIONS ({MAX_ALLOWED_ITERATIONS})"
+        )
+    return iterations
+
+
 class MCTSPromptOptimizer:
     """Monte Carlo Tree Search active optimizer for prompt engineering."""
 
@@ -99,13 +113,16 @@ class MCTSPromptOptimizer:
         test_cases: list[TestCase],
         model_name: str = "gpt-4o",
         max_iterations: int = 8,
+        num_iterations: Optional[int] = None,
         exploration_constant: float = 1.414,
         force_mock: bool = True,
     ):
+        raw_iterations = num_iterations if num_iterations is not None else max_iterations
+        self.max_iterations = validate_mcts_iterations(raw_iterations)
+        self.num_iterations = self.max_iterations
         self.initial_prompt = initial_prompt
         self.test_cases = test_cases
         self.model_name = model_name
-        self.max_iterations = max_iterations
         self.c = exploration_constant
         self.force_mock = force_mock
         self.provider = get_provider(model_name=self.model_name, force_mock=self.force_mock)
@@ -262,8 +279,13 @@ class MCTSPromptOptimizer:
             _traverse(child, "", idx == len(root.children) - 1)
         return "\n".join(lines)
 
-    async def optimize(self) -> MCTSResult:
+    async def optimize(self, num_iterations: Optional[int] = None) -> MCTSResult:
         """Run full Monte Carlo Tree Search optimization."""
+        iterations = (
+            validate_mcts_iterations(num_iterations)
+            if num_iterations is not None
+            else self.max_iterations
+        )
         root_metrics = await self._evaluate_prompt(self.initial_prompt)
         root = MCTSNode(
             prompt_template=self.initial_prompt,
@@ -273,7 +295,7 @@ class MCTSPromptOptimizer:
         )
         self.all_nodes = [root]
 
-        for _iteration in range(self.max_iterations):
+        for _iteration in range(iterations):
             selected = self._select(root)
             if selected.visits > 0 or selected == root:
                 expanded_children = self._expand(selected)
@@ -307,6 +329,6 @@ class MCTSPromptOptimizer:
             tree_ascii=tree_ascii,
         )
 
-    def optimize_sync(self) -> MCTSResult:
+    def optimize_sync(self, num_iterations: Optional[int] = None) -> MCTSResult:
         """Synchronous wrapper for MCTS optimization."""
-        return asyncio.run(self.optimize())
+        return asyncio.run(self.optimize(num_iterations=num_iterations))

@@ -43,3 +43,44 @@ async def test_mcts_prompt_optimizer() -> None:
     assert result.nodes_explored >= 3
     assert len(result.pareto_frontier) >= 1
     assert "MCTS Tree Root" in result.tree_ascii
+
+
+def test_mcts_iteration_guard_limits() -> None:
+    """Verify that MCTS rejects non-positive or excessive iterations exceeding MAX_ALLOWED_ITERATIONS."""
+    from promptdiff.optimizer.mcts import MAX_ALLOWED_ITERATIONS, validate_mcts_iterations
+
+    assert MAX_ALLOWED_ITERATIONS == 500
+
+    # Valid iterations
+    assert validate_mcts_iterations(1) == 1
+    assert validate_mcts_iterations(500) == 500
+
+    # Non-positive iterations
+    with pytest.raises(ValueError, match="positive integer"):
+        validate_mcts_iterations(0)
+
+    with pytest.raises(ValueError, match="positive integer"):
+        validate_mcts_iterations(-10)
+
+    # Exceeding MAX_ALLOWED_ITERATIONS
+    with pytest.raises(ValueError, match="exceeds MAX_ALLOWED_ITERATIONS"):
+        validate_mcts_iterations(501)
+
+    with pytest.raises(ValueError, match="exceeds MAX_ALLOWED_ITERATIONS"):
+        validate_mcts_iterations(1000)
+
+    # In MCTSPromptOptimizer constructor
+    test_cases = [TestCase(id="t1", vars={"query": "Test"})]
+    with pytest.raises(ValueError, match="exceeds MAX_ALLOWED_ITERATIONS"):
+        MCTSPromptOptimizer(
+            initial_prompt="Prompt: {{query}}",
+            test_cases=test_cases,
+            num_iterations=999,
+        )
+
+    with pytest.raises(ValueError, match="positive integer"):
+        MCTSPromptOptimizer(
+            initial_prompt="Prompt: {{query}}",
+            test_cases=test_cases,
+            max_iterations=0,
+        )
