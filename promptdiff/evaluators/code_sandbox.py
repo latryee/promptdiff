@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
-import subprocess
+import subprocess  # nosec: B404 # subprocess module import is required for sandbox execution isolation
 import sys
 from dataclasses import dataclass
 from typing import Optional
@@ -212,7 +212,7 @@ class SafeCodeSandboxEvaluator(BaseEvaluator):
         ]
 
         try:
-            proc = subprocess.run(
+            proc = subprocess.run(  # nosec: B603 # subprocess execution uses explicit sys.executable with isolated flags and no shell
                 cmd,
                 input=payload,
                 capture_output=True,

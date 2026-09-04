@@ -46,6 +46,10 @@ jobs:
         run: |
           pip-audit . --desc --strict
 
+      - name: Run Bandit Static Security Analysis
+        run: |
+          bandit -r promptdiff -ll
+
 
   test:
     name: Test (${{ matrix.os }} - Py${{ matrix.python-version }})
