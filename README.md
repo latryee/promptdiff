@@ -49,6 +49,30 @@ Modifying system prompts or switching models often leads to unexpected side effe
 
 ---
 
+## ⚖️ Honest Comparison: PromptDiff vs Alternatives
+
+Selecting the right evaluation tool depends heavily on your team's workflow, runtime stack, and data sovereignty requirements:
+
+| Feature / Dimension | **PromptDiff** | **promptfoo** | **LangSmith** | **Braintrust** |
+| :--- | :--- | :--- | :--- | :--- |
+| **Primary Focus** | **Local-first regression CI/CD** & prompt version diffing | LLM red-teaming, security & multi-provider CLI evals | Production tracing, debug sessions & SaaS observability | Enterprise eval platform, proxy logging & collaboration |
+| **Runtime & Language** | **Pure Python 3.10+** (zero heavy dependencies) | Node.js / TypeScript | Hosted SaaS (Python / TS SDKs) | Hosted SaaS / Enterprise on-prem |
+| **Data Privacy** | **100% Local / On-prem** (SQLite on local disk; zero telemetry exfiltration) | Local / Self-hosted | Cloud SaaS (prompts & traces sent to vendor servers) | Cloud SaaS / Enterprise Private Cloud |
+| **CI/CD Quality Gate** | **Native `promptdiff test` & Pytest plugin** (exit code 1 on regression) | Native CLI runner & GitHub Actions | Webhook / CI SDK assertions | CI integration via CLI / SDK |
+| **Cost & Latency Diffing** | **Deterministic offline token & pricing delta engine** | Basic cost approximations | Cloud dashboard cost tracking | Cloud dashboard cost analytics |
+| **Sandboxed Code Execution** | **Isolated OS subprocess** (`-I -s -B`, memory & CPU limits) | Node VM sandbox | Cloud worker execution | Cloud execution sandbox |
+| **Automated Prompt Optimization** | **Reflexive meta-prompting & MCTS compiler** | Optional external scripts | Playground prompt engineering | Automated AI prompt tuner |
+| **Full Distributed Tracing** | ⚠️ *Telemetry logs only* (OpenTelemetry / MLflow exportable) | ⚠️ *Eval-focused only* | ✅ **Full distributed waterfall traces** | ✅ **Distributed trace logging & proxy** |
+| **Pricing Model** | **100% Free & Open Source (MIT)** | Open Source (MIT) with Enterprise tier | Proprietary SaaS (Usage-based subscription) | Commercial SaaS / Enterprise license |
+
+### When to choose which:
+- **Choose PromptDiff** if you are a Python/MLOps team that treats prompts as code in Git, wants pytest-native integration, requires 100% data sovereignty without external cloud dependencies, and needs fast PR regression gates.
+- **Choose promptfoo** if you have a Node.js/TypeScript stack, want a rich browser-based red-teaming workspace, or need pre-packaged adversarial jailbreak test suites.
+- **Choose LangSmith** if your primary requirement is distributed production trace visualization across multi-agent LangChain graphs.
+- **Choose Braintrust** if you want an enterprise-managed centralized cloud evaluation platform with web-based team playground collaboration.
+
+---
+
 ## 🚀 Quickstart in 30 Seconds
 
 ```bash
