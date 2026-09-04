@@ -7,13 +7,20 @@ from unittest.mock import patch
 
 from starlette.testclient import TestClient
 
+import promptdiff
 from promptdiff.cli.server import create_app, launch_server
 
 
 def test_fastapi_server_app() -> None:
-    """Test FastAPI application initialization."""
+    """Test FastAPI application initialization and dynamic version match."""
     app = create_app()
     assert app is not None
+    assert app.version == promptdiff.__version__
+
+    client = TestClient(app)
+    res = client.get("/")
+    assert res.status_code == 200
+    assert res.json()["version"] == promptdiff.__version__
 
 
 def test_server_unauthenticated_when_key_unset() -> None:

@@ -9,6 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+import promptdiff
 from promptdiff.sdk import compare, fuzz, shrink
 
 logger = logging.getLogger("promptdiff.cli.server")
@@ -48,7 +49,7 @@ def create_app(
 
     api = FastAPI(
         title="⚡ PromptDiff Enterprise API & Playground",
-        version="3.0.0",
+        version=promptdiff.__version__,
         description="RESTful API for live LLM prompt regression testing, red-teaming, and token compression.",
     )
 
@@ -79,7 +80,7 @@ def create_app(
 
     @api.get("/")
     def root() -> dict[str, str]:
-        return {"status": "ok", "service": "PromptDiff Live Server", "version": "3.0.0"}
+        return {"status": "ok", "service": "PromptDiff Live Server", "version": promptdiff.__version__}
 
     @api.post("/api/v1/compare", dependencies=[Depends(verify_api_key)])
     def api_compare(req: CompareRequest) -> dict[str, Any]:
