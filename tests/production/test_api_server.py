@@ -127,3 +127,42 @@ def test_cors_explicit_origin_allows_credentials() -> None:
     )
     assert res.headers.get("access-control-allow-origin") == "https://trusted.promptdiff.com"
     assert res.headers.get("access-control-allow-credentials") == "true"
+
+
+def test_rate_limiter_exceeded_returns_429() -> None:
+    """Rate limiter returns 429 when client exceeds request limit."""
+    with patch.dict(os.environ, {}, clear=False):
+        os.environ.pop("PROMPTDIFF_API_KEY", None)
+        # Configure a tight limit of 2 requests per minute for testing
+        app = create_app(rate_limit_per_minute=2)
+        client = TestClient(app)
+
+        payload = {"prompt": "Tell me a joke", "model": "gpt-4o", "mock": True}
+
+        # Request 1: OK
+        res1 = client.post("/api/v1/fuzz", json=payload)
+        assert res1.status_code == 200
+
+        # Request 2: OK
+        res2 = client.post("/api/v1/fuzz", json=payload)
+        assert res2.status_code == 200
+
+        # Request 3: Exceeded -> 429
+        res3 = client.post("/api/v1/fuzz", json=payload)
+        assert res3.status_code == 429
+        assert "Rate limit exceeded" in res3.json().get("detail", "")
+        assert res3.headers.get("retry-after") == "60"
+
+
+def test_token_bucket_limiter_unit() -> None:
+    """Direct unit test of TokenBucketRateLimiter logic."""
+    from promptdiff.cli._server_security import TokenBucketRateLimiter
+
+    limiter = TokenBucketRateLimiter(rate_per_minute=3)
+    assert limiter.acquire("ip1") is True
+    assert limiter.acquire("ip1") is True
+    assert limiter.acquire("ip1") is True
+    assert limiter.acquire("ip1") is False
+
+    # Independent IP is not blocked
+    assert limiter.acquire("ip2") is True

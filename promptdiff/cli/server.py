@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import logging
 import os
-import secrets
 from typing import Any
 
 from pydantic import BaseModel
+from starlette.requests import Request
 
 import promptdiff
 from promptdiff.sdk import compare, fuzz, shrink
@@ -38,6 +38,7 @@ class ShrinkRequest(BaseModel):
 def create_app(
     cors_origins: list[str] | None = None,
     allow_credentials: bool = False,
+    rate_limit_per_minute: int = 60,
 ) -> Any:
     """Create and configure FastAPI application."""
     try:
@@ -47,11 +48,16 @@ def create_app(
         logger.warning("FastAPI not installed. Run `pip install fastapi uvicorn` to enable promptdiff serve.")
         return None
 
+    from promptdiff.cli._server_security import TokenBucketRateLimiter, verify_api_key_value
+
+    limiter = TokenBucketRateLimiter(rate_per_minute=rate_limit_per_minute)
+
     api = FastAPI(
         title="⚡ PromptDiff Enterprise API & Playground",
         version=promptdiff.__version__,
         description="RESTful API for live LLM prompt regression testing, red-teaming, and token compression.",
     )
+    api.state.limiter = limiter
 
     origins = cors_origins if cors_origins is not None else ["*"]
     # Security Rule: Wildcard origin ("*") must NEVER be paired with allow_credentials=True
@@ -71,18 +77,30 @@ def create_app(
         expected_key = os.getenv("PROMPTDIFF_API_KEY")
         if not expected_key:
             return
-        if not x_api_key or not secrets.compare_digest(x_api_key, expected_key):
+        if not verify_api_key_value(x_api_key, expected_key):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Unauthorized: Invalid or missing X-API-Key header",
                 headers={"WWW-Authenticate": "ApiKey"},
             )
 
+    def check_rate_limit(request: Request) -> None:
+        client_ip = request.client.host if request.client else "127.0.0.1"
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            client_ip = forwarded.split(",")[0].strip()
+        if not limiter.acquire(client_ip):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too Many Requests: Rate limit exceeded. Please try again later.",
+                headers={"Retry-After": "60"},
+            )
+
     @api.get("/")
     def root() -> dict[str, str]:
         return {"status": "ok", "service": "PromptDiff Live Server", "version": promptdiff.__version__}
 
-    @api.post("/api/v1/compare", dependencies=[Depends(verify_api_key)])
+    @api.post("/api/v1/compare", dependencies=[Depends(verify_api_key), Depends(check_rate_limit)])
     def api_compare(req: CompareRequest) -> dict[str, Any]:
         report = compare(
             v1=req.v1_prompt,
@@ -98,7 +116,7 @@ def create_app(
             "total_cases": report.total_cases,
         }
 
-    @api.post("/api/v1/fuzz", dependencies=[Depends(verify_api_key)])
+    @api.post("/api/v1/fuzz", dependencies=[Depends(verify_api_key), Depends(check_rate_limit)])
     def api_fuzz(req: FuzzRequest) -> dict[str, Any]:
         rep = fuzz(prompt=req.prompt, model=req.model, mock=req.mock)
         return {
