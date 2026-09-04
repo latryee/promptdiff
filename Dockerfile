@@ -39,14 +39,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN groupadd -g 1001 promptdiff && \
     useradd -u 1001 -g promptdiff -s /bin/bash -m promptdiff
 
-COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder --chown=promptdiff:promptdiff /opt/venv /opt/venv
 
 RUN mkdir -p /app/prompts /app/.promptdiff && \
     chown -R promptdiff:promptdiff /app
 
 USER promptdiff
 
-EXPOSE 8765
+EXPOSE 8000 8765
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/healthz || curl -f http://localhost:8765/api/metrics || exit 1
 
 ENTRYPOINT ["promptdiff"]
 CMD ["--help"]
