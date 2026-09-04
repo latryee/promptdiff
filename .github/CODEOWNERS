@@ -1,0 +1,31 @@
+# PromptDiff Maintainer Code Ownership Mapping
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for entire repository
+*                                       @latryee
+
+# Core Engine, Telemetry & Persistence
+/promptdiff/core/                       @latryee
+/promptdiff/cli/app.py                  @latryee
+
+# Production & Deployment Servers
+/promptdiff/production/                 @latryee
+/promptdiff/cli/server.py               @latryee
+/promptdiff/cli/studio.py               @latryee
+/promptdiff/cli/_server_security.py     @latryee
+
+# Security, Red-Teaming & Sandboxing
+/promptdiff/security/                   @latryee
+/promptdiff/evaluators/code_sandbox.py  @latryee
+
+# Evaluators & LLM Judges
+/promptdiff/evaluators/                 @latryee
+
+# Optimizer, MCTS & Token Compressor
+/promptdiff/optimizer/                  @latryee
+
+# CI/CD Workflows, Packaging & Containers
+/.github/                               @latryee
+/Dockerfile                             @latryee
+/docker-compose.yml                     @latryee
+/requirements*.lock                     @latryee
