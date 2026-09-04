@@ -6,6 +6,7 @@ import logging
 import math
 import re
 import time
+from collections import deque
 from dataclasses import dataclass
 from typing import Optional
 
@@ -48,14 +49,22 @@ class PromptHealthDaemon:
         golden_reference_outputs: list[str],
         drift_threshold: float = 0.75,
         webhook_url: Optional[str] = None,
+        max_history: int = 1000,
     ):
         self.prompt_version = prompt_version
         self.golden_references = golden_reference_outputs or ["Default reference response"]
         self.drift_threshold = drift_threshold
         self.webhook_url = webhook_url
+        self.max_history = max(1, max_history)
         self.total_monitored = 0
         self.alerts_count = 0
-        self.recent_scores: list[float] = []
+        self.recent_scores: deque[float] = deque(maxlen=self.max_history)
+        self.recent_alerts: deque[DriftAlert] = deque(maxlen=self.max_history)
+
+    def purge_history(self) -> None:
+        """Purge sliding window history to reclaim memory."""
+        self.recent_scores.clear()
+        self.recent_alerts.clear()
 
     def _compute_similarity(self, text1: str, text2: str) -> float:
         w1 = set(re.findall(r"\w+", text1.lower()))
@@ -83,6 +92,7 @@ class PromptHealthDaemon:
                 sample_output=live_output[:200],
                 alert_level="CRITICAL" if max_sim < (self.drift_threshold - 0.20) else "WARNING",
             )
+            self.recent_alerts.append(alert)
             await self._dispatch_webhook(alert)
             return alert
 
