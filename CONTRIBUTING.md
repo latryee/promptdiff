@@ -26,6 +26,25 @@ pip install -e ".[dev,all]"
 
 ---
 
+## 🌱 Good First Issues & Beginner Onboarding Tasks
+
+New to PromptDiff or looking for an easy place to start? We actively curate bite-sized, accessible tasks labeled [`good first issue`](https://github.com/latryee/promptdiff/labels/good%20first%20issue). Here are 5 great entry points:
+
+1. **Add a New LLM Pricing Model Entry** (`promptdiff/core/pricing.py`):
+   - Add input/output token pricing per 1M tokens for newly released models (e.g. `gemini-2.0-flash`, `claude-3-7-sonnet`, `deepseek-v3`).
+   - Add matching assertions in `tests/core/test_providers.py`.
+2. **Implement a Specialized Evaluator Metric** (`promptdiff/evaluators/`):
+   - Create a lightweight evaluator checking output formatting rules (e.g., Markdown table validator, YAML schema verifier, or reading grade level scorer).
+   - Inherit from `BaseEvaluator` and register it in `EvaluatorRegistry`.
+3. **Expand the Adversarial Red-Teaming Fuzzer** (`promptdiff/security/fuzzer.py`):
+   - Add new jailbreak, indirect prompt injection, or system prompt exfiltration payload patterns to increase test coverage.
+4. **CLI Output Polish & Terminal UX** (`promptdiff/cli/`):
+   - Improve Rich table formatting, add colored status badges, or enhance error hints when user datasets contain missing fields.
+5. **Add End-to-End Evaluation Recipes** (`examples/recipes/`):
+   - Contribute a runnable evaluation recipe demonstrating prompt regression testing with frameworks like LangGraph, Instructor, or LiteLLM.
+
+---
+
 ## 🧪 Testing & Code Quality
 
 Before submitting a pull request, ensure that all tests, linters, and type checks pass:
