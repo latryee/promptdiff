@@ -32,6 +32,38 @@ from promptdiff.providers.base import BaseLLMProvider
 
 logger = logging.getLogger("promptdiff.core.runner")
 
+MAX_RUNNER_CONCURRENCY: int = 64
+DEFAULT_QUEUE_BUFFER_FACTOR: int = 2
+
+
+def resolve_concurrency(
+    requested: int,
+    max_limit: int = MAX_RUNNER_CONCURRENCY,
+    strict: bool = False,
+) -> int:
+    """Validate and resolve runner concurrency bounds.
+
+    If requested <= 0, raises ValueError.
+    If requested > max_limit:
+        - If strict is True, raises ValueError.
+        - Otherwise, logs a warning and clamps to max_limit.
+    """
+    if requested <= 0:
+        raise ValueError(f"Concurrency must be a positive integer, got {requested}")
+    if requested > max_limit:
+        if strict:
+            raise ValueError(
+                f"Requested concurrency {requested} exceeds maximum allowed concurrency limit {max_limit}"
+            )
+        logger.warning(
+            "Requested concurrency %d exceeds maximum limit %d; clamping to %d",
+            requested,
+            max_limit,
+            max_limit,
+        )
+        return max_limit
+    return requested
+
 
 class PromptDiffRunner:
     """Orchestrates async LLM runs, bounded concurrency, caching, and evaluator scoring."""
@@ -46,6 +78,9 @@ class PromptDiffRunner:
         assertions: list[str] | None = None,
         cache: DiskCache | None = None,
         concurrency: int = 4,
+        max_concurrency: int = MAX_RUNNER_CONCURRENCY,
+        strict_concurrency: bool = False,
+        queue_size: int | None = None,
     ):
         self.v1_prompt = v1_prompt
         self.v2_prompt = v2_prompt
@@ -54,7 +89,10 @@ class PromptDiffRunner:
         self.evaluators = evaluators or get_evaluators(["json_validity", "latency", "cost", "similarity"])
         self.assertion_rules = parse_assertion_list(assertions or [])
         self.cache = cache or DiskCache(enabled=True)
-        self.concurrency = max(1, concurrency)
+        self.max_concurrency = max_concurrency
+        self.strict_concurrency = strict_concurrency
+        self.concurrency = resolve_concurrency(concurrency, max_limit=max_concurrency, strict=strict_concurrency)
+        self.queue_size = queue_size or max(self.concurrency * DEFAULT_QUEUE_BUFFER_FACTOR, 16)
         self.semaphore = asyncio.Semaphore(self.concurrency)
 
     async def _execute_single(
@@ -197,25 +235,69 @@ class PromptDiffRunner:
         test_cases: list[TestCase],
         progress_cb: Callable[[int, int], None] | None = None,
     ) -> DiffReport:
-        """Run batch regression comparison concurrently across all test cases with bounded concurrency."""
+        """Run batch regression comparison concurrently across all test cases with bounded queue backpressure."""
         total = len(test_cases)
+        if total == 0:
+            verdict = evaluate_assertions([], self.assertion_rules)
+            evaluator_names = [e.name for e in self.evaluators]
+            return DiffReport(
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                v1_name=self.v1_prompt.name,
+                v2_name=self.v2_prompt.name,
+                model_v1=self.v1_prompt.model,
+                model_v2=self.v2_prompt.model,
+                comparisons=[],
+                verdict=verdict,
+                evaluators=evaluator_names,
+                total_cases=0,
+                aggregate_stats={
+                    "total_cost_v1": 0.0,
+                    "total_cost_v2": 0.0,
+                    "cost_delta_pct": 0.0,
+                    "avg_latency_v1": 0.0,
+                    "avg_latency_v2": 0.0,
+                    "latency_delta_pct": 0.0,
+                    "passed_cases": 0,
+                },
+            )
+
         completed_count = 0
         lock = asyncio.Lock()
+        comparisons: list[ComparisonResult | None] = [None] * total
+        queue: asyncio.Queue[tuple[int, TestCase] | None] = asyncio.Queue(maxsize=self.queue_size)
 
-        async def _run_single_case(tc: TestCase) -> ComparisonResult:
+        async def _worker() -> None:
             nonlocal completed_count
-            comp = await self.compare_case(tc)
-            async with lock:
-                completed_count += 1
-                if progress_cb:
-                    progress_cb(completed_count, total)
-            return comp
+            while True:
+                item = await queue.get()
+                if item is None:
+                    queue.task_done()
+                    break
+                idx, tc = item
+                try:
+                    comp = await self.compare_case(tc)
+                    comparisons[idx] = comp
+                finally:
+                    queue.task_done()
 
-        # Execute all test cases concurrently using asyncio.gather bounded by semaphore
-        comparisons = await asyncio.gather(*[_run_single_case(tc) for tc in test_cases])
+                async with lock:
+                    completed_count += 1
+                    if progress_cb:
+                        progress_cb(completed_count, total)
+
+        workers = [asyncio.create_task(_worker()) for _ in range(self.concurrency)]
+
+        for idx, tc in enumerate(test_cases):
+            await queue.put((idx, tc))
+
+        for _ in range(self.concurrency):
+            await queue.put(None)
+
+        await asyncio.gather(*workers)
+        final_comparisons: list[ComparisonResult] = [c for c in comparisons if c is not None]
 
         # Run CI/CD assertion checks
-        verdict = evaluate_assertions(list(comparisons), self.assertion_rules)
+        verdict = evaluate_assertions(final_comparisons, self.assertion_rules)
 
         # Build aggregate statistics
         evaluator_names = [e.name for e in self.evaluators]
@@ -225,7 +307,7 @@ class PromptDiffRunner:
             v2_name=self.v2_prompt.name,
             model_v1=self.v1_prompt.model,
             model_v2=self.v2_prompt.model,
-            comparisons=list(comparisons),
+            comparisons=final_comparisons,
             verdict=verdict,
             evaluators=evaluator_names,
             total_cases=len(test_cases),
@@ -236,7 +318,7 @@ class PromptDiffRunner:
                 "avg_latency_v1": verdict.avg_latency_v1,
                 "avg_latency_v2": verdict.avg_latency_v2,
                 "latency_delta_pct": verdict.latency_delta_pct,
-                "passed_cases": sum(1 for c in comparisons if all(s.passed for s in c.scores.values())),
+                "passed_cases": sum(1 for c in final_comparisons if all(s.passed for s in c.scores.values())),
             },
         )
 
@@ -254,13 +336,19 @@ class ArenaRunner:
         evaluators: list[BaseEvaluator] | None = None,
         cache: DiskCache | None = None,
         concurrency: int = 6,
+        max_concurrency: int = MAX_RUNNER_CONCURRENCY,
+        strict_concurrency: bool = False,
+        queue_size: int | None = None,
     ):
         self.variants = variants
         self.providers = providers
         self.baseline_name = baseline_name if baseline_name in variants else list(variants.keys())[0]
         self.evaluators = evaluators or get_evaluators(["json_validity", "latency", "cost", "similarity"])
         self.cache = cache or DiskCache(enabled=True)
-        self.concurrency = max(1, concurrency)
+        self.max_concurrency = max_concurrency
+        self.strict_concurrency = strict_concurrency
+        self.concurrency = resolve_concurrency(concurrency, max_limit=max_concurrency, strict=strict_concurrency)
+        self.queue_size = queue_size or max(self.concurrency * DEFAULT_QUEUE_BUFFER_FACTOR, 16)
         self.semaphore = asyncio.Semaphore(self.concurrency)
 
     async def _execute_variant(
@@ -385,21 +473,52 @@ class ArenaRunner:
         test_cases: list[TestCase],
         progress_cb: Callable[[int, int], None] | None = None,
     ) -> ArenaReport:
-        """Run full multi-model arena evaluation across all testcases."""
+        """Run full multi-model arena evaluation across all testcases with bounded queue backpressure."""
         total = len(test_cases)
+        if total == 0:
+            return ArenaReport(
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                variants=list(self.variants.keys()),
+                models={name: pv.model for name, pv in self.variants.items()},
+                total_cases=0,
+                leaderboard=[],
+                comparisons=[],
+            )
+
         completed = 0
         lock = asyncio.Lock()
+        comparisons: list[MultiComparisonResult | None] = [None] * total
+        queue: asyncio.Queue[tuple[int, TestCase] | None] = asyncio.Queue(maxsize=self.queue_size)
 
-        async def _eval_case(tc: TestCase) -> MultiComparisonResult:
+        async def _worker() -> None:
             nonlocal completed
-            res = await self.evaluate_multi_case(tc)
-            async with lock:
-                completed += 1
-                if progress_cb:
-                    progress_cb(completed, total)
-            return res
+            while True:
+                item = await queue.get()
+                if item is None:
+                    queue.task_done()
+                    break
+                idx, tc = item
+                try:
+                    res = await self.evaluate_multi_case(tc)
+                    comparisons[idx] = res
+                finally:
+                    queue.task_done()
 
-        comparisons = await asyncio.gather(*[_eval_case(tc) for tc in test_cases])
+                async with lock:
+                    completed += 1
+                    if progress_cb:
+                        progress_cb(completed, total)
+
+        workers = [asyncio.create_task(_worker()) for _ in range(self.concurrency)]
+
+        for idx, tc in enumerate(test_cases):
+            await queue.put((idx, tc))
+
+        for _ in range(self.concurrency):
+            await queue.put(None)
+
+        await asyncio.gather(*workers)
+        final_comparisons: list[MultiComparisonResult] = [c for c in comparisons if c is not None]
 
         # Compute leaderboard aggregates per variant
         variant_names = list(self.variants.keys())
@@ -407,7 +526,7 @@ class ArenaRunner:
 
         for name in variant_names:
             pv = self.variants[name]
-            runs = [comp.results[name] for comp in comparisons if name in comp.results]
+            runs = [comp.results[name] for comp in final_comparisons if name in comp.results]
             tot_cost = sum(r.cost_usd for r in runs)
             avg_lat = sum(r.latency_ms for r in runs) / max(1, len(runs))
             avg_tok = sum(r.total_tokens for r in runs) / max(1, len(runs))
@@ -419,7 +538,7 @@ class ArenaRunner:
 
             if name != self.baseline_name:
                 for ev in self.evaluators:
-                    scores_list = [comp.scores.get(name, {}).get(ev.name) for comp in comparisons]
+                    scores_list = [comp.scores.get(name, {}).get(ev.name) for comp in final_comparisons]
                     valid_scores = [
                         float(s.v2_score) for s in scores_list if s is not None and isinstance(s.v2_score, (int, float))
                     ]
@@ -428,7 +547,7 @@ class ArenaRunner:
 
                 # Statistical hypothesis testing against baseline
                 baseline_runs = [
-                    comp.results[self.baseline_name] for comp in comparisons if self.baseline_name in comp.results
+                    comp.results[self.baseline_name] for comp in final_comparisons if self.baseline_name in comp.results
                 ]
                 if len(baseline_runs) == len(runs) and len(runs) > 0:
                     base_lat = [r.latency_ms for r in baseline_runs]
@@ -463,5 +582,17 @@ class ArenaRunner:
             models={name: pv.model for name, pv in self.variants.items()},
             total_cases=len(test_cases),
             leaderboard=ranked_summaries,
-            comparisons=list(comparisons),
+            comparisons=final_comparisons,
         )
+
+
+MultiVariantRunner = ArenaRunner
+
+__all__ = [
+    "MAX_RUNNER_CONCURRENCY",
+    "DEFAULT_QUEUE_BUFFER_FACTOR",
+    "resolve_concurrency",
+    "PromptDiffRunner",
+    "ArenaRunner",
+    "MultiVariantRunner",
+]
