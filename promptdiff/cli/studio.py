@@ -10,15 +10,23 @@ from __future__ import annotations
 import http.server
 import json
 import logging
+import os
 import threading
 import urllib.parse
 import webbrowser
 from typing import Any
 
+from promptdiff.cli._server_security import (
+    TokenBucketRateLimiter,
+    validate_bind_host,
+    verify_api_key_value,
+)
 from promptdiff.pricing import MODEL_PRICING_TABLE
 from promptdiff.sdk import compare
 
 logger = logging.getLogger("promptdiff.cli.studio")
+
+studio_limiter = TokenBucketRateLimiter(rate_per_minute=60)
 
 STUDIO_HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en" class="dark">
@@ -256,11 +264,59 @@ class StudioRequestHandler(http.server.BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
+    def _verify_auth(self) -> bool:
+        api_key = os.getenv("PROMPTDIFF_API_KEY")
+        if not api_key:
+            return True
+        client_key = self.headers.get("X-API-Key")
+        if not verify_api_key_value(client_key, api_key):
+            body = json.dumps({"detail": "Unauthorized: Invalid or missing X-API-Key header"}).encode("utf-8")
+            self.send_response(401)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("WWW-Authenticate", "ApiKey")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(body)
+            return False
+        return True
+
+    def _check_rate_limit(self) -> bool:
+        client_ip = self.client_address[0] if self.client_address else "127.0.0.1"
+        forwarded = self.headers.get("X-Forwarded-For")
+        if forwarded:
+            client_ip = forwarded.split(",")[0].strip()
+        if not studio_limiter.acquire(client_ip):
+            body = json.dumps({"detail": "Too Many Requests: Rate limit exceeded"}).encode("utf-8")
+            self.send_response(429)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Retry-After", "60")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(body)
+            return False
+        return True
+
+    def do_OPTIONS(self) -> None:
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def do_POST(self) -> None:
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == "/api/compare":
             content_len = int(self.headers.get("Content-Length", 0))
-            body_bytes = self.rfile.read(content_len)
+            body_bytes = self.rfile.read(content_len) if content_len > 0 else b"{}"
+
+            if not self._verify_auth():
+                return
+            if not self._check_rate_limit():
+                return
+
             try:
                 payload = json.loads(body_bytes.decode("utf-8"))
                 v1 = payload.get("v1", "")
@@ -285,17 +341,24 @@ class StudioRequestHandler(http.server.BaseHTTPRequestHandler):
                     "v1_cost": report.verdict.total_cost_v1,
                     "v2_cost": report.verdict.total_cost_v2,
                 }
+                resp_bytes = json.dumps(resp_data).encode("utf-8")
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(resp_bytes)))
+                self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
-                self.wfile.write(json.dumps(resp_data).encode("utf-8"))
+                self.wfile.write(resp_bytes)
             except Exception as e:
+                err_bytes = json.dumps({"error": str(e)}).encode("utf-8")
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(err_bytes)))
+                self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
-                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                self.wfile.write(err_bytes)
         else:
             self.send_response(404)
+            self.send_header("Content-Length", "0")
             self.end_headers()
 
     def log_message(self, format: str, *args: Any) -> None:
@@ -307,6 +370,7 @@ def launch_studio(
     host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True
 ) -> http.server.ThreadingHTTPServer:
     """Launch local-first PromptDiff Studio Web server."""
+    validate_bind_host(host)
     server = http.server.ThreadingHTTPServer((host, port), StudioRequestHandler)
     url = f"http://{host}:{port}"
     if open_browser:
