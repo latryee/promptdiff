@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 from pydantic import BaseModel
@@ -13,6 +16,47 @@ import promptdiff
 from promptdiff.sdk import compare, fuzz, shrink
 
 logger = logging.getLogger("promptdiff.cli.server")
+
+
+class GracefulShutdownManager:
+    """Coordinates graceful drainage of in-flight HTTP requests during server shutdown."""
+
+    def __init__(self, timeout: float = 30.0):
+        self.timeout = timeout
+        self.active_requests: int = 0
+        self.is_shutting_down: bool = False
+        self._lock = asyncio.Lock()
+        self._drain_event = asyncio.Event()
+        self._drain_event.set()
+
+    async def on_request_start(self) -> None:
+        """Register commencement of an HTTP request."""
+        async with self._lock:
+            self.active_requests += 1
+            self._drain_event.clear()
+
+    async def on_request_end(self) -> None:
+        """Register completion of an HTTP request."""
+        async with self._lock:
+            self.active_requests -= 1
+            if self.active_requests <= 0:
+                self.active_requests = 0
+                self._drain_event.set()
+
+    async def wait_drained(self) -> None:
+        """Wait for all in-flight requests to complete up to timeout."""
+        self.is_shutting_down = True
+        if self.active_requests > 0:
+            logger.info("Graceful shutdown: waiting for %d active request(s) to complete...", self.active_requests)
+            try:
+                await asyncio.wait_for(self._drain_event.wait(), timeout=self.timeout)
+                logger.info("Graceful shutdown: all active requests completed successfully.")
+            except asyncio.TimeoutError:
+                logger.warning(
+                    "Graceful shutdown timeout (%ss) reached with %d pending request(s).",
+                    self.timeout,
+                    self.active_requests,
+                )
 
 
 class CompareRequest(BaseModel):
@@ -39,6 +83,7 @@ def create_app(
     cors_origins: list[str] | None = None,
     allow_credentials: bool = False,
     rate_limit_per_minute: int = 60,
+    shutdown_timeout: float = 30.0,
 ) -> Any:
     """Create and configure FastAPI application."""
     try:
@@ -51,13 +96,34 @@ def create_app(
     from promptdiff.cli._server_security import TokenBucketRateLimiter, verify_api_key_value
 
     limiter = TokenBucketRateLimiter(rate_per_minute=rate_limit_per_minute)
+    shutdown_manager = GracefulShutdownManager(timeout=shutdown_timeout)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        yield
+        manager = getattr(app.state, "shutdown_manager", None)
+        if manager:
+            await manager.wait_drained()
 
     api = FastAPI(
         title="⚡ PromptDiff Enterprise API & Playground",
         version=promptdiff.__version__,
         description="RESTful API for live LLM prompt regression testing, red-teaming, and token compression.",
+        lifespan=lifespan,
     )
     api.state.limiter = limiter
+    api.state.shutdown_manager = shutdown_manager
+
+    @api.middleware("http")
+    async def track_in_flight_requests(request: Request, call_next: Any) -> Any:
+        manager: GracefulShutdownManager | None = getattr(request.app.state, "shutdown_manager", None)
+        if manager:
+            await manager.on_request_start()
+        try:
+            return await call_next(request)
+        finally:
+            if manager:
+                await manager.on_request_end()
 
     origins = cors_origins if cors_origins is not None else ["*"]
     # Security Rule: Wildcard origin ("*") must NEVER be paired with allow_credentials=True
@@ -172,8 +238,9 @@ def launch_server(
     port: int = 8000,
     cors_origins: list[str] | None = None,
     allow_insecure_bind: bool = False,
+    shutdown_timeout: float = 30.0,
 ) -> None:
-    """Launch Uvicorn HTTP server."""
+    """Launch Uvicorn HTTP server with graceful shutdown handling."""
     from promptdiff.cli._server_security import validate_bind_host
 
     validate_bind_host(host)
@@ -189,8 +256,13 @@ def launch_server(
     try:
         import uvicorn
 
-        app_instance = create_app(cors_origins=cors_origins)
+        app_instance = create_app(cors_origins=cors_origins, shutdown_timeout=shutdown_timeout)
         if app_instance:
-            uvicorn.run(app_instance, host=host, port=port)
+            uvicorn.run(
+                app_instance,
+                host=host,
+                port=port,
+                timeout_graceful_shutdown=int(shutdown_timeout),
+            )
     except Exception as e:
         logger.error(f"Could not start promptdiff server: {e}")

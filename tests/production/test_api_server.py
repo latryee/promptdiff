@@ -227,3 +227,62 @@ def test_readyz_endpoint_unhealthy_when_db_fails() -> None:
         data = res.json()["detail"]
         assert data["status"] == "not_ready"
         assert "Disk full" in data["checks"]["database"]
+
+
+async def test_graceful_shutdown_manager_draining() -> None:
+    """GracefulShutdownManager waits for active requests to finish draining."""
+    import asyncio
+
+    from promptdiff.cli.server import GracefulShutdownManager
+
+    manager = GracefulShutdownManager(timeout=2.0)
+    assert manager.active_requests == 0
+
+    await manager.on_request_start()
+    assert manager.active_requests == 1
+
+    drained = False
+
+    async def drain_watcher() -> None:
+        nonlocal drained
+        await manager.wait_drained()
+        drained = True
+
+    watcher_task = asyncio.create_task(drain_watcher())
+    await asyncio.sleep(0.05)
+    assert drained is False
+
+    await manager.on_request_end()
+    assert manager.active_requests == 0
+    await watcher_task
+    assert drained is True
+
+
+async def test_graceful_shutdown_manager_timeout() -> None:
+    """GracefulShutdownManager logs warning and terminates wait on timeout."""
+    from promptdiff.cli.server import GracefulShutdownManager
+
+    manager = GracefulShutdownManager(timeout=0.1)
+    await manager.on_request_start()
+
+    # Should exit cleanly without raising TimeoutError
+    await manager.wait_drained()
+    assert manager.is_shutting_down is True
+
+
+def test_lifespan_shutdown_integration() -> None:
+    """FastAPI lifespan executes graceful shutdown drainage upon exit."""
+    app = create_app(shutdown_timeout=2.0)
+    with TestClient(app) as client:
+        res = client.get("/healthz")
+        assert res.status_code == 200
+    # On context exit, lifespan shutdown executed
+    assert app.state.shutdown_manager.is_shutting_down is True
+
+
+def test_launch_server_passes_graceful_shutdown_timeout() -> None:
+    """launch_server passes timeout_graceful_shutdown to uvicorn.run."""
+    with patch("uvicorn.run") as mock_run:
+        launch_server(host="127.0.0.1", port=8000, shutdown_timeout=15.0)
+        mock_run.assert_called_once()
+        assert mock_run.call_args[1]["timeout_graceful_shutdown"] == 15
