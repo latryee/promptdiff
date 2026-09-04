@@ -100,6 +100,34 @@ def create_app(
     def root() -> dict[str, str]:
         return {"status": "ok", "service": "PromptDiff Live Server", "version": promptdiff.__version__}
 
+    @api.get("/healthz")
+    def healthz() -> dict[str, str]:
+        """Liveness probe endpoint."""
+        return {"status": "ok"}
+
+    @api.get("/readyz")
+    def readyz() -> dict[str, Any]:
+        """Readiness probe endpoint checking database connectivity."""
+        checks: dict[str, str] = {}
+        is_ready = True
+        try:
+            from promptdiff.core.db import TelemetryDatabase
+
+            db = TelemetryDatabase()
+            with db._get_connection() as conn:
+                conn.execute("SELECT 1").fetchone()
+            checks["database"] = "ok"
+        except Exception as e:
+            checks["database"] = f"error: {e}"
+            is_ready = False
+
+        if not is_ready:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={"status": "not_ready", "checks": checks},
+            )
+        return {"status": "ready", "checks": checks}
+
     @api.post("/api/v1/compare", dependencies=[Depends(verify_api_key), Depends(check_rate_limit)])
     def api_compare(req: CompareRequest) -> dict[str, Any]:
         report = compare(

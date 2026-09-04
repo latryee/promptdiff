@@ -193,3 +193,37 @@ def test_token_bucket_limiter_unit() -> None:
 
     # Independent IP is not blocked
     assert limiter.acquire("ip2") is True
+
+
+def test_healthz_endpoint_unauthenticated() -> None:
+    """healthz probe returns 200 OK without requiring authentication."""
+    with patch.dict(os.environ, {"PROMPTDIFF_API_KEY": "secret-key-123"}):
+        app = create_app()
+        client = TestClient(app)
+        res = client.get("/healthz")
+        assert res.status_code == 200
+        assert res.json() == {"status": "ok"}
+
+
+def test_readyz_endpoint_healthy() -> None:
+    """readyz probe returns 200 OK with database check status."""
+    with patch.dict(os.environ, {"PROMPTDIFF_API_KEY": "secret-key-123"}):
+        app = create_app()
+        client = TestClient(app)
+        res = client.get("/readyz")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "ready"
+        assert data["checks"]["database"] == "ok"
+
+
+def test_readyz_endpoint_unhealthy_when_db_fails() -> None:
+    """readyz probe returns 503 when critical dependency check fails."""
+    app = create_app()
+    client = TestClient(app)
+    with patch("promptdiff.core.db.TelemetryDatabase._get_connection", side_effect=RuntimeError("Disk full")):
+        res = client.get("/readyz")
+        assert res.status_code == 503
+        data = res.json()["detail"]
+        assert data["status"] == "not_ready"
+        assert "Disk full" in data["checks"]["database"]
