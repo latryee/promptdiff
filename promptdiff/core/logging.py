@@ -13,12 +13,8 @@ import sys
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-correlation_id_ctx: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
-    "correlation_id", default=None
-)
-run_id_ctx: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
-    "run_id", default=None
-)
+correlation_id_ctx: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar("correlation_id", default=None)
+run_id_ctx: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar("run_id", default=None)
 
 
 def set_correlation_id(correlation_id: str | None) -> contextvars.Token[Optional[str]]:
@@ -148,9 +144,7 @@ def setup_logging(
     if log_format.lower() == "json":
         handler.setFormatter(JSONLogFormatter())
     else:
-        handler.setFormatter(
-            logging.Formatter("[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s")
-        )
+        handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s"))
 
     target_logger.addHandler(handler)
     return target_logger

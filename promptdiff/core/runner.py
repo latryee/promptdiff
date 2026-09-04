@@ -52,9 +52,7 @@ def resolve_concurrency(
         raise ValueError(f"Concurrency must be a positive integer, got {requested}")
     if requested > max_limit:
         if strict:
-            raise ValueError(
-                f"Requested concurrency {requested} exceeds maximum allowed concurrency limit {max_limit}"
-            )
+            raise ValueError(f"Requested concurrency {requested} exceeds maximum allowed concurrency limit {max_limit}")
         logger.warning(
             "Requested concurrency %d exceeds maximum limit %d; clamping to %d",
             requested,

@@ -98,9 +98,7 @@ def validate_mcts_iterations(iterations: int) -> int:
     if iterations <= 0:
         raise ValueError(f"MCTS iterations must be a positive integer, got {iterations}")
     if iterations > MAX_ALLOWED_ITERATIONS:
-        raise ValueError(
-            f"MCTS iterations ({iterations}) exceeds MAX_ALLOWED_ITERATIONS ({MAX_ALLOWED_ITERATIONS})"
-        )
+        raise ValueError(f"MCTS iterations ({iterations}) exceeds MAX_ALLOWED_ITERATIONS ({MAX_ALLOWED_ITERATIONS})")
     return iterations
 
 
@@ -281,11 +279,7 @@ class MCTSPromptOptimizer:
 
     async def optimize(self, num_iterations: Optional[int] = None) -> MCTSResult:
         """Run full Monte Carlo Tree Search optimization."""
-        iterations = (
-            validate_mcts_iterations(num_iterations)
-            if num_iterations is not None
-            else self.max_iterations
-        )
+        iterations = validate_mcts_iterations(num_iterations) if num_iterations is not None else self.max_iterations
         root_metrics = await self._evaluate_prompt(self.initial_prompt)
         root = MCTSNode(
             prompt_template=self.initial_prompt,

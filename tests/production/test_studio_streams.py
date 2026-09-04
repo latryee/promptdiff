@@ -76,8 +76,10 @@ def test_studio_auth_enforced_when_key_set() -> None:
     mock_report.verdict.total_cost_v2 = 0.009
 
     try:
-        with patch.dict(os.environ, {"PROMPTDIFF_API_KEY": "studio-secret-key"}), \
-             patch("promptdiff.cli.studio.compare", return_value=mock_report):
+        with (
+            patch.dict(os.environ, {"PROMPTDIFF_API_KEY": "studio-secret-key"}),
+            patch("promptdiff.cli.studio.compare", return_value=mock_report),
+        ):
             url = f"http://127.0.0.1:{port}/api/compare"
             payload = {"v1": "Hello", "v2": "Hi", "dataset": [{"id": "t1", "vars": {}}]}
 
@@ -116,8 +118,7 @@ def test_studio_rate_limit_429() -> None:
     mock_report.verdict.total_cost_v2 = 0.01
 
     try:
-        with patch.dict(os.environ, {}, clear=False), \
-             patch("promptdiff.cli.studio.compare", return_value=mock_report):
+        with patch.dict(os.environ, {}, clear=False), patch("promptdiff.cli.studio.compare", return_value=mock_report):
             os.environ.pop("PROMPTDIFF_API_KEY", None)
             url = f"http://127.0.0.1:{port}/api/compare"
             payload = {"v1": "Hello", "v2": "Hi", "dataset": [{"id": "t1", "vars": {}}]}
