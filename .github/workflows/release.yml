@@ -42,10 +42,19 @@ jobs:
           # Uses PyPI Trusted Publishing via GitHub OIDC
           skip-existing: true
 
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: bom.json
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          files: |
+            dist/*
+            bom.json
           generate_release_notes: true
           draft: false
           prerelease: false
