@@ -298,6 +298,14 @@ Detailed mathematical formulations, system diagrams, and resume-ready STAR bulle
 
 👉 [**Technical Architecture & Portfolio Showcase (PORTFOLIO.md)**](PORTFOLIO.md)
 
+## 🔒 Data Privacy & Local Storage Disclosure
+
+PromptDiff operates under an absolute **local-first, zero-telemetry exfiltration** guarantee:
+- **Local Persistence Only:** Evaluation runs and token metrics are written to local SQLite storage (`.promptdiff/telemetry.db`). No prompt contents, outputs, or traces are ever sent to external cloud servers.
+- **Automated Retention Management:** Automatically delete historical records older than $N$ days with `--db-retention-days <N>` or run `promptdiff db prune --days 14`.
+- **Ephemeral Storage:** Run with `--db-path ":memory:"` for zero disk persistence.
+- Complete security documentation and disclosure SLAs are available in [SECURITY.md](SECURITY.md).
+
 ---
 
 ## 🤝 Community & Contributing
