@@ -5,6 +5,13 @@ All notable changes to **PromptDiff** are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### 📋 Breaking Change & Deprecation Policy
+PromptDiff enforces strict Semantic Versioning (`MAJOR.MINOR.PATCH`):
+- **Major Releases (`X.0.0`)**: Permitted to introduce breaking changes in the public Python SDK (`promptdiff.sdk`), CLI subcommands, and report schemas. All breaking modifications require a deprecation notice in at least one preceding minor release.
+- **Minor Releases (`0.Y.0`)**: Backward-compatible new features, metrics, evaluators, and performance enhancements. May introduce deprecation warnings.
+- **Patch Releases (`0.0.Z`)**: Backward-compatible bug fixes and security hardening.
+- Detailed migration timelines and API stability scopes are documented in [DEPRECATION.md](DEPRECATION.md).
+
 ---
 
 ## [3.4.0] - 2026-09-03
