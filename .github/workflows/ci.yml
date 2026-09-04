@@ -42,6 +42,10 @@ jobs:
         run: |
           python -c "from promptdiff.core.models import DiffReport; import json, pathlib, sys; current = json.loads(pathlib.Path('examples/schema.json').read_text(encoding='utf-8')); expected = DiffReport.model_json_schema(); sys.exit(0 if current == expected else 1)"
 
+      - name: Run pip-audit supply chain vulnerability scan
+        run: |
+          pip-audit . --desc --strict
+
 
   test:
     name: Test (${{ matrix.os }} - Py${{ matrix.python-version }})

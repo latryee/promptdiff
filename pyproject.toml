@@ -86,6 +86,7 @@ dev = [
     "genbadge[all]>=1.1.0",
     "fastapi>=0.100.0",
     "uvicorn>=0.20.0",
+    "pip-audit>=2.7.0",
 ]
 mlops = [
     "mlflow>=2.10.0",
