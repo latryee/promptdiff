@@ -81,6 +81,26 @@ db_app = typer.Typer(name="db", help="Manage and query persistent SQLite evaluat
 app.add_typer(db_app)
 
 
+@app.callback()
+def main_callback(
+    log_format: str | None = typer.Option(
+        None,
+        "--log-format",
+        help="Structured log output format ('json' or 'text').",
+    ),
+    log_level: str | None = typer.Option(
+        None,
+        "--log-level",
+        help="Logging level (DEBUG, INFO, WARNING, ERROR).",
+    ),
+) -> None:
+    """Global configuration options for promptdiff."""
+    if log_format:
+        from promptdiff.core.logging import setup_logging
+
+        setup_logging(log_format=log_format, level=log_level or "INFO")
+
+
 def _run_test_suite(
     v1: str,
     v2: str,
