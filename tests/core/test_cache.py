@@ -99,7 +99,7 @@ def test_cache_ttl_invalidation_and_pruning(tmp_path: pytest.TempPathFactory) ->
     from pathlib import Path
 
     cache_dir = Path(str(tmp_path)) / "ttl_cache"
-    cache = DiskCache(cache_dir=cache_dir, ttl=1)  # 1 second TTL
+    cache = DiskCache(cache_dir=cache_dir, ttl=60)  # Robust TTL (manual backdating tests expiration)
 
     key = DiskCache.compute_key("ttl prompt", model="gpt-4o")
     result = RunResult(

@@ -128,10 +128,9 @@ def test_terminal_report_rendering():
 
 def test_reporters_version_synchronization_with_pyproject():
     """Ensure MLflow and OpenTelemetry reporters use dynamic promptdiff.__version__ matching pyproject.toml."""
+    import re
     import sys
     from unittest.mock import MagicMock, patch
-
-    import tomllib
 
     import promptdiff
     from promptdiff.reporters.mlflow_reporter import log_to_mlflow
@@ -139,9 +138,16 @@ def test_reporters_version_synchronization_with_pyproject():
 
     # 1. Read pyproject.toml version
     pyproject_path = Path(__file__).parents[2] / "pyproject.toml"
-    with open(pyproject_path, "rb") as f:
-        pyproject_data = tomllib.load(f)
-    expected_version = pyproject_data["project"]["version"]
+    try:
+        import tomllib
+
+        with open(pyproject_path, "rb") as f:
+            expected_version = tomllib.load(f)["project"]["version"]
+    except ModuleNotFoundError:
+        content = pyproject_path.read_text(encoding="utf-8")
+        match = re.search(r'version\s*=\s*["\']([^"\']+)["\']', content)
+        assert match is not None
+        expected_version = match.group(1)
 
     assert promptdiff.__version__ == expected_version, "promptdiff.__version__ does not match pyproject.toml"
 
