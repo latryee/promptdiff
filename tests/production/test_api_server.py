@@ -90,3 +90,33 @@ def test_launch_server_rebinding_warning_when_key_unset() -> None:
             assert "Rebinding server to '127.0.0.1'" in mock_warn.call_args[0][0]
             mock_run.assert_called_once()
             assert mock_run.call_args[1]["host"] == "127.0.0.1"
+
+
+def test_cors_wildcard_origin_never_allows_credentials() -> None:
+    """Wildcard origin must never have allow_credentials=True in response headers."""
+    app = create_app(cors_origins=["*"], allow_credentials=True)
+    client = TestClient(app)
+    res = client.options(
+        "/api/v1/shrink",
+        headers={
+            "Origin": "https://attacker.com",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    # Access-Control-Allow-Credentials must not be 'true' when origin is wildcard
+    assert res.headers.get("access-control-allow-credentials") != "true"
+
+
+def test_cors_explicit_origin_allows_credentials() -> None:
+    """Explicit trusted origin can allow credentials."""
+    app = create_app(cors_origins=["https://trusted.promptdiff.com"], allow_credentials=True)
+    client = TestClient(app)
+    res = client.options(
+        "/api/v1/shrink",
+        headers={
+            "Origin": "https://trusted.promptdiff.com",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+    assert res.headers.get("access-control-allow-origin") == "https://trusted.promptdiff.com"
+    assert res.headers.get("access-control-allow-credentials") == "true"

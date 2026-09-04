@@ -34,7 +34,10 @@ class ShrinkRequest(BaseModel):
     mock: bool = True
 
 
-def create_app() -> Any:
+def create_app(
+    cors_origins: list[str] | None = None,
+    allow_credentials: bool = False,
+) -> Any:
     """Create and configure FastAPI application."""
     try:
         from fastapi import Depends, FastAPI, Header, HTTPException, status
@@ -49,10 +52,14 @@ def create_app() -> Any:
         description="RESTful API for live LLM prompt regression testing, red-teaming, and token compression.",
     )
 
+    origins = cors_origins if cors_origins is not None else ["*"]
+    # Security Rule: Wildcard origin ("*") must NEVER be paired with allow_credentials=True
+    effective_allow_credentials = allow_credentials and ("*" not in origins)
+
     api.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
+        allow_origins=origins,
+        allow_credentials=effective_allow_credentials,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -113,7 +120,11 @@ def create_app() -> Any:
     return api
 
 
-def launch_server(host: str = "127.0.0.1", port: int = 8000) -> None:
+def launch_server(
+    host: str = "127.0.0.1",
+    port: int = 8000,
+    cors_origins: list[str] | None = None,
+) -> None:
     """Launch Uvicorn HTTP server."""
     api_key = os.getenv("PROMPTDIFF_API_KEY")
     if not api_key and host not in ("127.0.0.1", "localhost", "::1"):
@@ -125,7 +136,7 @@ def launch_server(host: str = "127.0.0.1", port: int = 8000) -> None:
     try:
         import uvicorn
 
-        app_instance = create_app()
+        app_instance = create_app(cors_origins=cors_origins)
         if app_instance:
             uvicorn.run(app_instance, host=host, port=port)
     except Exception as e:
