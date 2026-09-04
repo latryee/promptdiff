@@ -73,3 +73,25 @@ def test_result_models_frozen_immutability() -> None:
 
     with pytest.raises(ValidationError):
         report.v1_name = "mutated_v1"  # type: ignore[misc]
+
+    assert report.schema_version == "1.0.0"
+    dumped = report.model_dump()
+    assert dumped["schema_version"] == "1.0.0"
+
+
+def test_diff_report_custom_schema_version() -> None:
+    """Verify DiffReport accepts custom schema versions for migration workflows."""
+    from promptdiff.core.models import DiffReport, RegressionVerdict
+
+    report = DiffReport(
+        schema_version="2.0.0-alpha",
+        v1_name="v1",
+        v2_name="v2",
+        model_v1="mock",
+        model_v2="mock",
+        comparisons=[],
+        verdict=RegressionVerdict(passed=True),
+        evaluators=["cost"],
+        total_cases=0,
+    )
+    assert report.schema_version == "2.0.0-alpha"

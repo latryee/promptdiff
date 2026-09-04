@@ -202,6 +202,7 @@ class DiffReport(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
+    schema_version: str = "1.0.0"
     run_id: str = Field(default_factory=lambda: f"run_{uuid.uuid4().hex[:8]}")
     timestamp: str = ""
     v1_name: str

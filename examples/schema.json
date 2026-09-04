@@ -344,6 +344,11 @@
   },
   "description": "Complete serialized evaluation and regression report.",
   "properties": {
+    "schema_version": {
+      "default": "1.0.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
     "run_id": {
       "title": "Run Id",
       "type": "string"
