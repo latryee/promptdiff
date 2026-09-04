@@ -84,6 +84,8 @@ dev = [
     "mypy>=1.10.0",
     "ruff>=0.4.0",
     "genbadge[all]>=1.1.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
 ]
 mlops = [
     "mlflow>=2.10.0",

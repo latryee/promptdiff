@@ -3,19 +3,42 @@
 from __future__ import annotations
 
 import logging
+import os
+import secrets
 from typing import Any
+
+from pydantic import BaseModel
 
 from promptdiff.sdk import compare, fuzz, shrink
 
 logger = logging.getLogger("promptdiff.cli.server")
 
 
+class CompareRequest(BaseModel):
+    v1_prompt: str
+    v2_prompt: str
+    dataset: list[dict[str, Any]]
+    model: str = "gpt-4o"
+    mock: bool = True
+
+
+class FuzzRequest(BaseModel):
+    prompt: str
+    model: str = "gpt-4o"
+    mock: bool = True
+
+
+class ShrinkRequest(BaseModel):
+    prompt: str
+    target_reduction: float = 0.30
+    mock: bool = True
+
+
 def create_app() -> Any:
     """Create and configure FastAPI application."""
     try:
-        from fastapi import FastAPI
+        from fastapi import Depends, FastAPI, Header, HTTPException, status
         from fastapi.middleware.cors import CORSMiddleware
-        from pydantic import BaseModel
     except ImportError:
         logger.warning("FastAPI not installed. Run `pip install fastapi uvicorn` to enable promptdiff serve.")
         return None
@@ -34,28 +57,24 @@ def create_app() -> Any:
         allow_headers=["*"],
     )
 
-    class CompareRequest(BaseModel):
-        v1_prompt: str
-        v2_prompt: str
-        dataset: list[dict[str, Any]]
-        model: str = "gpt-4o"
-        mock: bool = True
-
-    class FuzzRequest(BaseModel):
-        prompt: str
-        model: str = "gpt-4o"
-        mock: bool = True
-
-    class ShrinkRequest(BaseModel):
-        prompt: str
-        target_reduction: float = 0.30
-        mock: bool = True
+    def verify_api_key(
+        x_api_key: str | None = Header(None, alias="X-API-Key"),
+    ) -> None:
+        expected_key = os.getenv("PROMPTDIFF_API_KEY")
+        if not expected_key:
+            return
+        if not x_api_key or not secrets.compare_digest(x_api_key, expected_key):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unauthorized: Invalid or missing X-API-Key header",
+                headers={"WWW-Authenticate": "ApiKey"},
+            )
 
     @api.get("/")
     def root() -> dict[str, str]:
         return {"status": "ok", "service": "PromptDiff Live Server", "version": "3.0.0"}
 
-    @api.post("/api/v1/compare")
+    @api.post("/api/v1/compare", dependencies=[Depends(verify_api_key)])
     def api_compare(req: CompareRequest) -> dict[str, Any]:
         report = compare(
             v1=req.v1_prompt,
@@ -71,7 +90,7 @@ def create_app() -> Any:
             "total_cases": report.total_cases,
         }
 
-    @api.post("/api/v1/fuzz")
+    @api.post("/api/v1/fuzz", dependencies=[Depends(verify_api_key)])
     def api_fuzz(req: FuzzRequest) -> dict[str, Any]:
         rep = fuzz(prompt=req.prompt, model=req.model, mock=req.mock)
         return {
@@ -81,7 +100,7 @@ def create_app() -> Any:
             "recommendations": rep.recommendations,
         }
 
-    @api.post("/api/v1/shrink")
+    @api.post("/api/v1/shrink", dependencies=[Depends(verify_api_key)])
     def api_shrink(req: ShrinkRequest) -> dict[str, Any]:
         res = shrink(prompt=req.prompt, target_reduction=req.target_reduction, mock=req.mock)
         return {
@@ -96,6 +115,13 @@ def create_app() -> Any:
 
 def launch_server(host: str = "127.0.0.1", port: int = 8000) -> None:
     """Launch Uvicorn HTTP server."""
+    api_key = os.getenv("PROMPTDIFF_API_KEY")
+    if not api_key and host not in ("127.0.0.1", "localhost", "::1"):
+        logger.warning(
+            "Security Warning: PROMPTDIFF_API_KEY is not set. Rebinding server to '127.0.0.1' for safety.",
+        )
+        host = "127.0.0.1"
+
     try:
         import uvicorn
 
