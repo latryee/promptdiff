@@ -6,7 +6,8 @@
 
 *Catch silent quality regressions, schema breakages, latency spikes, and cost inflation before merging prompt changes.*
 
-[![Version](https://img.shields.io/badge/version-v3.4.0-blue.svg)](https://github.com/latryee/promptdiff)
+[![Version](https://img.shields.io/badge/version-v3.4.1-blue.svg)](https://github.com/latryee/promptdiff)
+[![Live Demo](https://img.shields.io/badge/live%20demo-interactive%20showcase-6366f1.svg)](https://latryee.github.io/promptdiff/)
 [![Python versions](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://github.com/latryee/promptdiff)
 [![CI](https://github.com/latryee/promptdiff/actions/workflows/ci.yml/badge.svg)](https://github.com/latryee/promptdiff/actions)
 [![Tests Passing](https://img.shields.io/badge/tests-394%20passed-success.svg)](https://github.com/latryee/promptdiff/actions)
@@ -24,6 +25,7 @@
 <br/>
 <br/>
 
+[🌐 **Live Interactive Demo**](https://latryee.github.io/promptdiff/) •
 [🚀 **Quickstart**](#-quickstart-in-30-seconds) •
 [🔍 **Core Workflow**](#-how-it-works-pull-request-quality-gate) •
 [🩺 **Environment Doctor**](#-environment-doctor) •
@@ -33,6 +35,9 @@
 [📦 **Installation**](#-installation--modular-extras)
 
 </div>
+
+> 🌐 **Try it Live in Your Browser:** Test the interactive prompt diff playground, token cost calculator, and AST mutation visualizer without installing anything: **[latryee.github.io/promptdiff](https://latryee.github.io/promptdiff/)**
+
 
 ---
 
@@ -45,7 +50,7 @@ Modifying system prompts or switching models often leads to unexpected side effe
 - **Deterministic Caching:** SHA-256 keyed SQLite disk cache ensures identical runs cost \$0 and execute in milliseconds.
 - **Accurate Token & Cost Gating:** Model pricing registry with local tokenizers calculates exact financial and latency deltas.
 - **Hardened Subprocess Sandbox:** Isolated code execution runner with resource limits and exploit-tested AST/memory sandboxing.
-- **Rich Reports:** Standalone, zero-dependency interactive HTML reports and automated sticky PR comments.
+- **Rich Reports:** Standalone, zero-dependency interactive HTML reports and automated sticky PR comments ([Explore Live Demo](https://latryee.github.io/promptdiff/)).
 
 ---
 
