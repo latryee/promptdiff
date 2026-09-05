@@ -13,7 +13,6 @@ def _is_tiktoken_encoding_available() -> bool:
         return False
 
 
-
 def test_normalize_model_name():
     assert normalize_model_name("  GPT-4o ") == "gpt-4o"
     assert normalize_model_name("Claude-3-5-Sonnet") == "claude-3-5-sonnet"

@@ -98,4 +98,3 @@ def test_diff_ast_list_multiple_elements_added_removed() -> None:
     assert len(js_added) >= 2
     assert any("second" in d.path or (isinstance(d.v2_value, dict) and "second" in str(d.v2_value)) for d in js_added)
     assert any("ThirdService" in d.path for d in js_added)
-
