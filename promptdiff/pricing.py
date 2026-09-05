@@ -162,10 +162,10 @@ def estimate_tokens(text: str, model_name: str = "gpt-4o") -> int:
         except (KeyError, ValueError):
             encoding = tiktoken.get_encoding("cl100k_base")
         return max(1, len(encoding.encode(text)))
-    except ImportError:
+    except Exception:
         if not _TIKTOKEN_WARNED:
             logger.warning(
-                "tiktoken is not installed; falling back to regex-based token estimation. "
+                "tiktoken is not installed or encoding is unavailable; falling back to regex-based token estimation. "
                 "Install with `pip install 'promptdiff[tokenizer]'` for exact token counts."
             )
             _TIKTOKEN_WARNED = True

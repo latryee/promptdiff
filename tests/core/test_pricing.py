@@ -1,6 +1,17 @@
-"""Unit tests for Model Pricing & Token Cost Calculations."""
+import pytest
 
 from promptdiff.pricing import calculate_cost, get_model_pricing, normalize_model_name
+
+
+def _is_tiktoken_encoding_available() -> bool:
+    try:
+        import tiktoken
+
+        tiktoken.get_encoding("cl100k_base")
+        return True
+    except Exception:
+        return False
+
 
 
 def test_normalize_model_name():
@@ -109,6 +120,10 @@ def test_estimate_tokens_with_tiktoken() -> None:
         mock_tiktoken.encoding_for_model.assert_called_with("gpt-4o")
 
 
+@pytest.mark.skipif(
+    not _is_tiktoken_encoding_available(),
+    reason="tiktoken encoding not cached and network unavailable",
+)
 def test_calculate_text_cost() -> None:
     """Test calculate_text_cost using prompt and completion strings."""
     from promptdiff.pricing import calculate_text_cost

@@ -111,6 +111,36 @@ class ASTStructuredDiffer:
             "imports": [{"imported": (i[0] or i[1]).strip(), "source": i[2]} for i in imports],
         }
 
+    @staticmethod
+    def _get_node_name(node: Any) -> str | None:
+        """Extract a human-readable identifier or name from an AST node if present."""
+        if isinstance(node, dict):
+            id_field = node.get("id")
+            if isinstance(id_field, dict) and isinstance(id_field.get("name"), str):
+                return str(id_field["name"])
+            if isinstance(id_field, str):
+                return id_field
+            name_field = node.get("name")
+            if isinstance(name_field, str):
+                return name_field
+            imported_field = node.get("imported")
+            if isinstance(imported_field, str):
+                return imported_field
+            key_field = node.get("key")
+            if isinstance(key_field, dict) and isinstance(key_field.get("name"), str):
+                return str(key_field["name"])
+            if isinstance(key_field, str):
+                return key_field
+        return None
+
+    def _format_item_path(self, path: str, idx: int, item: Any) -> str:
+        """Format path for list item with index and optional node identifier."""
+        base = f"{path}[{idx}]" if path else f"[{idx}]"
+        node_name = self._get_node_name(item)
+        if node_name:
+            return f"{base}.{node_name}"
+        return base
+
     def _compare_nodes(self, path: str, n1: Any, n2: Any, diffs: list[ASTDifference]) -> None:
         type1 = type(n1)
         type2 = type(n2)
@@ -157,18 +187,46 @@ class ASTStructuredDiffer:
                 self._compare_nodes(f"{path}.{k}" if path else k, n1[k], n2[k], diffs)
 
         elif isinstance(n1, list):
-            if len(n1) != len(n2):
+            len1 = len(n1)
+            len2 = len(n2)
+            if len1 != len2:
                 diffs.append(
                     ASTDifference(
                         path=path or "root",
                         change_type="VALUE_CHANGED",
-                        v1_value=f"len={len(n1)}",
-                        v2_value=f"len={len(n2)}",
+                        v1_value=f"len={len1}",
+                        v2_value=f"len={len2}",
                         severity="MINOR",
                     )
                 )
-            for idx in range(min(len(n1), len(n2))):
-                self._compare_nodes(f"{path}[{idx}]", n1[idx], n2[idx], diffs)
+            min_len = min(len1, len2)
+            for idx in range(min_len):
+                self._compare_nodes(f"{path}[{idx}]" if path else f"[{idx}]", n1[idx], n2[idx], diffs)
+
+            if len2 > len1:
+                for idx in range(min_len, len2):
+                    item = n2[idx]
+                    diffs.append(
+                        ASTDifference(
+                            path=self._format_item_path(path, idx, item),
+                            change_type="ADDED",
+                            v1_value=None,
+                            v2_value=item,
+                            severity="MINOR",
+                        )
+                    )
+            elif len1 > len2:
+                for idx in range(min_len, len1):
+                    item = n1[idx]
+                    diffs.append(
+                        ASTDifference(
+                            path=self._format_item_path(path, idx, item),
+                            change_type="REMOVED",
+                            v1_value=item,
+                            v2_value=None,
+                            severity="CRITICAL",
+                        )
+                    )
 
         else:
             if n1 != n2:
