@@ -320,11 +320,13 @@ PromptDiff is built to enterprise MLOps standards with zero tolerance for unveri
 
 ---
 
-## 🏛️ Architecture & Resume Showcase
+## 🏛️ Architecture Deep-Dive
 
-Detailed mathematical formulations, system diagrams, and resume-ready STAR bullet points for senior AI Engineer and MLOps roles are available in:
+Detailed system design documentation, architectural diagrams, mathematical formulations, and core engineering decisions are available in:
 
-👉 [**Technical Architecture & Portfolio Showcase (PORTFOLIO.md)**](PORTFOLIO.md)
+👉 [**Technical Architecture & System Design Deep-Dive (PORTFOLIO.md)**](PORTFOLIO.md)
+
+---
 
 ## 🔒 Data Privacy & Local Storage Disclosure
 
