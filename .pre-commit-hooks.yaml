@@ -1,0 +1,15 @@
+- id: promptdiff-check
+  name: PromptDiff Prompt Linter
+  description: Statically lint and analyze prompt templates (syntax, unclosed variables, token limits, and quality).
+  entry: promptdiff check
+  language: python
+  types_or: [text, plain-text]
+  files: \.(prompt|txt|jinja2)$
+  pass_filenames: true
+
+- id: promptdiff-diff
+  name: PromptDiff Syntax Diff
+  description: Side-by-side terminal syntax diff for prompt revisions before commit.
+  entry: promptdiff diff
+  language: python
+  pass_filenames: true
