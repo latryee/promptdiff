@@ -112,7 +112,7 @@ jobs:
         run: promptdiff test examples/prompts/support_bot_v1.txt examples/prompts/support_bot_v2.txt --inputs examples/testcases.jsonl --eval "json_validity,latency,cost,similarity" --mock --export-markdown regression-report.md --export-html regression-report.html
 
       - name: Upload regression test report artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
         with:
           name: regression-report-py${{ matrix.python-version }}
