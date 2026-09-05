@@ -32,7 +32,12 @@ def render_diff_text(chunks: list[DiffChunk], side: str = "v2") -> Text:
     return result
 
 
-def build_comparison_panel(comparison: ComparisonResult, console_width: int = 120) -> RenderableType:
+def build_comparison_panel(
+    comparison: ComparisonResult,
+    console_width: int = 120,
+    has_assertions: bool = False,
+    asserted_metrics: set[str] | None = None,
+) -> RenderableType:
     """Build a side-by-side Rich comparison renderable for a test case."""
     v1 = comparison.v1_result
     v2 = comparison.v2_result
@@ -106,7 +111,12 @@ def build_comparison_panel(comparison: ComparisonResult, console_width: int = 12
     score_table.add_column("Verdict", justify="center")
 
     for metric_name, score in comparison.scores.items():
-        verdict = "[green]PASS[/green]" if score.passed else "[red]FAIL[/red]"
+        if not has_assertions:
+            verdict = "[dim]—[/dim]"
+        elif asserted_metrics is not None and len(asserted_metrics) > 0 and metric_name not in asserted_metrics:
+            verdict = "[dim]—[/dim]"
+        else:
+            verdict = "[green]PASS[/green]" if score.passed else "[red]FAIL[/red]"
         score_table.add_row(
             metric_name.replace("_", " ").title(),
             str(score.v1_score),

@@ -5,7 +5,6 @@ model: gpt-4o
 temperature: 0.0
 
 evaluators:
-  - json_validity
   - latency
   - cost
   - similarity

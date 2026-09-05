@@ -45,10 +45,16 @@ def generate_markdown_report(report: DiffReport, output_path: Optional[str] = No
     for comp in report.comparisons:
         tc = comp.test_case
         json_s = comp.scores.get("json_validity")
-        json_txt = f"{json_s.v2_score:.1f}" if json_s else "-"
+        if json_s:
+            json_txt = f"{json_s.v2_score:.1f}" if isinstance(json_s.v2_score, (int, float)) else str(json_s.v2_score)
+        else:
+            json_txt = "-"
 
         sim_s = comp.scores.get("similarity")
-        sim_txt = f"{sim_s.v2_score * 100:.1f}%" if sim_s else "-"
+        if sim_s:
+            sim_txt = f"{sim_s.v2_score * 100:.1f}%" if isinstance(sim_s.v2_score, (int, float)) else str(sim_s.v2_score)
+        else:
+            sim_txt = "-"
 
         lat_s = comp.scores.get("latency")
         lat_txt = f"{lat_s.delta_pct:+.1f}%" if lat_s and lat_s.delta_pct is not None else "-"
@@ -56,8 +62,14 @@ def generate_markdown_report(report: DiffReport, output_path: Optional[str] = No
         cost_s = comp.scores.get("cost")
         cost_txt = f"{cost_s.delta_pct:+.1f}%" if cost_s and cost_s.delta_pct is not None else "-"
 
-        all_pass = all(s.passed for s in comp.scores.values())
-        verdict_str = "✅ PASS" if all_pass else "❌ FAIL"
+        has_assertions = report.aggregate_stats.get(
+            "has_assertions", len(report.verdict.failed_assertions) > 0 or not report.verdict.passed
+        )
+        if not has_assertions:
+            verdict_str = "—"
+        else:
+            all_pass = all(s.passed for s in comp.scores.values())
+            verdict_str = "✅ PASS" if all_pass else "❌ FAIL"
 
         lines.append(f"| `{tc.id}` | `{json_txt}` | `{sim_txt}` | `{lat_txt}` | `{cost_txt}` | {verdict_str} |")
 

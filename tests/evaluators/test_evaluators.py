@@ -44,6 +44,15 @@ def test_json_validity_evaluator():
     assert score_bad.v2_score == 0.0
     assert score_bad.passed is False
 
+    # Plain text without JSON syntax indicators
+    r_text1 = create_run("Hello! How can I help you today?", 100.0, 0.001)
+    r_text2 = create_run("Hi there! Feel free to ask any question.", 90.0, 0.001)
+    score_na = evaluator.evaluate(r_text1, r_text2, tc)
+    assert score_na.v1_score == "N/A"
+    assert score_na.v2_score == "N/A"
+    assert score_na.passed is True
+    assert "N/A" in score_na.message
+
 
 def test_json_schema_validation():
     schema = {

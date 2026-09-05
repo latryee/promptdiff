@@ -98,8 +98,29 @@ class JsonValidityEvaluator(BaseEvaluator):
         v2_result: RunResult,
         test_case: TestCase,
     ) -> EvaluatorScore:
+        schema = test_case.schema_definition
+        has_json_syntax = (
+            schema is not None
+            or "{" in v1_result.output
+            or "[" in v1_result.output
+            or "{" in v2_result.output
+            or "[" in v2_result.output
+        )
+
         v1_json, v1_err = extract_json(v1_result.output)
         v2_json, v2_err = extract_json(v2_result.output)
+
+        if not has_json_syntax and v1_json is None and v2_json is None:
+            return EvaluatorScore(
+                name=self.name,
+                v1_score="N/A",
+                v2_score="N/A",
+                delta=0.0,
+                delta_pct=0.0,
+                passed=True,
+                message="N/A (Prompt output is not JSON)",
+                details={"not_applicable": True},
+            )
 
         v1_score = 1.0 if v1_json is not None else 0.0
         v2_score = 1.0 if v2_json is not None else 0.0

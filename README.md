@@ -95,7 +95,7 @@ cd my-evals
 promptdiff test prompts/system_v1.txt prompts/system_v2.txt \
   --inputs testcases.jsonl \
   --mock \
-  --eval "json_validity,latency,cost,similarity" \
+  --eval "latency,cost,similarity" \
   --assert "cost_delta <= 15%, latency_delta <= 20%" \
   --export-html report.html
 ```

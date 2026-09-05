@@ -34,9 +34,19 @@ def render_terminal_report(
 
     console.print(ASCII_BANNER)
 
+    has_assertions = report.aggregate_stats.get(
+        "has_assertions", len(report.verdict.failed_assertions) > 0 or not report.verdict.passed
+    )
+    asserted_metrics = set(report.aggregate_stats.get("asserted_metrics", [])) if has_assertions else set()
+
     # 1. Render all comparison panels
     for comp in report.comparisons:
-        panel_group = build_comparison_panel(comp, console_width=console.width)
+        panel_group = build_comparison_panel(
+            comp,
+            console_width=console.width,
+            has_assertions=has_assertions,
+            asserted_metrics=asserted_metrics,
+        )
         console.print(panel_group)
         console.print("[dim]" + "─" * min(console.width, 100) + "[/dim]")
 
@@ -103,17 +113,32 @@ def render_terminal_report(
                 f"{m2:.3f}",
                 f"[{color}]{sign}{d:.3f}[/{color}]",
             )
+        else:
+            summary_table.add_row(
+                f"Eval: {ev_name.replace('_', ' ').title()}",
+                "[dim]N/A[/dim]",
+                "[dim]N/A[/dim]",
+                "[dim]— (N/A)[/dim]",
+            )
 
     # Test cases count
-    passed_cases = report.aggregate_stats.get("passed_cases", len(report.comparisons))
-    summary_table.add_row(
-        "Test Cases Passed",
-        f"{report.total_cases} total",
-        f"[green]{passed_cases} passed[/green]",
-        f"[red]{report.total_cases - passed_cases} failed[/red]"
-        if passed_cases < report.total_cases
-        else "[green]0 failed[/green]",
-    )
+    if has_assertions:
+        passed_cases = report.aggregate_stats.get("passed_cases", len(report.comparisons))
+        summary_table.add_row(
+            "Test Cases Passed",
+            f"{report.total_cases} total",
+            f"[green]{passed_cases} passed[/green]",
+            f"[red]{report.total_cases - passed_cases} failed[/red]"
+            if passed_cases < report.total_cases
+            else "[green]0 failed[/green]",
+        )
+    else:
+        summary_table.add_row(
+            "Test Cases Evaluated",
+            f"{report.total_cases} total",
+            f"[green]{report.total_cases} completed[/green]",
+            "[dim]— (no thresholds)[/dim]",
+        )
 
     console.print()
     console.print(summary_table)
@@ -138,21 +163,29 @@ def render_terminal_report(
         console.print(forecast_panel)
 
     # 4. Regression Verdict Callout
-    if v.passed:
-        verdict_panel = Panel(
-            "[bold green][PASS] NO REGRESSIONS DETECTED[/bold green]\n"
-            f"[dim]All {report.total_cases} test cases and assertion rules passed successfully. Quality gate cleared.[/dim]",
-            border_style="green",
-            box=ROUNDED,
-            padding=(1, 2),
-        )
-    else:
+    if not v.passed:
         failure_bullets = "\n".join(f" [bold red][FAIL][/bold red] {f}" for f in v.failed_assertions)
         verdict_panel = Panel(
             f"[bold red][!] REGRESSION DETECTED ({len(v.failed_assertions)} Failed Assertions)[/bold red]\n\n"
             f"{failure_bullets}\n\n"
             f"[dim red]Quality gate failed. Pull Request check will be blocked.[/dim red]",
             border_style="red",
+            box=ROUNDED,
+            padding=(1, 2),
+        )
+    elif not has_assertions:
+        verdict_panel = Panel(
+            "[bold green][PASS] NO REGRESSIONS DETECTED[/bold green]\n"
+            f"[dim]All {report.total_cases} test cases executed cleanly. No regression thresholds (--assert) were violated.[/dim]",
+            border_style="green",
+            box=ROUNDED,
+            padding=(1, 2),
+        )
+    else:
+        verdict_panel = Panel(
+            "[bold green][PASS] NO REGRESSIONS DETECTED[/bold green]\n"
+            f"[dim]All {report.total_cases} test cases and assertion rules passed successfully. Quality gate cleared.[/dim]",
+            border_style="green",
             box=ROUNDED,
             padding=(1, 2),
         )

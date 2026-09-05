@@ -126,6 +126,30 @@ def test_terminal_report_rendering():
     assert "NO REGRESSIONS DETECTED" in out
 
 
+def test_terminal_report_rendering_without_assertions():
+    report = sample_report()
+    report.aggregate_stats["has_assertions"] = False
+    c = Console(record=True, width=120)
+    render_terminal_report(report, console=c)
+    out = c.export_text()
+    assert "Execution & Regression Summary" in out
+    assert "NO REGRESSIONS DETECTED" in out
+    assert "no thresholds" in out
+
+
+def test_terminal_report_rendering_with_assertions():
+    report = sample_report()
+    report.aggregate_stats["has_assertions"] = True
+    report.aggregate_stats["asserted_metrics"] = ["latency"]
+    report.aggregate_stats["passed_cases"] = 1
+    c = Console(record=True, width=120)
+    render_terminal_report(report, console=c)
+    out = c.export_text()
+    assert "Execution & Regression Summary" in out
+    assert "Test Cases Passed" in out
+    assert "1 passed" in out
+
+
 def test_reporters_version_synchronization_with_pyproject():
     """Ensure MLflow and OpenTelemetry reporters use dynamic promptdiff.__version__ matching pyproject.toml."""
     import re

@@ -298,6 +298,25 @@ class PromptDiffRunner:
         verdict = evaluate_assertions(final_comparisons, self.assertion_rules)
 
         # Build aggregate statistics
+        has_assertions = len(self.assertion_rules) > 0
+        asserted_metrics: set[str] = set()
+        if has_assertions:
+            for rule in self.assertion_rules:
+                m = rule.metric
+                if m in ["cost", "cost_delta", "cost_delta_pct"]:
+                    asserted_metrics.add("cost")
+                elif m in ["latency", "latency_delta", "latency_delta_pct"]:
+                    asserted_metrics.add("latency")
+                else:
+                    asserted_metrics.add(m)
+
+            failed_case_ids = {
+                f.split("'")[3] for f in verdict.failed_assertions if "on test case '" in f
+            }
+            passed_cases = len(final_comparisons) - len(failed_case_ids)
+        else:
+            passed_cases = len(final_comparisons)
+
         evaluator_names = [e.name for e in self.evaluators]
         report = DiffReport(
             timestamp=datetime.now(timezone.utc).isoformat(),
@@ -316,7 +335,9 @@ class PromptDiffRunner:
                 "avg_latency_v1": verdict.avg_latency_v1,
                 "avg_latency_v2": verdict.avg_latency_v2,
                 "latency_delta_pct": verdict.latency_delta_pct,
-                "passed_cases": sum(1 for c in final_comparisons if all(s.passed for s in c.scores.values())),
+                "has_assertions": has_assertions,
+                "asserted_metrics": list(asserted_metrics),
+                "passed_cases": passed_cases,
             },
         )
 

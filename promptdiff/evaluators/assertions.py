@@ -104,7 +104,14 @@ def evaluate_assertions(
             for comp in comparisons:
                 score_obj = comp.scores.get(metric)
                 if score_obj:
-                    val = float(score_obj.v2_score)
+                    try:
+                        val = float(score_obj.v2_score)
+                    except (ValueError, TypeError):
+                        failed.append(
+                            f"Assertion '{rule.raw_expression}' failed on test case '{comp.test_case.id}' "
+                            f"(actual {metric} is non-numeric: {score_obj.v2_score})"
+                        )
+                        continue
                     if not rule.evaluate(val):
                         failed.append(
                             f"Assertion '{rule.raw_expression}' failed on test case '{comp.test_case.id}' "

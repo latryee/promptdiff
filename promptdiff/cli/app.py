@@ -1192,7 +1192,6 @@ def init_cmd(
         "v2_prompt: prompts/system_v2.txt\n"
         "model: gpt-4o\n"
         "evaluators:\n"
-        "  - json_validity\n"
         "  - latency\n"
         "  - cost\n"
         "  - similarity\n"
