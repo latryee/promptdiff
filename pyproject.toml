@@ -78,11 +78,11 @@ all = [
     "esprima>=4.0.1",
 ]
 dev = [
-    "pytest>=8.0.0",
-    "pytest-asyncio>=0.23.0",
-    "pytest-cov>=5.0.0",
-    "mypy>=1.10.0",
-    "ruff>=0.4.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "mypy>=2.3.1",
+    "ruff>=0.16.5",
     "genbadge[all]>=1.1.0",
     "fastapi>=0.100.0",
     "uvicorn>=0.20.0",
