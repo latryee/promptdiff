@@ -52,7 +52,9 @@ def generate_markdown_report(report: DiffReport, output_path: Optional[str] = No
 
         sim_s = comp.scores.get("similarity")
         if sim_s:
-            sim_txt = f"{sim_s.v2_score * 100:.1f}%" if isinstance(sim_s.v2_score, (int, float)) else str(sim_s.v2_score)
+            sim_txt = (
+                f"{sim_s.v2_score * 100:.1f}%" if isinstance(sim_s.v2_score, (int, float)) else str(sim_s.v2_score)
+            )
         else:
             sim_txt = "-"
 

@@ -310,9 +310,7 @@ class PromptDiffRunner:
                 else:
                     asserted_metrics.add(m)
 
-            failed_case_ids = {
-                f.split("'")[3] for f in verdict.failed_assertions if "on test case '" in f
-            }
+            failed_case_ids = {f.split("'")[3] for f in verdict.failed_assertions if "on test case '" in f}
             passed_cases = len(final_comparisons) - len(failed_case_ids)
         else:
             passed_cases = len(final_comparisons)
