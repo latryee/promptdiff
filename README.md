@@ -38,6 +38,26 @@
 
 > 🌐 **Try it Live in Your Browser:** Test the interactive prompt diff playground, token cost calculator, and AST mutation visualizer without installing anything: **[latryee.github.io/promptdiff](https://latryee.github.io/promptdiff/)**
 
+---
+
+## 📑 Table of Contents
+
+- [💡 Why PromptDiff?](#-why-promptdiff)
+- [⚖️ Honest Comparison: PromptDiff vs Alternatives](#-honest-comparison-promptdiff-vs-alternatives)
+- [🚀 Quickstart in 30 Seconds](#-quickstart-in-30-seconds)
+- [🩺 Environment Doctor](#-environment-doctor)
+- [🔍 How It Works: Pull Request Quality Gate](#-how-it-works-pull-request-quality-gate)
+- [📚 Curated Recipe Catalog](#-curated-recipe-catalog)
+- [🧪 Pytest Plugin Integration](#-pytest-plugin-integration)
+- [🐍 Python SDK](#-python-sdk)
+- [📦 Installation & Modular Extras](#-installation--modular-extras)
+- [🧩 Advanced & Extended Modules](#-advanced--extended-modules)
+- [🛡️ Production Engineering Standards & Quality Assurance](#-production-engineering-standards--quality-assurance)
+- [🏛️ Architecture Deep-Dive](#-architecture-deep-dive)
+- [🔒 Data Privacy & Local Storage Disclosure](#-data-privacy--local-storage-disclosure)
+- [🤝 Community & Contributing](#-community--contributing)
+- [📈 Star History](#-star-history)
+- [📄 License](#-license)
 
 ---
 
