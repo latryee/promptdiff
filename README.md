@@ -347,6 +347,16 @@ PromptDiff operates under an absolute **local-first, zero-telemetry exfiltration
 
 ---
 
+## 📈 Star History
+
+<div align="center">
+
+[![Star History Chart](https://api.star-history.com/svg?repos=latryee/promptdiff&type=Date)](https://star-history.com/#latryee/promptdiff&Date)
+
+</div>
+
+---
+
 ## 📄 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
