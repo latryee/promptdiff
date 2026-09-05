@@ -64,6 +64,7 @@ from promptdiff.core.runner import PromptDiffRunner
 from promptdiff.evaluators.registry import get_evaluators
 from promptdiff.providers.registry import get_provider
 
+
 async def main():
     runner = PromptDiffRunner(
         v1_prompt=PromptVersion(name="v1", template="Summarize: {{text}}"),
@@ -73,11 +74,12 @@ async def main():
         evaluators=get_evaluators(["latency", "cost", "json_validity"]),
     )
 
-    report = await runner.run([
-        TestCase(id="tc1", vars={"text": "PromptDiff is an enterprise prompt regression testing tool."})
-    ])
+    report = await runner.run(
+        [TestCase(id="tc1", vars={"text": "PromptDiff is an enterprise prompt regression testing tool."})]
+    )
 
     print(f"Evaluation verdict: {report.verdict.passed}")
+
 
 asyncio.run(main())
 ```
@@ -94,6 +96,7 @@ When `promptdiff-eval` is installed, the pytest plugin fixtures are automaticall
 # tests/test_prompts.py
 import pytest
 from promptdiff.core.models import TestCase
+
 
 @pytest.mark.asyncio
 async def test_support_prompt_regression(prompt_diff):
@@ -132,6 +135,7 @@ Create domain-specific evaluation metrics by subclassing `BaseEvaluator`:
 ```python
 from promptdiff.evaluators.base import BaseEvaluator
 from promptdiff.core.models import EvaluationResult, TestCase
+
 
 class WordCountEvaluator(BaseEvaluator):
     name = "word_count"
