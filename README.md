@@ -10,8 +10,8 @@
 [![Live Demo](https://img.shields.io/badge/live%20demo-interactive%20showcase-6366f1.svg)](https://latryee.github.io/promptdiff/)
 [![Python versions](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://github.com/latryee/promptdiff)
 [![CI](https://github.com/latryee/promptdiff/actions/workflows/ci.yml/badge.svg)](https://github.com/latryee/promptdiff/actions)
-[![Tests Passing](https://img.shields.io/badge/tests-394%20passed-success.svg)](https://github.com/latryee/promptdiff/actions)
-[![Coverage](https://img.shields.io/badge/coverage-93%25%20verified-brightgreen.svg)](https://github.com/latryee/promptdiff/actions)
+[![Tests Passing](https://raw.githubusercontent.com/latryee/promptdiff/main/.github/badges/tests.svg)](https://github.com/latryee/promptdiff/actions)
+[![Coverage](https://raw.githubusercontent.com/latryee/promptdiff/main/.github/badges/coverage.svg)](https://github.com/latryee/promptdiff/actions)
 [![Security: Isolated Sandbox](https://img.shields.io/badge/sandbox-isolated%20subprocess-blue.svg)](promptdiff/evaluators/code_sandbox.py)
 [![Pytest Plugin](https://img.shields.io/badge/pytest--plugin-enabled-blueviolet.svg)](https://docs.pytest.org/)
 [![Type Checked: mypy](https://img.shields.io/badge/mypy-strict-blue.svg)](http://mypy-lang.org/)
@@ -290,8 +290,8 @@ PromptDiff is built to enterprise MLOps standards with zero tolerance for unveri
 
 | Dimension | Quality Standard | Verification |
 | :--- | :--- | :--- |
-| **Comprehensive Test Suite** | 394 unit, integration, and security tests | `pytest` passing on Linux, macOS, and Windows |
-| **Test Coverage** | 93%+ branch & statement coverage | Automated threshold enforcement in CI (`--cov-fail-under=85`) |
+| **Comprehensive Test Suite** | 390+ unit, integration, and security tests (see CI badge above for live count) | `pytest` passing on Linux, macOS, and Windows |
+| **Test Coverage** | 92%+ branch & statement coverage (see CI badge above) | Automated threshold enforcement in CI (`--cov-fail-under=85`) |
 | **Isolated Code Sandbox** | Subprocess execution with resource limits (`RLIMIT_AS`, `RLIMIT_CPU`) | Exploit-tested AST/memory barriers & strict timeout handling |
 | **Strict Type Safety** | 100% type-annotated codebase (PEP 561 compliant `py.typed`) | `mypy --strict promptdiff` (0 errors across 121 source files) |
 | **Code Formatting & Linting** | Automated style checking & import order | `ruff check .` & `ruff format --check .` in pre-commit |
