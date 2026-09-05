@@ -44,7 +44,7 @@ dependencies = [
 Homepage = "https://github.com/latryee/promptdiff"
 Repository = "https://github.com/latryee/promptdiff"
 Issues = "https://github.com/latryee/promptdiff/issues"
-Documentation = "https://github.com/latryee/promptdiff#readme"
+Documentation = "https://latryee.github.io/promptdiff/docs/"
 Changelog = "https://github.com/latryee/promptdiff/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]

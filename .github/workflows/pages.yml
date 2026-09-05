@@ -1,10 +1,12 @@
-name: Deploy GitHub Pages Demo
+name: Deploy GitHub Pages Demo & Documentation
 
 on:
   push:
     branches: [ main ]
     paths:
       - 'docs/**'
+      - 'docs_src/**'
+      - 'mkdocs.yml'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -27,13 +29,29 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install documentation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install mkdocs mkdocs-material
+
+      - name: Build MkDocs documentation and bundle demo
+        run: |
+          mkdir -p dist_site
+          mkdocs build -d dist_site/docs
+          cp docs/index.html dist_site/index.html
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'docs'
+          path: 'dist_site'
 
       - name: Deploy to GitHub Pages
         id: deployment

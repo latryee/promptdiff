@@ -8,6 +8,7 @@
 
 [![Version](https://img.shields.io/badge/version-v3.4.1-blue.svg)](https://github.com/latryee/promptdiff)
 [![Live Demo](https://img.shields.io/badge/live%20demo-interactive%20showcase-6366f1.svg)](https://latryee.github.io/promptdiff/)
+[![Docs](https://img.shields.io/badge/docs-material%20for%20mkdocs-blue.svg)](https://latryee.github.io/promptdiff/docs/)
 [![Python versions](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://github.com/latryee/promptdiff)
 [![CI](https://github.com/latryee/promptdiff/actions/workflows/ci.yml/badge.svg)](https://github.com/latryee/promptdiff/actions)
 [![Tests Passing](https://raw.githubusercontent.com/latryee/promptdiff/main/.github/badges/tests.svg)](https://github.com/latryee/promptdiff/actions)
@@ -26,6 +27,7 @@
 <br/>
 
 [🌐 **Live Interactive Demo**](https://latryee.github.io/promptdiff/) •
+[📖 **Docs & API**](https://latryee.github.io/promptdiff/docs/) •
 [🚀 **Quickstart**](#-quickstart-in-30-seconds) •
 [🔍 **Core Workflow**](#-how-it-works-pull-request-quality-gate) •
 [🩺 **Environment Doctor**](#-environment-doctor) •

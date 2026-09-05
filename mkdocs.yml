@@ -1,8 +1,9 @@
-﻿site_name: PromptDiff
-site_description: Enterprise LLM Prompt & Model Regression Testing Platform
+site_name: PromptDiff
+site_description: Enterprise LLM Prompt Regression Testing & Cost/Latency Gating
 site_author: PromptDiff Team
 repo_url: https://github.com/latryee/promptdiff
 repo_name: latryee/promptdiff
+docs_dir: docs_src
 
 theme:
   name: material
@@ -30,7 +31,11 @@ theme:
 nav:
   - Overview: index.md
   - CLI Reference: api/cli.md
-  - Python SDK Reference: api/sdk.md
+  - Python SDK: api/sdk.md
+  - Recipes: recipes.md
+  - Architecture: architecture.md
+  - Security & Sandbox: security.md
+  - ⚡ Live Playground: "https://latryee.github.io/promptdiff/"
 
 markdown_extensions:
   - admonition

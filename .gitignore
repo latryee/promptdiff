@@ -49,3 +49,5 @@ Thumbs.db
 
 # Scratch and temporary directories
 scratch/
+site/
+dist_site/
