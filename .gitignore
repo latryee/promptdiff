@@ -40,7 +40,12 @@ promptdiff-report.html
 promptdiff-report.json
 promptdiff-report.md
 
-# IDEs
+# IDEs & OS
 .vscode/
 .idea/
 *.swp
+.DS_Store
+Thumbs.db
+
+# Scratch and temporary directories
+scratch/
