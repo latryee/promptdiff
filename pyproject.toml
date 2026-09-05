@@ -56,7 +56,7 @@ semantic = [
 ]
 ui = [
     "streamlit>=1.30.0",
-    "pandas>=2.0.0",
+    "pandas>=2.3.3",
 ]
 tui = [
     "textual>=0.50.0",
@@ -73,7 +73,7 @@ all = [
     "tiktoken>=0.7.0",
     "streamlit>=1.30.0",
     "textual>=0.50.0",
-    "pandas>=2.0.0",
+    "pandas>=2.3.3",
     "scipy>=1.10.0",
     "esprima>=4.0.1",
 ]
