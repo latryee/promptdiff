@@ -49,8 +49,9 @@ jobs:
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        continue-on-error: true
         with:
-          # Uses PyPI Trusted Publishing via GitHub OIDC
+          password: ${{ secrets.PYPI_API_TOKEN }}
           skip-existing: true
 
       - name: Generate CycloneDX SBOM
