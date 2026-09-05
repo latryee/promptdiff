@@ -36,3 +36,22 @@ jobs:
           test -f action-test-bundle.html
           test -f action-test-report.json
           echo "PromptDiff Action successfully executed and produced all expected artifacts."
+
+      - name: Run promptdiff action with command injection attempt
+        uses: ./
+        with:
+          v1: "examples/prompts/support_bot_v1.txt"
+          v2: "examples/prompts/support_bot_v2.txt"
+          inputs: "examples/testcases.jsonl"
+          mock: "true"
+          export-html: "safe-report.html; touch /tmp/pwned.txt"
+          fail-on-regression: "false"
+
+      - name: Verify command injection was neutralized
+        shell: bash
+        run: |
+          if [ -f /tmp/pwned.txt ]; then
+            echo "SECURITY VULNERABILITY DETECTED: Command injection succeeded!"
+            exit 1
+          fi
+          echo "Command injection attempt was successfully neutralized."

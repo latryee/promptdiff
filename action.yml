@@ -74,42 +74,58 @@ runs:
 
     - name: Run promptdiff regression tests
       shell: bash
+      env:
+        INPUT_V1: ${{ inputs.v1 }}
+        INPUT_V2: ${{ inputs.v2 }}
+        INPUT_INPUTS: ${{ inputs.inputs }}
+        INPUT_MODEL: ${{ inputs.model }}
+        INPUT_EVAL: ${{ inputs.eval }}
+        INPUT_ASSERTIONS: ${{ inputs.assertions }}
+        INPUT_MOCK: ${{ inputs.mock }}
+        INPUT_EXPORT_HTML: ${{ inputs.export-html }}
+        INPUT_EXPORT_MARKDOWN: ${{ inputs.export-markdown }}
+        INPUT_EXPORT_BUNDLE: ${{ inputs.export-bundle }}
+        INPUT_EXPORT_JSON: ${{ inputs.export-json }}
+        INPUT_FAIL_ON_REGRESSION: ${{ inputs.fail-on-regression }}
       run: |
-        ARGS="test \"${{ inputs.v1 }}\" \"${{ inputs.v2 }}\""
-        if [ -n "${{ inputs.inputs }}" ]; then
-          ARGS="$ARGS --inputs \"${{ inputs.inputs }}\""
+        ARGS=("test" "$INPUT_V1" "$INPUT_V2")
+        if [ -n "$INPUT_INPUTS" ]; then
+          ARGS+=(--inputs "$INPUT_INPUTS")
         fi
-        if [ -n "${{ inputs.model }}" ]; then
-          ARGS="$ARGS --model \"${{ inputs.model }}\""
+        if [ -n "$INPUT_MODEL" ]; then
+          ARGS+=(--model "$INPUT_MODEL")
         fi
-        if [ -n "${{ inputs.eval }}" ]; then
-          ARGS="$ARGS --eval \"${{ inputs.eval }}\""
+        if [ -n "$INPUT_EVAL" ]; then
+          ARGS+=(--eval "$INPUT_EVAL")
         fi
-        if [ -n "${{ inputs.assertions }}" ]; then
-          IFS=',' read -ra ADDR <<< "${{ inputs.assertions }}"
+        if [ -n "$INPUT_ASSERTIONS" ]; then
+          IFS=',' read -ra ADDR <<< "$INPUT_ASSERTIONS"
           for a in "${ADDR[@]}"; do
-            ARGS="$ARGS --assert \"$a\""
+            trimmed=$(echo "$a" | xargs)
+            if [ -n "$trimmed" ]; then
+              ARGS+=(--assert "$trimmed")
+            fi
           done
         fi
-        if [ "${{ inputs.mock }}" = "true" ]; then
-          ARGS="$ARGS --mock"
+        if [ "$INPUT_MOCK" = "true" ]; then
+          ARGS+=(--mock)
         fi
-        if [ -n "${{ inputs.export-html }}" ]; then
-          ARGS="$ARGS --export-html \"${{ inputs.export-html }}\""
+        if [ -n "$INPUT_EXPORT_HTML" ]; then
+          ARGS+=(--export-html "$INPUT_EXPORT_HTML")
         fi
-        if [ -n "${{ inputs.export-markdown }}" ]; then
-          ARGS="$ARGS --export-markdown \"${{ inputs.export-markdown }}\""
+        if [ -n "$INPUT_EXPORT_MARKDOWN" ]; then
+          ARGS+=(--export-markdown "$INPUT_EXPORT_MARKDOWN")
         fi
-        if [ -n "${{ inputs.export-bundle }}" ]; then
-          ARGS="$ARGS --export-bundle \"${{ inputs.export-bundle }}\""
+        if [ -n "$INPUT_EXPORT_BUNDLE" ]; then
+          ARGS+=(--export-bundle "$INPUT_EXPORT_BUNDLE")
         fi
-        if [ -n "${{ inputs.export-json }}" ]; then
-          ARGS="$ARGS --export-json \"${{ inputs.export-json }}\""
+        if [ -n "$INPUT_EXPORT_JSON" ]; then
+          ARGS+=(--export-json "$INPUT_EXPORT_JSON")
         fi
-        if [ "${{ inputs.fail-on-regression }}" = "false" ]; then
-          ARGS="$ARGS --no-fail-on-regression"
+        if [ "$INPUT_FAIL_ON_REGRESSION" = "false" ]; then
+          ARGS+=(--no-fail-on-regression)
         fi
-        eval "promptdiff $ARGS"
+        promptdiff "${ARGS[@]}"
 
     - name: Post Sticky PR Comment
       if: ${{ inputs.github-token != '' && github.event_name == 'pull_request' }}
