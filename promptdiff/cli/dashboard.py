@@ -20,7 +20,7 @@ except ImportError:
 def launch_dashboard(port: int = 8501, host: str = "localhost", report_path: Optional[str] = None) -> None:
     """Launch Streamlit dashboard server."""
     if not STREAMLIT_INSTALLED:
-        print("[!] Error: streamlit is not installed. Install with `pip install promptdiff[ui]`.", file=sys.stderr)
+        print("[!] Error: streamlit is not installed. Install with `pip install promptdiff-eval[ui]`.", file=sys.stderr)
         sys.exit(1)
 
     app_path = Path(__file__).resolve()

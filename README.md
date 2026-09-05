@@ -80,9 +80,12 @@ Selecting the right evaluation tool depends heavily on your team's workflow, run
 
 ## 🚀 Quickstart in 30 Seconds
 
+> [!NOTE]
+> **PyPI Package Name**: Published on PyPI as [`promptdiff-eval`](https://pypi.org/project/promptdiff-eval/) due to a legacy package name collision, while the CLI binary and import name remain `promptdiff`.
+
 ```bash
 # 1. Install promptdiff core (lightweight, zero heavy ML dependencies)
-pip install promptdiff
+pip install promptdiff-eval
 
 # 2. Scaffold a starter evaluation project
 promptdiff init my-evals
@@ -239,19 +242,19 @@ PromptDiff is built with a slim, featherweight core and modular extras so you on
 
 ```bash
 # Core CLI & CI runner (typer, rich, pydantic, httpx, jinja2, pyyaml, tenacity, numpy)
-pip install promptdiff
+pip install promptdiff-eval
 
 # Semantic dense embedding similarity (sentence-transformers)
-pip install "promptdiff[semantic]"
+pip install "promptdiff-eval[semantic]"
 
 # Interactive split-screen Terminal UI (Textual)
-pip install "promptdiff[tui]"
+pip install "promptdiff-eval[tui]"
 
 # Streamlit telemetry web dashboard
-pip install "promptdiff[ui]"
+pip install "promptdiff-eval[ui]"
 
 # All optional components
-pip install "promptdiff[all]"
+pip install "promptdiff-eval[all]"
 ```
 
 ---
@@ -272,8 +275,8 @@ pip install "promptdiff[all]"
 | `promptdiff diff` | *Core* | Instant side-by-side terminal syntax diff without calling model APIs. |
 | `promptdiff pricing` | *Core* | Query token pricing and cost calculations for 30+ providers. |
 | `promptdiff fuzz` | *Core* | Red-teaming security fuzzer scanning 20 distinct adversarial injection vectors. |
-| `promptdiff tui` | `[tui]` | Launch interactive split-screen terminal workspace (`pip install promptdiff[tui]`). |
-| `promptdiff ui` | `[ui]` | Launch Streamlit web dashboard for interactive telemetry (`pip install promptdiff[ui]`). |
+| `promptdiff tui` | `[tui]` | Launch interactive split-screen terminal workspace (`pip install promptdiff-eval[tui]`). |
+| `promptdiff ui` | `[ui]` | Launch Streamlit web dashboard for interactive telemetry (`pip install promptdiff-eval[ui]`). |
 | `promptdiff optimize` | *Core* | Reflective auto-prompt optimizer (DSPy style) using meta-model feedback. |
 | `promptdiff shrink` | *Core* | Token compressor pruning boilerplate fluff while preserving 100% output quality. |
 | `promptdiff cache-sim` | *Core* | Prefix caching hit rate analyzer and ROI forecaster. |

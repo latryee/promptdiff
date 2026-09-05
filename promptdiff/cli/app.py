@@ -1778,16 +1778,16 @@ def doctor_cmd() -> None:
     pkg_table.add_column("Feature Enabled", style="dim")
 
     optional_pkgs = [
-        ("tiktoken", "Exact token counting & tokenizer pricing", "pip install promptdiff[tokenizer]"),
+        ("tiktoken", "Exact token counting & tokenizer pricing", "pip install promptdiff-eval[tokenizer]"),
         (
             "sentence-transformers",
             "Semantic similarity & vector embedding evaluations",
-            "pip install promptdiff[semantic]",
+            "pip install promptdiff-eval[semantic]",
         ),
-        ("mlflow", "Enterprise experiment tracking & telemetry logging", "pip install promptdiff[mlops]"),
-        ("wandb", "Weights & Biases artifact & run tracking", "pip install promptdiff[mlops]"),
-        ("streamlit", "Interactive web visualizer dashboard", "pip install promptdiff[ui]"),
-        ("textual", "Interactive terminal UI (TUI) dashboard", "pip install promptdiff[tui]"),
+        ("mlflow", "Enterprise experiment tracking & telemetry logging", "pip install promptdiff-eval[mlops]"),
+        ("wandb", "Weights & Biases artifact & run tracking", "pip install promptdiff-eval[mlops]"),
+        ("streamlit", "Interactive web visualizer dashboard", "pip install promptdiff-eval[ui]"),
+        ("textual", "Interactive terminal UI (TUI) dashboard", "pip install promptdiff-eval[tui]"),
     ]
 
     for pkg_name, feat, install_cmd in optional_pkgs:

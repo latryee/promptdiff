@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "promptdiff"
+name = "promptdiff-eval"
 version = "3.4.1"
 description = "Enterprise-grade async LLM Prompt Regression Testing, DSPy Auto-Optimizer, RAG Evaluators, Security Guardrails, and Streamlit Dashboard"
 readme = "README.md"

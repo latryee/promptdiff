@@ -69,7 +69,7 @@ runs:
         if [ -f "pyproject.toml" ]; then
           pip install -e .
         else
-          pip install promptdiff
+          pip install promptdiff-eval
         fi
 
     - name: Run promptdiff regression tests

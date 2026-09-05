@@ -166,7 +166,7 @@ def estimate_tokens(text: str, model_name: str = "gpt-4o") -> int:
         if not _TIKTOKEN_WARNED:
             logger.warning(
                 "tiktoken is not installed or encoding is unavailable; falling back to regex-based token estimation. "
-                "Install with `pip install 'promptdiff[tokenizer]'` for exact token counts."
+                "Install with `pip install 'promptdiff-eval[tokenizer]'` for exact token counts."
             )
             _TIKTOKEN_WARNED = True
         words = len(re.findall(r"\w+|[^\w\s]", text, re.UNICODE))

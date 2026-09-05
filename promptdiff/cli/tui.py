@@ -384,7 +384,7 @@ def launch_tui(
         import sys
 
         print(
-            "[!] Error: Textual is not installed. Install with `pip install promptdiff[tui]` to use the interactive Terminal UI.",
+            "[!] Error: Textual is not installed. Install with `pip install promptdiff-eval[tui]` to use the interactive Terminal UI.",
             file=sys.stderr,
         )
         sys.exit(1)

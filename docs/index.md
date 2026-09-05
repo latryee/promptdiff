@@ -1,4 +1,4 @@
-﻿# PromptDiff Documentation
+# PromptDiff Documentation
 
 Welcome to **PromptDiff**, the enterprise regression testing, automated cost/latency gating, and continuous evaluation framework for production LLM prompts.
 
@@ -7,13 +7,13 @@ Welcome to **PromptDiff**, the enterprise regression testing, automated cost/lat
 Install PromptDiff via pip:
 
 ```bash
-pip install promptdiff
+pip install promptdiff-eval
 ```
 
 Or install all enterprise features:
 
 ```bash
-pip install "promptdiff[all]"
+pip install "promptdiff-eval[all]"
 ```
 
 ## Core Workflows
