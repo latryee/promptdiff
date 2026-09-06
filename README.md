@@ -6,7 +6,7 @@
 
 *Catch silent quality regressions, schema breakages, latency spikes, and cost inflation before merging prompt changes.*
 
-[![Version](https://img.shields.io/badge/version-v3.4.1-blue.svg)](https://github.com/latryee/promptdiff)
+[![Version](https://img.shields.io/badge/version-v3.5.0-blue.svg)](https://github.com/latryee/promptdiff)
 [![Live Demo](https://img.shields.io/badge/live%20demo-interactive%20showcase-6366f1.svg)](https://latryee.github.io/promptdiff/)
 [![Docs](https://img.shields.io/badge/docs-material%20for%20mkdocs-blue.svg)](https://latryee.github.io/promptdiff/docs/)
 [![Python versions](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://github.com/latryee/promptdiff)

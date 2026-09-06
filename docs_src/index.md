@@ -1,6 +1,6 @@
 # PromptDiff Documentation
 
-[![Version](https://img.shields.io/badge/version-v3.4.1-blue.svg)](https://github.com/latryee/promptdiff)
+[![Version](https://img.shields.io/badge/version-v3.5.0-blue.svg)](https://github.com/latryee/promptdiff)
 [![PyPI](https://img.shields.io/badge/pypi-promptdiff--eval-blue.svg)](https://pypi.org/project/promptdiff-eval/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/latryee/promptdiff/blob/main/LICENSE)
 

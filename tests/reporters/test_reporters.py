@@ -106,6 +106,53 @@ def test_markdown_report_generation(tmp_path: Path):
     assert "PASSED" in md
 
 
+def test_markdown_report_generation_with_failed_assertions_and_metrics(tmp_path: Path):
+    from promptdiff.core.models import EvaluatorScore, RegressionVerdict
+
+    base_report = sample_report()
+    comp = base_report.comparisons[0]
+    scores = dict(comp.scores)
+    scores["similarity"] = EvaluatorScore(
+        name="similarity", v1_score=1.0, v2_score=0.88, message="88% similarity", passed=True
+    )
+    scores["cost"] = EvaluatorScore(
+        name="cost", v1_score=0.0001, v2_score=0.0003, delta_pct=200.0, message="+200%", passed=False
+    )
+    scores["json_validity"] = EvaluatorScore(
+        name="json_validity", v1_score=1.0, v2_score=1.0, message="Valid", passed=True
+    )
+    new_comp = comp.model_copy(update={"scores": scores})
+
+    new_verdict = RegressionVerdict(
+        passed=False,
+        status="REGRESSION_DETECTED",
+        failed_assertions=["cost_delta <= 10%", "latency_delta <= 15%"],
+        total_cost_v1=0.0001,
+        total_cost_v2=0.0003,
+        cost_delta_pct=200.0,
+        avg_latency_v1=150.0,
+        avg_latency_v2=120.0,
+        latency_delta_pct=-20.0,
+    )
+    report = base_report.model_copy(
+        update={
+            "verdict": new_verdict,
+            "comparisons": [new_comp],
+            "aggregate_stats": {"has_assertions": True, "passed_cases": 0},
+        }
+    )
+
+    out_file = tmp_path / "report_failed.md"
+    md = generate_markdown_report(report, str(out_file))
+
+    assert "REGRESSION DETECTED" in md
+    assert "Failed Assertions & Regressions" in md
+    assert "cost_delta <= 10%" in md
+    assert "❌ FAIL" in md
+    assert "88.0%" in md
+    assert "+200.0%" in md
+
+
 def test_json_report_generation(tmp_path: Path):
     report = sample_report()
     out_file = tmp_path / "report.json"

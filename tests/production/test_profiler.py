@@ -24,6 +24,47 @@ async def test_streaming_profiler() -> None:
 
 
 @pytest.mark.asyncio
+async def test_streaming_profiler_with_provider_fallback() -> None:
+    """Test streaming profiler execution path with custom provider response."""
+    from unittest.mock import AsyncMock
+
+    from promptdiff.providers.base import BaseLLMProvider, ProviderResponse
+
+    mock_provider = AsyncMock(spec=BaseLLMProvider)
+    mock_provider.generate.return_value = ProviderResponse(
+        output="Real streaming token output",
+        prompt_tokens=10,
+        completion_tokens=25,
+        total_tokens=35,
+        latency_ms=250.0,
+        model="mock-gpt",
+    )
+    pv = PromptVersion(name="stream_p", template="Answer: {{query}}")
+    profiler = StreamingProfiler(prompt_version=pv, provider=mock_provider, force_mock=False)
+    res = await profiler.profile_stream("Tell me a story")
+    assert res.total_tokens_received == 25
+    assert res.total_latency_ms == 250.0
+    assert res.full_output == "Real streaming token output"
+
+
+@pytest.mark.asyncio
+async def test_streaming_profiler_with_provider_exception() -> None:
+    """Test streaming profiler error handling when provider throws an exception."""
+    from unittest.mock import AsyncMock
+
+    from promptdiff.providers.base import BaseLLMProvider
+
+    mock_provider = AsyncMock(spec=BaseLLMProvider)
+    mock_provider.generate.side_effect = RuntimeError("API rate limit exceeded")
+    pv = PromptVersion(name="stream_p", template="Answer: {{query}}")
+    profiler = StreamingProfiler(prompt_version=pv, provider=mock_provider, force_mock=False)
+    res = await profiler.profile_stream("Tell me a story")
+    assert res.full_output == "Error"
+    assert res.total_latency_ms == 1000.0
+    assert res.tokens_per_second == 10.0
+
+
+@pytest.mark.asyncio
 async def test_streaming_profiler_and_sparklines() -> None:
     """Test microsecond TTFT profiler and sparkline rendering."""
     spark = _build_ascii_sparkline([10.0, 20.0, 50.0, 30.0, 10.0])

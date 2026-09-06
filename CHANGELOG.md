@@ -14,6 +14,21 @@ PromptDiff enforces strict Semantic Versioning (`MAJOR.MINOR.PATCH`):
 
 ---
 
+## [3.5.0] - 2026-09-06
+
+### Security & Packaging
+- **PyPI Package Renamed to `promptdiff-eval`**: Official distribution package renamed to `promptdiff-eval` to secure reliable installation via `pip install promptdiff-eval`.
+- **FastAPI Server Security Hardening**: Added API key authentication (`--api-key` / `PROMPTDIFF_API_KEY`), sliding-window IP rate limiting (100 req/min), configurable CORS policies, and safe-by-default localhost binding (`127.0.0.1`).
+- **Composite GitHub Action Shell Injection Neutralized**: Replaced unquoted template parameters in `action.yml` with environment-variable-backed arguments to eliminate command injection vectors.
+
+### Fixed & Enhanced
+- **JS AST Diff Bug Fixed**: Corrected token boundary calculation and syntax node diffing in JavaScript AST evaluator.
+- **Verdict & Status Consistency Harmonization**: Harmonized regression verdict computation across CLI, reporters, and SDK so test status codes and summary badges strictly align.
+- **Internal Dogfooding Suite**: Established `.promptdiff-self-test/` containing prompt evolution assets (`system_v1` -> `system_v2` -> `system_v3_optimized` / `system_shrunk`) and added automated self-testing step in CI.
+- **Cross-Platform Normalization**: Added `.gitattributes` enforcing consistent LF line endings and binary file handling across Windows, macOS, and Linux runners.
+
+---
+
 ## [3.4.1] - 2026-09-06
 
 ### Changed
