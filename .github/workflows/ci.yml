@@ -111,6 +111,9 @@ jobs:
       - name: Test promptdiff regression CLI (Mock mode)
         run: promptdiff test examples/prompts/support_bot_v1.txt examples/prompts/support_bot_v2.txt --inputs examples/testcases.jsonl --eval "json_validity,latency,cost,similarity" --mock --export-markdown regression-report.md --export-html regression-report.html
 
+      - name: Run dogfood self-test on internal prompts
+        run: promptdiff test .promptdiff-self-test/prompts/system_v1.txt .promptdiff-self-test/prompts/system_v2.txt --inputs .promptdiff-self-test/testcases.jsonl --eval "latency,cost,similarity" --mock
+
       - name: Upload regression test report artifact
         uses: actions/upload-artifact@v4
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'

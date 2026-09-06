@@ -14,6 +14,13 @@ PromptDiff enforces strict Semantic Versioning (`MAJOR.MINOR.PATCH`):
 
 ---
 
+## [3.4.1] - 2026-09-06
+
+### Changed
+- Relocated root prompt assets to `.promptdiff-self-test/` for internal dogfooding and prompt evolution verification.
+
+---
+
 ## [3.4.0] - 2026-09-03
 
 ### Added

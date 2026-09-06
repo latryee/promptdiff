@@ -11,8 +11,8 @@ from promptdiff.cli.history import track_git_history
 async def test_git_history_tracker() -> None:
     """Test Git revision regression tracker."""
     rep = await track_git_history(
-        prompt_file="prompts/system_v1.txt",
-        dataset_path="testcases.jsonl",
+        prompt_file="examples/prompts/support_bot_v1.txt",
+        dataset_path="examples/testcases.jsonl",
         commits_count=2,
         force_mock=True,
     )

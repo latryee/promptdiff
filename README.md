@@ -317,6 +317,7 @@ PromptDiff is built to enterprise MLOps standards with zero tolerance for unveri
 | **Isolated Code Sandbox** | Subprocess execution with resource limits (`RLIMIT_AS`, `RLIMIT_CPU`) | Exploit-tested AST/memory barriers & strict timeout handling |
 | **Strict Type Safety** | 100% type-annotated codebase (PEP 561 compliant `py.typed`) | `mypy --strict promptdiff` (0 errors across 121 source files) |
 | **Code Formatting & Linting** | Automated style checking & import order | `ruff check .` & `ruff format --check .` in pre-commit |
+| **Internal Dogfooding** | We dogfood PromptDiff on our own prompts — see `.promptdiff-self-test/`, prompt evolution from v1 to the optimizer-compressed version | Verified via offline mock regression tests in CI |
 | **Cryptographic Provenance** | HMAC-SHA256 zero-width prompt steganography | Constant-time tamper detection (`hmac.compare_digest`) |
 | **Schema Drift Protection** | Automated drift protection against JSON schema divergence | `DiffReport.model_json_schema()` verified in CI pipeline |
 

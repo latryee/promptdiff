@@ -76,6 +76,12 @@ We maintain strict **Mypy** type safety:
 mypy promptdiff
 ```
 
+### 4. Dogfooding & Self-Test
+We dogfood PromptDiff on our own prompts — see `.promptdiff-self-test/`, prompt evolution from v1 to the optimizer-compressed version:
+```bash
+promptdiff test .promptdiff-self-test/prompts/system_v1.txt .promptdiff-self-test/prompts/system_v2.txt --inputs .promptdiff-self-test/testcases.jsonl --mock
+```
+
 ---
 
 ## 🚀 Creating a Pull Request
