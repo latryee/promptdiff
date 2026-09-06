@@ -115,7 +115,7 @@ jobs:
         run: promptdiff test .promptdiff-self-test/prompts/system_v1.txt .promptdiff-self-test/prompts/system_v2.txt --inputs .promptdiff-self-test/testcases.jsonl --eval "latency,cost,similarity" --mock
 
       - name: Upload regression test report artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
         with:
           name: regression-report-py${{ matrix.python-version }}

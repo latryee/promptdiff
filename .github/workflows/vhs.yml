@@ -1,4 +1,4 @@
-﻿name: Validate and Generate VHS Demo GIF
+name: Validate and Generate VHS Demo GIF
 
 on:
   push:
@@ -49,7 +49,7 @@ jobs:
           echo "assets/demo.gif successfully rendered and validated."
 
       - name: Upload Demo Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: demo-gif
           path: assets/demo.gif
