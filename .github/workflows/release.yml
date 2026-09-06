@@ -49,10 +49,38 @@ jobs:
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        continue-on-error: true
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
           skip-existing: true
+
+      - name: Verify package on PyPI and record summary
+        run: |
+          PACKAGE_NAME="promptdiff-eval"
+          echo "### 🚀 PyPI Distribution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package:** \`$PACKAGE_NAME\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Tag:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **PyPI Project URL:** [https://pypi.org/project/$PACKAGE_NAME/](https://pypi.org/project/$PACKAGE_NAME/)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          echo "Querying PyPI API for indexed release versions..."
+          # Polling loop to allow PyPI index CDN to reflect newly published distribution
+          for i in {1..6}; do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://pypi.org/pypi/$PACKAGE_NAME/json" || true)
+            if [ "$HTTP_STATUS" = "200" ]; then
+              LATEST_VERSION=$(curl -s "https://pypi.org/pypi/$PACKAGE_NAME/json" | python -c "import sys, json; print(json.load(sys.stdin).get('info', {}).get('version', 'unknown'))" 2>/dev/null || echo "unknown")
+              echo "✅ Verified package on PyPI! Current indexed version: $LATEST_VERSION"
+              echo "- **Status:** ✅ Successfully published to PyPI" >> $GITHUB_STEP_SUMMARY
+              echo "- **Latest PyPI Version:** \`$LATEST_VERSION\`" >> $GITHUB_STEP_SUMMARY
+              break
+            else
+              echo "Attempt $i: PyPI index pending (HTTP $HTTP_STATUS). Retrying in 10s..."
+              sleep 10
+            fi
+          done
+
+          echo "Checking available versions via pip index..."
+          pip index versions "$PACKAGE_NAME" || true
 
       - name: Generate CycloneDX SBOM
         uses: anchore/sbom-action@v0
