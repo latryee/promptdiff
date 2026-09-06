@@ -44,6 +44,12 @@ jobs:
         run: |
           twine check dist/*
 
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          skip-existing: true
+
       - name: Sign distribution packages with Sigstore
         uses: sigstore/gh-action-sigstore-python@v3.4.0
         with:
@@ -53,12 +59,6 @@ jobs:
 
       - name: Install Cosign for container and artifact verification
         uses: sigstore/cosign-installer@v3.8.2
-
-      - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
-          skip-existing: true
 
       - name: Verify package on PyPI and record summary
         run: |
