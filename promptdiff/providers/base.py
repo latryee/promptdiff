@@ -27,6 +27,19 @@ except ImportError:  # pragma: no cover
     TENACITY_AVAILABLE = False
 
 
+@dataclass(frozen=True)
+class ProviderCapabilities:
+    """Exposes supported feature capabilities for an LLM provider."""
+
+    streaming: bool = True
+    system_prompt: bool = True
+    temperature: bool = True
+    max_tokens: bool = True
+    structured_output: bool = False
+    prompt_caching: bool = False
+    reasoning_tokens: bool = False
+
+
 @dataclass
 class ProviderResponse:
     """Structured response from an LLM provider call."""
@@ -38,6 +51,39 @@ class ProviderResponse:
     latency_ms: float
     model: str
     raw_response: Optional[Any] = None
+    finish_reason: Optional[str] = None
+    request_id: Optional[str] = None
+    cached_tokens: int = 0
+    reasoning_tokens: int = 0
+    provider_name: Optional[str] = None
+
+
+def classify_provider_exception(exc: BaseException) -> Any:
+    """Classify any provider exception into standard ErrorCategory."""
+    from promptdiff.core.models import ErrorCategory
+
+    if isinstance(exc, (asyncio.TimeoutError, httpx.TimeoutException)):
+        return ErrorCategory.TIMEOUT
+    if isinstance(exc, httpx.HTTPStatusError):
+        code = exc.response.status_code
+        if code in {401, 403}:
+            return ErrorCategory.AUTHENTICATION
+        if code == 429:
+            return ErrorCategory.RATE_LIMIT
+        if 400 <= code < 500:
+            return ErrorCategory.INVALID_REQUEST
+        if code >= 500:
+            return ErrorCategory.PROVIDER_ERROR
+    msg = str(exc).lower()
+    if any(k in msg for k in ["auth", "unauthorized", "forbidden", "api key", "invalid key", "token"]):
+        return ErrorCategory.AUTHENTICATION
+    if any(k in msg for k in ["rate limit", "429", "too many requests", "quota"]):
+        return ErrorCategory.RATE_LIMIT
+    if any(k in msg for k in ["timeout", "timed out"]):
+        return ErrorCategory.TIMEOUT
+    if any(k in msg for k in ["invalid", "bad request", "unknown parameter"]):
+        return ErrorCategory.INVALID_REQUEST
+    return ErrorCategory.PROVIDER_ERROR
 
 
 def is_retryable_exception(exc: BaseException) -> bool:
@@ -124,6 +170,10 @@ class BaseLLMProvider(ABC):
     def __init__(self, model_name: str, **kwargs: Any):
         self.model_name = model_name
         self.kwargs = kwargs
+
+    def get_capabilities(self) -> ProviderCapabilities:
+        """Return supported capabilities for this provider."""
+        return ProviderCapabilities()
 
     @abstractmethod
     async def generate(

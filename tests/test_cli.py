@@ -330,3 +330,225 @@ def test_cli_install_hook(tmp_path: Path) -> None:
     res = runner.invoke(app, ["install-hook", "--dir", str(tmp_path)])
     assert res.exit_code == 0
     assert "Successfully installed" in res.stdout
+
+
+def test_cli_test_with_tags_and_limit(tmp_path: Path) -> None:
+    f1 = tmp_path / "v1.txt"
+    f2 = tmp_path / "v2.txt"
+    f1.write_text("Hello {{name}}", encoding="utf-8")
+    f2.write_text("Hi {{name}}", encoding="utf-8")
+
+    dataset = tmp_path / "tagged.jsonl"
+    dataset.write_text(
+        '{"id": "tc1", "tags": ["smoke"], "vars": {"name": "Alice"}}\n'
+        '{"id": "tc2", "tags": ["regression"], "vars": {"name": "Bob"}}\n'
+        '{"id": "tc3", "tags": ["smoke"], "vars": {"name": "Charlie"}}\n',
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "test",
+            str(f1),
+            str(f2),
+            "--inputs",
+            str(dataset),
+            "--tags",
+            "smoke",
+            "--limit",
+            "1",
+            "--mock",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "1" in result.output
+
+
+def test_cli_test_with_redaction(tmp_path: Path) -> None:
+    import json
+
+    f1 = tmp_path / "v1.txt"
+    f2 = tmp_path / "v2.txt"
+    f1.write_text("Using key: sk-1234567890abcdef1234567890 for {{user}}", encoding="utf-8")
+    f2.write_text("Using key: sk-1234567890abcdef1234567890 for {{user}}", encoding="utf-8")
+
+    dataset = tmp_path / "cases.jsonl"
+    dataset.write_text(
+        '{"id": "tc1", "vars": {"user": "Alice", "password": "secret_pass"}}\n',
+        encoding="utf-8",
+    )
+
+    json_out = tmp_path / "redacted.json"
+
+    result = runner.invoke(
+        app,
+        [
+            "test",
+            str(f1),
+            str(f2),
+            "--inputs",
+            str(dataset),
+            "--mock",
+            "--redact",
+            "--export-json",
+            str(json_out),
+        ],
+    )
+    assert result.exit_code == 0
+    assert json_out.exists()
+
+    data = json.loads(json_out.read_text(encoding="utf-8"))
+    json_text = json.dumps(data)
+    assert "sk-1234567890abcdef1234567890" not in json_text
+    assert "[API_KEY_REDACTED]" in json_text
+    assert data["comparisons"][0]["test_case"]["vars"]["password"] == "[SECRET_REDACTED]"
+
+
+def test_cli_test_exit_code_config_error(tmp_path: Path) -> None:
+    f1 = tmp_path / "v1.txt"
+    f2 = tmp_path / "v2.txt"
+    f1.write_text("Prompt 1", encoding="utf-8")
+    f2.write_text("Prompt 2", encoding="utf-8")
+
+    bad_dataset = tmp_path / "bad.jsonl"
+    bad_dataset.write_text('{"id": "tc1"}\n{INVALID JSON HERE\n', encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "test",
+            str(f1),
+            str(f2),
+            "--inputs",
+            str(bad_dataset),
+            "--mock",
+        ],
+    )
+    # EXIT_CONFIG_ERROR is 2
+    assert result.exit_code == 2
+    assert "Configuration / Dataset Error" in result.output
+
+
+def test_cli_shrink(tmp_path: Path) -> None:
+    p = tmp_path / "verbose.txt"
+    p.write_text("Please kindly act as an AI assistant and answer: {{q}}", encoding="utf-8")
+    cases = tmp_path / "cases.jsonl"
+    cases.write_text('{"id": "tc1", "vars": {"q": "Help me"}}\n', encoding="utf-8")
+    out = tmp_path / "shrunk.txt"
+
+    res = runner.invoke(app, ["shrink", str(p), "--inputs", str(cases), "--output", str(out), "--mock"])
+    assert res.exit_code == 0
+    assert out.exists()
+    assert "Prompt Token Compression & Quality Report" in res.output
+
+
+def test_cli_mutate(tmp_path: Path) -> None:
+    cases = tmp_path / "cases.jsonl"
+    cases.write_text('{"id": "tc1", "vars": {"q": "Hello world"}}\n', encoding="utf-8")
+    out = tmp_path / "mutated.jsonl"
+
+    res = runner.invoke(app, ["mutate", str(cases), "-o", str(out)])
+    assert res.exit_code == 0
+    assert out.exists()
+
+
+def test_cli_cache_sim_with_inputs(tmp_path: Path) -> None:
+    p = tmp_path / "prompt.txt"
+    p.write_text("You are a helpful assistant. Query: {{q}}", encoding="utf-8")
+    cases = tmp_path / "cases.jsonl"
+    cases.write_text('{"id": "tc1", "vars": {"q": "Test"}}\n', encoding="utf-8")
+
+    res = runner.invoke(app, ["cache-sim", str(p), "--inputs", str(cases)])
+    assert res.exit_code == 0
+    assert "Prompt Prefix Caching Simulation" in res.output
+
+
+def test_cli_cache_impact(tmp_path: Path) -> None:
+    p1 = tmp_path / "p1.txt"
+    p2 = tmp_path / "p2.txt"
+    p1.write_text("System instructions for customer support: {{q}}", encoding="utf-8")
+    p2.write_text("System instructions for customer support updated: {{q}}", encoding="utf-8")
+
+    res = runner.invoke(app, ["cache-impact", str(p1), str(p2)])
+    assert res.exit_code == 0
+    assert "KV-Cache Prefix Caching Impact" in res.output
+
+
+def test_cli_check_syntax(tmp_path: Path) -> None:
+    p = tmp_path / "valid.txt"
+    p.write_text("Hello {{name}}, welcome to {{service}}!", encoding="utf-8")
+
+    res = runner.invoke(app, ["check", str(p)])
+    assert res.exit_code == 0
+    assert "Prompt Lint & Cost Diagnostics" in res.output
+
+
+def test_cli_cascade() -> None:
+    res = runner.invoke(app, ["cascade", "--volume", "1000"])
+    assert res.exit_code == 0
+    assert "Production Model Cascade ROI Simulation" in res.output
+
+
+def test_cli_hypothesis() -> None:
+    res = runner.invoke(app, ["hypothesis", "0.8,0.85,0.9", "0.82,0.88,0.91"])
+    assert res.exit_code == 0
+    assert "Statistical Significance & Hypothesis Testing" in res.output
+
+
+def test_cli_hard_negatives(tmp_path: Path) -> None:
+    p = tmp_path / "prompt.txt"
+    p.write_text("You are a strict code reviewer. Review: {{code}}", encoding="utf-8")
+    out = tmp_path / "hn.jsonl"
+
+    res = runner.invoke(app, ["hard-negatives", str(p), "-o", str(out)])
+    assert res.exit_code == 0
+    assert out.exists()
+
+
+def test_cli_mcts(tmp_path: Path) -> None:
+    p = tmp_path / "prompt.txt"
+    p.write_text("Answer: {{q}}", encoding="utf-8")
+    cases = tmp_path / "cases.jsonl"
+    cases.write_text('{"id": "tc1", "vars": {"q": "Test"}}\n', encoding="utf-8")
+
+    res = runner.invoke(app, ["mcts", str(p), "--inputs", str(cases), "--iterations", "2", "--mock"])
+    assert res.exit_code == 0
+    assert "MCTS Search Completed" in res.output
+
+
+def test_cli_redteam(tmp_path: Path) -> None:
+    p = tmp_path / "prompt.txt"
+    p.write_text("You are an assistant.", encoding="utf-8")
+
+    res = runner.invoke(app, ["redteam", str(p), "--turns", "1", "--mock"])
+    assert res.exit_code == 0
+    assert "AI Safety Vulnerability Score" in res.output
+
+
+def test_cli_db_stats_hotspots_prune() -> None:
+    res_stats = runner.invoke(app, ["db", "stats"])
+    assert res_stats.exit_code == 0
+
+    res_hotspots = runner.invoke(app, ["db", "hotspots"])
+    assert res_hotspots.exit_code == 0
+
+    res_prune = runner.invoke(app, ["db", "prune", "--days", "30", "--yes"])
+    assert res_prune.exit_code == 0
+    assert "Successfully pruned" in res_prune.output
+
+
+def test_cli_missing_file_config_error() -> None:
+    res = runner.invoke(app, ["diff", "nonexistent_file_1.txt", "nonexistent_file_2.txt"])
+    assert res.exit_code == 2
+    assert "Both arguments must be valid files" in res.output
+
+
+def test_cli_missing_dataset_config_error(tmp_path: Path) -> None:
+    p1 = tmp_path / "p1.txt"
+    p2 = tmp_path / "p2.txt"
+    p1.write_text("Hello", encoding="utf-8")
+    p2.write_text("World", encoding="utf-8")
+    res = runner.invoke(app, ["test", str(p1), str(p2), "--inputs", "nonexistent_dataset.jsonl", "--mock"])
+    assert res.exit_code == 2
+    assert "Configuration / Dataset Error" in res.output

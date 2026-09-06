@@ -33,9 +33,26 @@ promptdiff test prompts/v1.txt prompts/v2.txt \
 | `--db-retention-days` | | Automatically prune SQLite historical telemetry database runs older than $N$ days. |
 | `--estimate` | | Pre-calculate and display token and financial estimates before running evaluations. |
 | `--fail-on-regression` | | Exit with return code `1` if any assertion threshold is breached (ideal for CI/CD gates). |
+| `--tags` | | Filter test cases by comma-separated tags (e.g. `--tags "critical,edge-case"`). |
+| `--limit` | | Cap evaluation to the first $N$ matching test cases. |
+| `--timeout` | | Per-testcase execution timeout in seconds (default: `30.0`). |
+| `--redact` | | Redact provider API keys, Bearer tokens, and sensitive PII from outputs and reports. |
+| `--experiment-id` | | Custom identifier to group and tag evaluation runs in the database. |
 | `--export-html` | | Write standalone zero-dependency interactive HTML diff report. |
 | `--export-markdown` | | Output GitHub-flavored markdown report table. |
 | `--export-json` | | Output machine-readable JSON schema report. |
+
+### CI/CD Exit Codes
+
+`promptdiff` returns standard POSIX exit codes suitable for automated pipeline orchestration:
+
+| Exit Code | Constant | Meaning | Recommended Pipeline Action |
+| :---: | :--- | :--- | :--- |
+| `0` | `SUCCESS` | All assertions met, no regressions. | Proceed to merge / deploy. |
+| `1` | `REGRESSION_DETECTED` | One or more quality, latency, or cost assertions failed. | Block merge; notify author. |
+| `2` | `CONFIGURATION_ERROR` | Dataset syntax error, invalid assertion rule, or missing prompt file. | Fix test configuration. |
+| `3` | `PROVIDER_ERROR` | LLM provider API failure, rate limit exhausted, or network error. | Check provider credentials / retry. |
+| `4` | `INTERNAL_ERROR` | Unexpected unhandled exception inside PromptDiff runtime. | Inspect logs / file bug report. |
 
 ---
 

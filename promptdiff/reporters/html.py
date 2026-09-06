@@ -28,8 +28,17 @@ def _chunk_to_html(chunk: DiffChunk, side: str) -> str:
     return ""
 
 
-def generate_html_report(report: DiffReport, output_path: str) -> str:
+def generate_html_report(
+    report: DiffReport,
+    output_path: str,
+    redact: bool = False,
+) -> str:
     """Generate self-contained interactive dark-mode HTML report."""
+    if redact:
+        from promptdiff.security.redaction import redact_diff_report
+
+        report = redact_diff_report(report)
+
     v = report.verdict
     status_bg = (
         "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"

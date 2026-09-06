@@ -56,7 +56,16 @@ def test_pytester_subprocess_integration(pytester: pytest.Pytester) -> None:
             )
             assert report.total_cases >= 1
             assert report.verdict.passed is True
+
+        @pytest.mark.promptdiff(
+            v1="Hello world {{name}}",
+            v2="Hello universe {{name}}",
+            mock=True,
+        )
+        def test_marker_run(report):
+            assert report.total_cases >= 1
+            assert report.verdict.passed is True
         """
     )
     result = pytester.runpytest("-p", "promptdiff", "-o", "asyncio_mode=auto")
-    result.assert_outcomes(passed=2)
+    result.assert_outcomes(passed=3)

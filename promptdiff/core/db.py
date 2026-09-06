@@ -7,6 +7,7 @@ and identification of high-frequency failing test cases over time.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import threading
 import time
@@ -16,6 +17,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from promptdiff.core.models import DiffReport
+
+CURRENT_DB_SCHEMA_VERSION = 2
 
 _DB_LOCKS: dict[str, threading.RLock] = {}
 _DB_LOCKS_GUARD = threading.Lock()
@@ -41,6 +44,9 @@ class RunSummaryRecord:
     cost_delta_pct: float
     latency_delta_pct: float
     total_cases: int
+    experiment_id: str | None = None
+    model_v1: str | None = None
+    model_v2: str | None = None
 
 
 @dataclass
@@ -108,9 +114,28 @@ class TelemetryDatabase:
             self._all_connections.clear()
             self._local = threading.local()
 
+    def get_schema_version(self) -> int:
+        """Get the current database schema version."""
+        with self.connection() as conn:
+            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='schema_migrations'")
+            if not cursor.fetchone():
+                return 1
+            cursor = conn.execute("SELECT MAX(version) FROM schema_migrations")
+            row = cursor.fetchone()
+            return int(row[0]) if row and row[0] is not None else 1
+
     def _init_schema(self) -> None:
-        """Create tables and indices if not present."""
+        """Create tables and apply any pending schema migrations."""
         with self.transaction() as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS schema_migrations (
+                    version INTEGER PRIMARY KEY,
+                    applied_at REAL,
+                    description TEXT
+                )
+                """
+            )
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS evaluation_runs (
@@ -143,27 +168,85 @@ class TelemetryDatabase:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_timestamp ON evaluation_runs(timestamp)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_tc_id ON test_case_executions(test_case_id)")
 
+            cursor = conn.execute("SELECT 1 FROM schema_migrations WHERE version = 1")
+            if not cursor.fetchone():
+                conn.execute(
+                    "INSERT OR IGNORE INTO schema_migrations (version, applied_at, description) VALUES (1, ?, 'Base schema')",
+                    (time.time(),),
+                )
+
+            # Migration 2: Add experiment metadata and model columns
+            cursor = conn.execute("SELECT 1 FROM schema_migrations WHERE version = 2")
+            if not cursor.fetchone():
+                existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(evaluation_runs)").fetchall()}
+                for col_name, col_type in [
+                    ("experiment_id", "TEXT"),
+                    ("baseline_id", "TEXT"),
+                    ("model_v1", "TEXT"),
+                    ("model_v2", "TEXT"),
+                    ("evaluators", "TEXT"),
+                    ("metadata_json", "TEXT"),
+                ]:
+                    if col_name not in existing_cols:
+                        conn.execute(f"ALTER TABLE evaluation_runs ADD COLUMN {col_name} {col_type}")
+
+                tc_existing = {row[1] for row in conn.execute("PRAGMA table_info(test_case_executions)").fetchall()}
+                if "error" not in tc_existing:
+                    conn.execute("ALTER TABLE test_case_executions ADD COLUMN error TEXT")
+
+                conn.execute(
+                    "INSERT INTO schema_migrations (version, applied_at, description) VALUES (2, ?, 'Add experiment metadata and model columns')",
+                    (time.time(),),
+                )
+
     def record_run(self, report: DiffReport) -> None:
         """Persist DiffReport results into SQLite."""
         now = time.time()
         with self.transaction() as conn:
-            conn.execute(
-                """
-                INSERT OR REPLACE INTO evaluation_runs
-                (run_id, timestamp, v1_name, v2_name, passed, cost_delta_pct, latency_delta_pct, total_cases)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    report.run_id,
-                    now,
-                    report.v1_name,
-                    report.v2_name,
-                    1 if report.verdict.passed else 0,
-                    report.verdict.cost_delta_pct,
-                    report.verdict.latency_delta_pct,
-                    report.total_cases,
-                ),
-            )
+            existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(evaluation_runs)").fetchall()}
+            if "experiment_id" in existing_cols:
+                conn.execute(
+                    """
+                    INSERT OR REPLACE INTO evaluation_runs
+                    (run_id, timestamp, v1_name, v2_name, passed, cost_delta_pct, latency_delta_pct, total_cases,
+                     experiment_id, baseline_id, model_v1, model_v2, evaluators, metadata_json)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        report.run_id,
+                        now,
+                        report.v1_name,
+                        report.v2_name,
+                        1 if report.verdict.passed else 0,
+                        report.verdict.cost_delta_pct,
+                        report.verdict.latency_delta_pct,
+                        report.total_cases,
+                        report.experiment_id,
+                        report.baseline_id,
+                        report.model_v1,
+                        report.model_v2,
+                        ",".join(report.evaluators),
+                        json.dumps(report.aggregate_stats),
+                    ),
+                )
+            else:
+                conn.execute(
+                    """
+                    INSERT OR REPLACE INTO evaluation_runs
+                    (run_id, timestamp, v1_name, v2_name, passed, cost_delta_pct, latency_delta_pct, total_cases)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        report.run_id,
+                        now,
+                        report.v1_name,
+                        report.v2_name,
+                        1 if report.verdict.passed else 0,
+                        report.verdict.cost_delta_pct,
+                        report.verdict.latency_delta_pct,
+                        report.total_cases,
+                    ),
+                )
 
             execution_rows = [
                 (
@@ -190,15 +273,26 @@ class TelemetryDatabase:
     def get_recent_runs(self, limit: int = 20) -> list[RunSummaryRecord]:
         """Fetch chronological recent runs."""
         with self.connection() as conn:
-            cursor = conn.execute(
+            existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(evaluation_runs)").fetchall()}
+            has_v2_cols = "experiment_id" in existing_cols
+
+            if has_v2_cols:
+                query = """
+                    SELECT run_id, timestamp, v1_name, v2_name, passed, cost_delta_pct, latency_delta_pct, total_cases,
+                           experiment_id, model_v1, model_v2
+                    FROM evaluation_runs
+                    ORDER BY timestamp DESC
+                    LIMIT ?
                 """
-                SELECT run_id, timestamp, v1_name, v2_name, passed, cost_delta_pct, latency_delta_pct, total_cases
-                FROM evaluation_runs
-                ORDER BY timestamp DESC
-                LIMIT ?
-                """,
-                (limit,),
-            )
+            else:
+                query = """
+                    SELECT run_id, timestamp, v1_name, v2_name, passed, cost_delta_pct, latency_delta_pct, total_cases
+                    FROM evaluation_runs
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                """
+
+            cursor = conn.execute(query, (limit,))
             records = []
             for row in cursor.fetchall():
                 records.append(
@@ -211,6 +305,9 @@ class TelemetryDatabase:
                         cost_delta_pct=row["cost_delta_pct"],
                         latency_delta_pct=row["latency_delta_pct"],
                         total_cases=row["total_cases"],
+                        experiment_id=row["experiment_id"] if has_v2_cols else None,
+                        model_v1=row["model_v1"] if has_v2_cols else None,
+                        model_v2=row["model_v2"] if has_v2_cols else None,
                     )
                 )
             return records

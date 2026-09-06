@@ -13,10 +13,14 @@ import logging
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from promptdiff.core.models import RunResult
 
 logger = logging.getLogger("promptdiff.core.cache")
+
+
+CACHE_SCHEMA_VERSION = 2
 
 
 class DiskCache:
@@ -35,19 +39,84 @@ class DiskCache:
             self.db_path = self.cache_dir / "cache.sqlite"
             self._init_db()
 
+    def _get_connection(self) -> sqlite3.Connection:
+        """Create a SQLite connection configured with WAL mode, busy timeout, and synchronous normal."""
+        try:
+            conn = sqlite3.connect(str(self.db_path), timeout=30.0)
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=5000")
+            conn.execute("PRAGMA synchronous=NORMAL")
+            return conn
+        except sqlite3.DatabaseError as err:
+            logger.warning("DiskCache SQLite error: %s. Attempting corruption recovery...", err)
+            self._recover_corrupt_db()
+            conn = sqlite3.connect(str(self.db_path), timeout=30.0)
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=5000")
+            conn.execute("PRAGMA synchronous=NORMAL")
+            return conn
+
+    def _recover_corrupt_db(self) -> None:
+        """Safely quarantine corrupted database and re-initialize a fresh SQLite cache."""
+        try:
+            if hasattr(self, "db_path") and self.db_path.exists():
+                timestamp = int(datetime.now(timezone.utc).timestamp())
+                corrupt_backup = self.db_path.with_name(f"cache.sqlite.corrupt.{timestamp}")
+                self.db_path.rename(corrupt_backup)
+                logger.info("Quarantined corrupt cache to %s", corrupt_backup)
+            # Remove associated WAL and SHM files
+            for ext in ["cache.sqlite-wal", "cache.sqlite-shm"]:
+                extra = self.cache_dir / ext
+                if extra.exists():
+                    try:
+                        extra.unlink()
+                    except OSError:
+                        pass
+        except Exception as recovery_err:
+            logger.error("Failed to quarantine corrupt cache database: %s", recovery_err)
+
     def _init_db(self) -> None:
-        """Initialize SQLite cache table."""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS prompt_cache (
-                    hash_key TEXT PRIMARY KEY,
-                    data TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        """Initialize SQLite cache tables with schema version tracking."""
+        try:
+            with sqlite3.connect(str(self.db_path), timeout=30.0) as conn:
+                conn.execute("PRAGMA journal_mode=WAL")
+                conn.execute("PRAGMA busy_timeout=5000")
+                conn.execute("PRAGMA synchronous=NORMAL")
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS prompt_cache (
+                        hash_key TEXT PRIMARY KEY,
+                        data TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
                 )
-                """
-            )
-            conn.commit()
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS cache_meta (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL
+                    )
+                    """
+                )
+                conn.execute(
+                    "INSERT OR REPLACE INTO cache_meta (key, value) VALUES ('schema_version', ?)",
+                    (str(CACHE_SCHEMA_VERSION),),
+                )
+                conn.commit()
+        except sqlite3.DatabaseError:
+            self._recover_corrupt_db()
+            with sqlite3.connect(str(self.db_path), timeout=30.0) as conn:
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS prompt_cache (
+                        hash_key TEXT PRIMARY KEY,
+                        data TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+                conn.commit()
 
     @staticmethod
     def compute_key(
@@ -56,18 +125,27 @@ class DiskCache:
         model: str = "gpt-4o",
         temperature: float = 0.0,
         max_tokens: int | None = 2048,
+        provider: str | None = None,
+        extra_params: dict[str, Any] | None = None,
     ) -> str:
-        """Compute SHA-256 hash for deterministic execution parameters."""
-        raw_key = json.dumps(
-            {
-                "prompt": prompt_text,
-                "system": system_prompt or "",
-                "model": model.strip().lower(),
-                "temperature": round(temperature, 4),
-                "max_tokens": max_tokens or 0,
-            },
-            sort_keys=True,
-        )
+        """Compute SHA-256 hash for deterministic execution parameters.
+
+        Includes provider name and extra generation parameters when supplied,
+        while maintaining identical output for standard calls.
+        """
+        key_dict: dict[str, Any] = {
+            "prompt": prompt_text,
+            "system": system_prompt or "",
+            "model": model.strip().lower(),
+            "temperature": round(temperature, 4),
+            "max_tokens": max_tokens or 0,
+        }
+        if provider:
+            key_dict["provider"] = provider.strip().lower()
+        if extra_params:
+            key_dict["extra"] = sorted(extra_params.items())
+
+        raw_key = json.dumps(key_dict, sort_keys=True)
         return hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
 
     def get(self, hash_key: str) -> RunResult | None:
@@ -76,7 +154,7 @@ class DiskCache:
             return None
 
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     "SELECT data, created_at FROM prompt_cache WHERE hash_key = ?",
@@ -102,9 +180,15 @@ class DiskCache:
                             conn.commit()
                             return None
 
-                    data = json.loads(data_str)
-                    data["cached"] = True
-                    return RunResult.model_validate(data)
+                    try:
+                        data = json.loads(data_str)
+                        data["cached"] = True
+                        return RunResult.model_validate(data)
+                    except Exception as parse_err:
+                        logger.warning("Corrupted cache entry for key %s (%s). Deleting...", hash_key, parse_err)
+                        conn.execute("DELETE FROM prompt_cache WHERE hash_key = ?", (hash_key,))
+                        conn.commit()
+                        return None
         except Exception as err:
             logger.warning("Cache read failed for key %s: %s", hash_key, err)
             return None
@@ -117,7 +201,7 @@ class DiskCache:
 
         try:
             now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_connection() as conn:
                 conn.execute(
                     "INSERT OR REPLACE INTO prompt_cache (hash_key, data, created_at) VALUES (?, ?, ?)",
                     (hash_key, json.dumps(result.model_dump()), now_str),
@@ -133,7 +217,7 @@ class DiskCache:
         try:
             cutoff = datetime.now(timezone.utc).timestamp() - self.ttl
             cutoff_str = datetime.fromtimestamp(cutoff, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     "DELETE FROM prompt_cache WHERE created_at < ?",
@@ -145,12 +229,40 @@ class DiskCache:
             logger.warning("Cache prune failed: %s", err)
             return 0
 
-    def clear(self) -> int:
-        """Clear entire cache."""
-        if not self.enabled or not self.db_path.exists():
+    def prune_stale(self, max_entries: int = 50000) -> int:
+        """Prune oldest cache entries if cache size exceeds max_entries."""
+        if not self.enabled or not hasattr(self, "db_path") or not self.db_path.exists():
+            return 0
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT count(*) FROM prompt_cache")
+                row = cursor.fetchone()
+                current_count = row[0] if row else 0
+                if current_count <= max_entries:
+                    return 0
+                excess = current_count - max_entries
+                cursor.execute(
+                    """
+                    DELETE FROM prompt_cache
+                    WHERE hash_key IN (
+                        SELECT hash_key FROM prompt_cache ORDER BY created_at ASC LIMIT ?
+                    )
+                    """,
+                    (excess,),
+                )
+                conn.commit()
+                return cursor.rowcount
+        except Exception as err:
+            logger.warning("Cache stale prune failed: %s", err)
             return 0
 
-        with sqlite3.connect(self.db_path) as conn:
+    def clear(self) -> int:
+        """Clear entire cache."""
+        if not self.enabled or not hasattr(self, "db_path") or not self.db_path.exists():
+            return 0
+
+        with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM prompt_cache")
             count = cursor.rowcount
@@ -161,7 +273,7 @@ class DiskCache:
         """Get number of cached entries."""
         if not self.enabled or not hasattr(self, "db_path") or not self.db_path.exists():
             return 0
-        with sqlite3.connect(self.db_path) as conn:
+        with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT count(*) FROM prompt_cache")
             row = cursor.fetchone()
@@ -186,3 +298,7 @@ class DiskCache:
     async def async_prune_expired(self) -> int:
         """Asynchronously prune expired cache entries without blocking the event loop."""
         return await asyncio.to_thread(self.prune_expired)
+
+    async def async_prune_stale(self, max_entries: int = 50000) -> int:
+        """Asynchronously prune oldest entries if count exceeds limit."""
+        return await asyncio.to_thread(self.prune_stale, max_entries)

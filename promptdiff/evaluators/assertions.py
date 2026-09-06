@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from typing import Literal
 
+from promptdiff.core.exceptions import ConfigurationError
 from promptdiff.core.models import (
     AssertionRule,
     ComparisonResult,
@@ -16,7 +17,7 @@ from promptdiff.core.models import (
 )
 
 
-def parse_assertion_string(expr: str) -> AssertionRule | None:
+def parse_assertion_string(expr: str, strict: bool = False) -> AssertionRule | None:
     """Parse string expression into structured AssertionRule.
 
     Examples:
@@ -26,11 +27,19 @@ def parse_assertion_string(expr: str) -> AssertionRule | None:
         - "similarity >= 0.85" -> metric="similarity", op=">=", val=0.85, is_pct=False
     """
     clean = expr.strip()
+    if not clean:
+        return None
+
     match = re.match(
         r"^([a-zA-Z0-9_\-\.]+)\s*(<=|>=|<|>|==|!=)\s*([+\-]?[0-9]+(?:\.[0-9]+)?)\s*(%|ms|s)?$",
         clean,
     )
     if not match:
+        if strict:
+            raise ConfigurationError(
+                f"Invalid assertion expression '{clean}'. "
+                "Expected format: '<metric> <operator> <number>[unit]' (e.g. 'cost_delta <= 10%', 'latency_delta <= 50ms', 'similarity >= 0.85')"
+            )
         return None
 
     metric = match.group(1).lower()
@@ -48,14 +57,14 @@ def parse_assertion_string(expr: str) -> AssertionRule | None:
     )
 
 
-def parse_assertion_list(assertion_inputs: list[str]) -> list[AssertionRule]:
-    """Parse comma-separated or list of assertion strings."""
+def parse_assertion_list(assertion_inputs: list[str], strict: bool = False) -> list[AssertionRule]:
+    """Parse comma-separated or list of assertion strings with optional strict validation."""
     rules: list[AssertionRule] = []
     for item in assertion_inputs:
         for sub_expr in item.split(","):
             sub_clean = sub_expr.strip()
             if sub_clean:
-                rule = parse_assertion_string(sub_clean)
+                rule = parse_assertion_string(sub_clean, strict=strict)
                 if rule:
                     rules.append(rule)
     return rules

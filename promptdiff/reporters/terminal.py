@@ -27,8 +27,14 @@ def render_terminal_report(
     report: DiffReport,
     console: Console | None = None,
     forecast: str | int | None = None,
+    redact: bool = False,
 ) -> None:
     """Render full regression test report in rich terminal UI."""
+    if redact:
+        from promptdiff.security.redaction import redact_diff_report
+
+        report = redact_diff_report(report)
+
     if console is None:
         console = Console()
 

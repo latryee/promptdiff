@@ -10,6 +10,7 @@ from promptdiff.evaluators.code_sandbox import SafeCodeSandboxEvaluator
 from promptdiff.evaluators.cost import CostEvaluator
 from promptdiff.evaluators.council import CouncilOfJudgesEvaluator
 from promptdiff.evaluators.debate import MultiAgentDebateEvaluator
+from promptdiff.evaluators.exact_match import ExactMatchEvaluator
 from promptdiff.evaluators.fact_graph import FactGraphEvaluator
 from promptdiff.evaluators.fairness import FairnessEvaluator
 from promptdiff.evaluators.faithfulness import FaithfulnessEvaluator
@@ -79,27 +80,52 @@ EVALUATOR_MAP: dict[str, type[BaseEvaluator]] = {
     "code_sandbox": SafeCodeSandboxEvaluator,
     "sandbox": SafeCodeSandboxEvaluator,
     "multilingual": MultilingualConsistencyEvaluator,
+    "exact_match": ExactMatchEvaluator,
+    "exact": ExactMatchEvaluator,
 }
+
+
+def register_evaluator(name: str, evaluator_cls: type[BaseEvaluator]) -> None:
+    """Register a custom evaluator class under one or more alias names."""
+    clean = name.strip().lower()
+    EVALUATOR_MAP[clean] = evaluator_cls
 
 
 def get_evaluators(evaluator_names: list[str]) -> list[BaseEvaluator]:
     """Resolve evaluator names into instantiated BaseEvaluator objects.
 
-    Supports comma-separated strings (e.g. 'json_validity,latency,cost,similarity,llm_judge,faithfulness,security').
+    Supports comma-separated strings (e.g. 'json_validity,latency,cost,similarity,exact_match'),
+    built-in aliases, custom registered evaluators, and dynamic 'module.path:ClassName' references.
     """
     instances: list[BaseEvaluator] = []
     seen = set()
 
     for item in evaluator_names:
         for name in item.split(","):
-            clean_name = name.strip().lower()
+            raw_clean = name.strip()
+            clean_name = raw_clean.lower()
             if not clean_name or clean_name in seen:
                 continue
 
+            # 1. Direct registry lookup
             if clean_name in EVALUATOR_MAP:
                 evaluator_cls = EVALUATOR_MAP[clean_name]
                 instances.append(evaluator_cls())
                 seen.add(clean_name)
+            # 2. Dynamic module:Class import
+            elif ":" in raw_clean:
+                import importlib
+
+                mod_path, cls_name = raw_clean.split(":", 1)
+                try:
+                    mod = importlib.import_module(mod_path.strip())
+                    custom_cls = getattr(mod, cls_name.strip())
+                    if not issubclass(custom_cls, BaseEvaluator):
+                        raise TypeError(f"Custom class {cls_name} must subclass BaseEvaluator")
+                    instances.append(custom_cls())
+                    seen.add(clean_name)
+                except Exception as import_err:
+                    raise ValueError(f"Failed to load custom evaluator '{raw_clean}': {import_err}") from import_err
             else:
                 import difflib
 

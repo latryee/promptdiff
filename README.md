@@ -148,10 +148,32 @@ promptdiff test prompts/system_v1.txt prompts/system_v2.txt \
   --export-markdown report.md
 ```
 
-| Exit Code | CI Status | Action |
-| :---: | :--- | :--- |
-| `0` | **PASSED** | Quality assertions satisfied; safe to merge. |
-| `1` | **REGRESSION** | Regression threshold violated (e.g. cost jump, latency spike, schema break). CI pipeline fails. |
+| Exit Code | CI Status | Category | Description |
+| :---: | :--- | :--- | :--- |
+| `0` | **PASSED** | `SUCCESS` | Quality assertions satisfied; no regressions detected. Safe to merge. |
+| `1` | **REGRESSION** | `REGRESSION_DETECTED` | Regression threshold violated (e.g. cost jump, latency spike, schema break). CI fails. |
+| `2` | **CONFIG_ERROR** | `CONFIGURATION_ERROR` | Malformed dataset, invalid prompt syntax, or bad assertion expression. |
+| `3` | **PROVIDER_ERROR** | `PROVIDER_ERROR` | Provider API authentication failure, rate limit, quota exhaustion, or timeout. |
+| `4` | **INTERNAL_ERROR** | `INTERNAL_ERROR` | Unexpected unhandled runtime exception or critical internal error. |
+
+### ⚙️ Production CI Flags
+
+```bash
+promptdiff test prompts/system_v1.txt prompts/system_v2.txt \
+  --inputs datasets/large_testcases.jsonl \
+  --tags "critical,edge-case" \
+  --limit 200 \
+  --timeout 45.0 \
+  --redact \
+  --experiment-id "release-2026-q3" \
+  --fail-on-regression
+```
+
+- `--tags`: Filter test cases by comma-separated tags (only executes matching cases).
+- `--limit`: Stream and evaluate only the first $N$ matching test cases (ideal for smoke tests).
+- `--timeout`: Enforce per-testcase execution timeout in seconds (default: 30.0s).
+- `--redact`: Mask API keys (OpenAI, Anthropic, Gemini, AWS), Bearer/JWT tokens, and PII (emails, SSNs) from outputs, logs, and exported reports.
+- `--experiment-id`: Track evaluations with a custom run ID for multi-run database telemetry.
 
 ### 🤖 Standalone Pull Request Commenter (`scripts/pr_commenter.py`)
 
@@ -193,7 +215,38 @@ promptdiff recipe pull security-guard   # Prompt Injection & Extraction Defense
 
 ## 🧪 Pytest Plugin Integration
 
-Use `promptdiff` fixtures directly in your standard Python unit test suites:
+PromptDiff includes an official, native pytest plugin (`pytest-promptdiff`) for seamless test automation:
+
+### 1. Declarative Test Marker (`@pytest.mark.promptdiff`)
+
+Define regression tests declaratively on test functions. Quality assertions are automatically verified by the plugin:
+
+```python
+import pytest
+from promptdiff.core.models import TestCase
+
+
+@pytest.mark.promptdiff(
+    v1="prompts/support_v1.txt",
+    v2="prompts/support_v2.txt",
+    dataset=[
+        TestCase(id="tc1", vars={"query": "How do I reset my password?"}),
+        TestCase(id="tc2", vars={"query": "Request billing refund"}),
+    ],
+    model="gpt-4o",
+    eval="json_validity,latency,cost,similarity",
+    assertions=["cost_delta <= 15%", "latency_delta <= 20%"],
+    mock=True,
+)
+def test_support_prompt_regression(report):
+    # 'report' fixture is automatically injected with the DiffReport
+    assert report.verdict.passed
+    assert report.verdict.cost_delta_pct < 15.0
+```
+
+### 2. Programmatic Fixture (`prompt_diff`)
+
+For dynamic setups requiring conditional test generation:
 
 ```python
 # tests/test_prompts.py
@@ -336,6 +389,7 @@ Detailed system design documentation, architectural diagrams, mathematical formu
 PromptDiff operates under an absolute **local-first, zero-telemetry exfiltration** guarantee:
 - **Local Persistence Only:** Evaluation runs and token metrics are written to local SQLite storage (`.promptdiff/telemetry.db`). No prompt contents, outputs, or traces are ever sent to external cloud servers.
 - **Automated Retention Management:** Automatically delete historical records older than $N$ days with `--db-retention-days <N>` or run `promptdiff db prune --days 14`.
+- **Sensitive Data & PII Redaction:** Pass `--redact` (or `redact=True` in Python SDK) to automatically mask API keys (OpenAI, Anthropic, Gemini, AWS, Hugging Face), Bearer/JWT tokens, and sensitive PII (emails, SSNs, credit cards) in terminal outputs, logs, and exported artifacts.
 - **Ephemeral Storage:** Run with `--db-path ":memory:"` for zero disk persistence.
 - Complete security documentation and disclosure SLAs are available in [SECURITY.md](SECURITY.md).
 

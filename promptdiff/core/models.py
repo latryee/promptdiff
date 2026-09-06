@@ -5,12 +5,31 @@ Structured with strict Pydantic v2 validation and typed schemas.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 import time
 import uuid
+from enum import Enum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+
+class ErrorCategory(str, Enum):
+    """Normalized category of LLM execution or evaluation errors."""
+
+    SUCCESS = "success"
+    TIMEOUT = "timeout"
+    RATE_LIMIT = "rate_limit"
+    AUTHENTICATION = "authentication"
+    INVALID_REQUEST = "invalid_request"
+    PROVIDER_ERROR = "provider_error"
+    EVALUATOR_FAILURE = "evaluator_failure"
+    INFRASTRUCTURE = "infrastructure"
+
+
+CostStatus = Literal["known", "estimated", "unavailable"]
 
 
 class TestCase(BaseModel):
@@ -51,6 +70,20 @@ class PromptVersion(BaseModel):
             # Single braces: {key} (if not already part of double brace)
             text = re.sub(rf"(?<!\{{)\{{{re.escape(key)}\}}(?!\}})", str(value), text)
         return text
+
+    def compute_hash(self) -> str:
+        """Compute deterministic SHA-256 fingerprint for this prompt version configuration."""
+        payload = json.dumps(
+            {
+                "template": self.template,
+                "system_prompt": self.system_prompt or "",
+                "model": self.model,
+                "temperature": round(self.temperature, 4),
+                "max_tokens": self.max_tokens,
+            },
+            sort_keys=True,
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 class ConversationVersion(PromptVersion):
@@ -97,6 +130,11 @@ class RunResult(BaseModel):
     model: str
     cached: bool = False
     error: str | None = None
+    error_category: ErrorCategory | None = None
+    finish_reason: str | None = None
+    request_id: str | None = None
+    cost_status: CostStatus = "known"
+    raw_cost_details: dict[str, Any] = Field(default_factory=dict)
     timestamp: float = Field(default_factory=time.time)
 
 
@@ -197,6 +235,38 @@ class RegressionVerdict(BaseModel):
     summary_metrics: dict[str, Any] = Field(default_factory=dict)
 
 
+class RunProvenance(BaseModel):
+    """Environment and system provenance metadata for reproducible evaluation runs."""
+
+    model_config = ConfigDict(frozen=True)
+
+    framework_version: str = "3.5.0"
+    runner_version: str | None = None
+    python_version: str = ""
+    platform: str = ""
+    pricing_version: str = "2025.03"
+    git_commit: str | None = None
+    git_branch: str | None = None
+    git_dirty: bool | None = None
+    timestamp_utc: str = ""
+    timestamp: str | None = None
+    environment: dict[str, str] = Field(default_factory=dict)
+    command: str | None = None
+
+
+class VarianceStats(BaseModel):
+    """Statistical variance across repeated evaluation runs."""
+
+    model_config = ConfigDict(frozen=True)
+
+    metric: str
+    samples: int
+    mean: float
+    std_dev: float
+    min_value: float
+    max_value: float
+
+
 class DiffReport(BaseModel):
     """Complete serialized evaluation and regression report."""
 
@@ -204,11 +274,20 @@ class DiffReport(BaseModel):
 
     schema_version: str = "1.0.0"
     run_id: str = Field(default_factory=lambda: f"run_{uuid.uuid4().hex[:8]}")
+    experiment_id: str | None = None
+    baseline_id: str | None = None
+    candidate_id: str | None = None
     timestamp: str = ""
     v1_name: str
     v2_name: str
     model_v1: str
     model_v2: str
+    v1_prompt_hash: str | None = None
+    v2_prompt_hash: str | None = None
+    dataset_hash: str | None = None
+    provenance: RunProvenance | None = None
+    config_snapshot: dict[str, Any] | None = None
+    variance_stats: dict[str, VarianceStats] | None = None
     comparisons: list[ComparisonResult]
     verdict: RegressionVerdict
     evaluators: list[str]

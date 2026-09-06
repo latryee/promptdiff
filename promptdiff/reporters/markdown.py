@@ -8,8 +8,17 @@ from typing import Optional
 from promptdiff.core.models import DiffReport
 
 
-def generate_markdown_report(report: DiffReport, output_path: Optional[str] = None) -> str:
+def generate_markdown_report(
+    report: DiffReport,
+    output_path: Optional[str] = None,
+    redact: bool = False,
+) -> str:
     """Generate clean Markdown table summary for CI/CD."""
+    if redact:
+        from promptdiff.security.redaction import redact_diff_report
+
+        report = redact_diff_report(report)
+
     v = report.verdict
     status_icon = "✅ **PASSED**" if v.passed else "❌ **REGRESSION DETECTED**"
 

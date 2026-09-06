@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import logging
 from collections.abc import Callable
 from datetime import datetime, timezone
@@ -14,12 +16,14 @@ from promptdiff.core.models import (
     ComparisonResult,
     DiffChunk,
     DiffReport,
+    ErrorCategory,
     EvaluatorScore,
     MultiComparisonResult,
     PromptVersion,
     RunResult,
     TestCase,
 )
+from promptdiff.core.provenance import capture_provenance
 from promptdiff.core.statistics import bootstrap_ci, permutation_test_p_value
 from promptdiff.diff.json_diff import compute_json_diff
 from promptdiff.diff.text_diff import compute_word_diff
@@ -27,8 +31,8 @@ from promptdiff.evaluators.assertions import evaluate_assertions, parse_assertio
 from promptdiff.evaluators.base import BaseEvaluator
 from promptdiff.evaluators.json_validity import extract_json
 from promptdiff.evaluators.registry import get_evaluators
-from promptdiff.pricing import calculate_cost
-from promptdiff.providers.base import BaseLLMProvider
+from promptdiff.pricing import calculate_detailed_cost
+from promptdiff.providers.base import BaseLLMProvider, classify_provider_exception
 
 logger = logging.getLogger("promptdiff.core.runner")
 
@@ -63,6 +67,15 @@ def resolve_concurrency(
     return requested
 
 
+def compute_dataset_hash(test_cases: list[TestCase]) -> str:
+    """Compute deterministic SHA-256 fingerprint for a collection of test cases."""
+    hasher = hashlib.sha256()
+    for tc in sorted(test_cases, key=lambda c: str(c.id)):
+        hasher.update(str(tc.id).encode("utf-8"))
+        hasher.update(json.dumps(tc.vars, sort_keys=True, default=str).encode("utf-8"))
+    return hasher.hexdigest()
+
+
 class PromptDiffRunner:
     """Orchestrates async LLM runs, bounded concurrency, caching, and evaluator scoring."""
 
@@ -79,6 +92,8 @@ class PromptDiffRunner:
         max_concurrency: int = MAX_RUNNER_CONCURRENCY,
         strict_concurrency: bool = False,
         queue_size: int | None = None,
+        timeout: float | None = None,
+        experiment_id: str | None = None,
     ):
         self.v1_prompt = v1_prompt
         self.v2_prompt = v2_prompt
@@ -92,6 +107,8 @@ class PromptDiffRunner:
         self.concurrency = resolve_concurrency(concurrency, max_limit=max_concurrency, strict=strict_concurrency)
         self.queue_size = queue_size or max(self.concurrency * DEFAULT_QUEUE_BUFFER_FACTOR, 16)
         self.semaphore = asyncio.Semaphore(self.concurrency)
+        self.timeout = timeout
+        self.experiment_id = experiment_id
 
     async def _execute_single(
         self,
@@ -120,16 +137,23 @@ class PromptDiffRunner:
         # 2. Execute via Provider under Semaphore limit
         async with self.semaphore:
             try:
-                response = await provider.generate(
+                generate_coro = provider.generate(
                     prompt=rendered,
                     system_prompt=prompt_version.system_prompt,
                     temperature=prompt_version.temperature,
                     max_tokens=prompt_version.max_tokens,
                 )
-                cost = calculate_cost(
+                if self.timeout is not None:
+                    response = await asyncio.wait_for(generate_coro, timeout=self.timeout)
+                else:
+                    response = await generate_coro
+
+                cost_res = calculate_detailed_cost(
                     model_name=prompt_version.model,
                     prompt_tokens=response.prompt_tokens,
                     completion_tokens=response.completion_tokens,
+                    cached_tokens=getattr(response, "cached_tokens", 0),
+                    reasoning_tokens=getattr(response, "reasoning_tokens", 0),
                 )
                 run_result = RunResult(
                     prompt_name=prompt_version.name,
@@ -140,11 +164,48 @@ class PromptDiffRunner:
                     prompt_tokens=response.prompt_tokens,
                     completion_tokens=response.completion_tokens,
                     total_tokens=response.total_tokens,
-                    cost_usd=cost,
+                    cost_usd=cost_res.total_cost,
                     model=prompt_version.model,
                     cached=False,
+                    finish_reason=response.finish_reason,
+                    request_id=response.request_id,
+                    cost_status=cost_res.status,  # type: ignore[arg-type]
+                    raw_cost_details={
+                        "input_cost": cost_res.input_cost,
+                        "output_cost": cost_res.output_cost,
+                        "cached_input_cost": cost_res.cached_input_cost,
+                        "reasoning_cost": cost_res.reasoning_cost,
+                        "pricing_version": cost_res.pricing_version,
+                        "explanation": cost_res.explanation,
+                    },
+                    error_category=ErrorCategory.SUCCESS,
+                )
+            except TimeoutError as err:
+                logger.error(
+                    "Provider '%s' timed out after %ss executing prompt '%s' on case '%s'",
+                    prompt_version.model,
+                    self.timeout,
+                    prompt_version.name,
+                    test_case.id,
+                )
+                run_result = RunResult(
+                    prompt_name=prompt_version.name,
+                    test_case_id=test_case.id,
+                    rendered_prompt=rendered,
+                    output="",
+                    latency_ms=self.timeout * 1000.0 if self.timeout else 0.0,
+                    prompt_tokens=0,
+                    completion_tokens=0,
+                    total_tokens=0,
+                    cost_usd=0.0,
+                    model=prompt_version.model,
+                    cached=False,
+                    error=f"Timeout after {self.timeout}s: {err}",
+                    error_category=ErrorCategory.TIMEOUT,
+                    cost_status="known",
                 )
             except Exception as err:
+                cat = classify_provider_exception(err)
                 logger.error(
                     "Provider '%s' failed executing prompt '%s' on case '%s': %s",
                     prompt_version.model,
@@ -165,6 +226,8 @@ class PromptDiffRunner:
                     model=prompt_version.model,
                     cached=False,
                     error=str(err),
+                    error_category=cat,
+                    cost_status="known",
                 )
 
         # 3. Store in cache if successful
@@ -235,6 +298,16 @@ class PromptDiffRunner:
     ) -> DiffReport:
         """Run batch regression comparison concurrently across all test cases with bounded queue backpressure."""
         total = len(test_cases)
+        dataset_hash = compute_dataset_hash(test_cases)
+        v1_prompt_hash = self.v1_prompt.compute_hash()
+        v2_prompt_hash = self.v2_prompt.compute_hash()
+        provenance = capture_provenance()
+        config_snapshot = {
+            "concurrency": self.concurrency,
+            "timeout": self.timeout,
+            "cache_enabled": self.cache.enabled,
+        }
+
         if total == 0:
             verdict = evaluate_assertions([], self.assertion_rules)
             evaluator_names = [e.name for e in self.evaluators]
@@ -257,6 +330,12 @@ class PromptDiffRunner:
                     "latency_delta_pct": 0.0,
                     "passed_cases": 0,
                 },
+                experiment_id=self.experiment_id,
+                v1_prompt_hash=v1_prompt_hash,
+                v2_prompt_hash=v2_prompt_hash,
+                dataset_hash=dataset_hash,
+                provenance=provenance,
+                config_snapshot=config_snapshot,
             )
 
         completed_count = 0
@@ -337,6 +416,12 @@ class PromptDiffRunner:
                 "asserted_metrics": list(asserted_metrics),
                 "passed_cases": passed_cases,
             },
+            experiment_id=self.experiment_id,
+            v1_prompt_hash=v1_prompt_hash,
+            v2_prompt_hash=v2_prompt_hash,
+            dataset_hash=dataset_hash,
+            provenance=provenance,
+            config_snapshot=config_snapshot,
         )
 
         return report
@@ -356,6 +441,8 @@ class ArenaRunner:
         max_concurrency: int = MAX_RUNNER_CONCURRENCY,
         strict_concurrency: bool = False,
         queue_size: int | None = None,
+        timeout: float | None = None,
+        experiment_id: str | None = None,
     ):
         self.variants = variants
         self.providers = providers
@@ -367,6 +454,8 @@ class ArenaRunner:
         self.concurrency = resolve_concurrency(concurrency, max_limit=max_concurrency, strict=strict_concurrency)
         self.queue_size = queue_size or max(self.concurrency * DEFAULT_QUEUE_BUFFER_FACTOR, 16)
         self.semaphore = asyncio.Semaphore(self.concurrency)
+        self.timeout = timeout
+        self.experiment_id = experiment_id
 
     async def _execute_variant(
         self,
@@ -392,16 +481,23 @@ class ArenaRunner:
 
         async with self.semaphore:
             try:
-                response = await provider.generate(
+                generate_coro = provider.generate(
                     prompt=rendered,
                     system_prompt=pv.system_prompt,
                     temperature=pv.temperature,
                     max_tokens=pv.max_tokens,
                 )
-                cost = calculate_cost(
+                if self.timeout is not None:
+                    response = await asyncio.wait_for(generate_coro, timeout=self.timeout)
+                else:
+                    response = await generate_coro
+
+                cost_res = calculate_detailed_cost(
                     model_name=pv.model,
                     prompt_tokens=response.prompt_tokens,
                     completion_tokens=response.completion_tokens,
+                    cached_tokens=getattr(response, "cached_tokens", 0),
+                    reasoning_tokens=getattr(response, "reasoning_tokens", 0),
                 )
                 run_res = RunResult(
                     prompt_name=variant_name,
@@ -412,10 +508,48 @@ class ArenaRunner:
                     prompt_tokens=response.prompt_tokens,
                     completion_tokens=response.completion_tokens,
                     total_tokens=response.total_tokens,
-                    cost_usd=cost,
+                    cost_usd=cost_res.total_cost,
                     model=pv.model,
+                    cached=False,
+                    finish_reason=response.finish_reason,
+                    request_id=response.request_id,
+                    cost_status=cost_res.status,  # type: ignore[arg-type]
+                    raw_cost_details={
+                        "input_cost": cost_res.input_cost,
+                        "output_cost": cost_res.output_cost,
+                        "cached_input_cost": cost_res.cached_input_cost,
+                        "reasoning_cost": cost_res.reasoning_cost,
+                        "pricing_version": cost_res.pricing_version,
+                        "explanation": cost_res.explanation,
+                    },
+                    error_category=ErrorCategory.SUCCESS,
+                )
+            except TimeoutError as e:
+                logger.error(
+                    "Variant '%s' (model '%s') timed out after %ss on case '%s'",
+                    variant_name,
+                    pv.model,
+                    self.timeout,
+                    test_case.id,
+                )
+                run_res = RunResult(
+                    prompt_name=variant_name,
+                    test_case_id=test_case.id,
+                    rendered_prompt=rendered,
+                    output="",
+                    latency_ms=self.timeout * 1000.0 if self.timeout else 0.0,
+                    prompt_tokens=0,
+                    completion_tokens=0,
+                    total_tokens=0,
+                    cost_usd=0.0,
+                    model=pv.model,
+                    cached=False,
+                    error=f"Timeout after {self.timeout}s: {e}",
+                    error_category=ErrorCategory.TIMEOUT,
+                    cost_status="known",
                 )
             except Exception as e:
+                cat = classify_provider_exception(e)
                 logger.error(
                     "Variant '%s' (model '%s') execution failed on case '%s': %s",
                     variant_name,
@@ -434,7 +568,10 @@ class ArenaRunner:
                     total_tokens=0,
                     cost_usd=0.0,
                     model=pv.model,
+                    cached=False,
                     error=str(e),
+                    error_category=cat,
+                    cost_status="known",
                 )
 
         if self.cache.enabled and not run_res.error:

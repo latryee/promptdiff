@@ -16,6 +16,18 @@ PromptDiff enforces strict Semantic Versioning (`MAJOR.MINOR.PATCH`):
 
 ## [3.5.0] - 2026-09-06
 
+### Enterprise Architecture & Reliability
+- **Standardized CI Exit Codes**: Introduced `ExitCode` enum with standardized exit statuses: `0` (Success), `1` (Regression Detected), `2` (Configuration / Dataset Syntax Error), `3` (Provider API / Auth / Rate Limit Error), and `4` (Internal System Error).
+- **Streaming Dataset Engine & Dynamic Filtering**: Added lazy file streaming via `stream_dataset()` for arbitrary scale JSONL/YAML/CSV datasets with negligible memory footprint. Added `--tags` filtering and `--limit` test-case truncation alongside line-numbered `DatasetError` diagnostics.
+- **Security & PII Redaction Engine**: Implemented `promptdiff.security.redaction` with automated regex masking for LLM provider API keys (OpenAI, Anthropic, Gemini, AWS, Hugging Face), Bearer/JWT tokens, and PII (emails, SSNs, credit cards). Integrated via `--redact` CLI flag, SDK parameters, and `SecretRedactingFilter` in logging.
+- **Runtime Execution Provenance**: Enriched `DiffReport` and `RunResult` with full execution provenance (`RunProvenance`), capturing Git commit SHA, branch, dirty status, machine architecture, OS, Python/PromptDiff versions, dataset SHA-256 hash, and configuration snapshots.
+- **SQLite Cache Resilience & Self-Healing**: Hardened `DiskCache` with schema v2 (`cache_meta`), SQLite WAL mode, 30s busy timeouts, self-healing decode error eviction, automatic corruption quarantine (`cache.sqlite.corrupt.<timestamp>`), and bounded TTL pruning.
+- **Database Schema Migrations**: Introduced formal `schema_migrations` tracking in SQLite telemetry database with automated migration to v2, persisting experiment IDs, baseline IDs, model parameters, and evaluator lists.
+- **Exact Match Evaluator**: Added deterministic `ExactMatchEvaluator` supporting case-folding, whitespace collapsing, punctuation normalization, and unified diff output generation. Added dynamic evaluator class loading via `"module.path:ClassName"`.
+- **Advanced Pricing & Reasoning Token Support**: Upgraded pricing registry to `2025.03` rates with support for cached input tokens, prompt reasoning tokens (o1, o3-mini, DeepSeek-R1), and runtime custom pricing overrides (`register_model_price`).
+- **Pytest Plugin Modernization**: Added declarative `@pytest.mark.promptdiff` test marker, `report` and `diff_report` fixtures, and automated post-test regression assertion enforcement.
+- **Provider Architecture & Capabilities**: Added `ProviderCapabilities` introspection (`supports_streaming`, `supports_system_prompt`, `supports_tools`, `supports_json_schema`) and unified provider exception classification (`classify_provider_exception`).
+
 ### Security & Packaging
 - **PyPI Package Renamed to `promptdiff-eval`**: Official distribution package renamed to `promptdiff-eval` to secure reliable installation via `pip install promptdiff-eval`.
 - **FastAPI Server Security Hardening**: Added API key authentication (`--api-key` / `PROMPTDIFF_API_KEY`), sliding-window IP rate limiting (100 req/min), configurable CORS policies, and safe-by-default localhost binding (`127.0.0.1`).

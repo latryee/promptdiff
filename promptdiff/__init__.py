@@ -15,6 +15,14 @@ if sys.platform == "win32":
 __version__ = "3.5.0"
 __author__ = "promptdiff team"
 
+from promptdiff.core.config import (
+    DatasetError,
+    ProjectConfig,
+    load_dataset,
+    load_project_config,
+    load_prompt_file,
+    stream_dataset,
+)
 from promptdiff.core.db import TelemetryDatabase
 from promptdiff.core.exceptions import (
     CacheError,
@@ -25,16 +33,36 @@ from promptdiff.core.exceptions import (
     ProviderExecutionError,
     RunnerError,
 )
+from promptdiff.core.exit_codes import (
+    EXIT_CONFIG_ERROR,
+    EXIT_INTERNAL_ERROR,
+    EXIT_PROVIDER_ERROR,
+    EXIT_REGRESSION,
+    EXIT_SUCCESS,
+    ExitCode,
+)
 from promptdiff.core.models import (
     ArenaReport,
     ComparisonResult,
     ConversationVersion,
     DiffReport,
+    ErrorCategory,
     MultiComparisonResult,
     PromptVersion,
     RegressionVerdict,
+    RunProvenance,
     RunResult,
     TestCase,
+    VarianceStats,
+)
+from promptdiff.pricing import (
+    CostCalculationResult,
+    ModelPrice,
+    calculate_cost,
+    calculate_detailed_cost,
+    is_known_model,
+    load_pricing_overrides,
+    register_model_pricing,
 )
 from promptdiff.sdk import (
     analyze_cache_impact,
@@ -94,6 +122,12 @@ from promptdiff.sdk import (
     verify_watermark,
     watermark,
 )
+from promptdiff.security.redaction import (
+    SecretRedactingFilter,
+    redact_data,
+    redact_diff_report,
+    redact_text,
+)
 
 __all__ = [
     "ArenaReport",
@@ -103,15 +137,31 @@ __all__ = [
     "ConversationVersion",
     "DatasetLoadError",
     "DiffReport",
+    "ErrorCategory",
     "EvaluatorExecutionError",
+    "ExitCode",
+    "EXIT_SUCCESS",
+    "EXIT_REGRESSION",
+    "EXIT_CONFIG_ERROR",
+    "EXIT_PROVIDER_ERROR",
+    "EXIT_INTERNAL_ERROR",
     "MultiComparisonResult",
     "PromptDiffError",
     "PromptVersion",
     "ProviderExecutionError",
     "RegressionVerdict",
+    "RunProvenance",
     "RunnerError",
     "RunResult",
     "TestCase",
+    "VarianceStats",
+    "CostCalculationResult",
+    "ModelPrice",
+    "calculate_cost",
+    "calculate_detailed_cost",
+    "is_known_model",
+    "register_model_pricing",
+    "load_pricing_overrides",
     "TelemetryDatabase",
     "analyze_cache_impact",
     "async_compare",
@@ -169,5 +219,15 @@ __all__ = [
     "scaffold_editor_extensions",
     "export_executive_report",
     "verify_watermark",
+    "load_dataset",
+    "stream_dataset",
+    "load_prompt_file",
+    "load_project_config",
+    "ProjectConfig",
+    "DatasetError",
+    "redact_text",
+    "redact_data",
+    "redact_diff_report",
+    "SecretRedactingFilter",
     "__version__",
 ]

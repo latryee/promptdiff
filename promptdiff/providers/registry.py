@@ -12,6 +12,14 @@ from promptdiff.providers.mock_provider import MockProvider
 from promptdiff.providers.ollama_provider import OllamaProvider
 from promptdiff.providers.openai_provider import OpenAIProvider
 
+CUSTOM_PROVIDER_REGISTRY: dict[str, type[BaseLLMProvider]] = {}
+
+
+def register_provider(name_or_prefix: str, provider_cls: type[BaseLLMProvider]) -> None:
+    """Register a custom LLM provider class under a name or prefix key."""
+    clean = name_or_prefix.strip().lower()
+    CUSTOM_PROVIDER_REGISTRY[clean] = provider_cls
+
 
 def get_provider(
     model_name: str = "gpt-4o",
@@ -23,12 +31,19 @@ def get_provider(
     """Resolve and return appropriate BaseLLMProvider instance.
 
     If force_mock is True, or if model_name starts with 'mock', returns MockProvider.
-    Otherwise resolves OpenAI, Anthropic, Gemini, or Ollama automatically.
+    Otherwise resolves custom registered providers, OpenAI, Anthropic, Gemini, or Ollama automatically.
     """
     clean_name = model_name.strip().lower()
 
     if force_mock or clean_name.startswith("mock"):
         return MockProvider(model_name=model_name, **kwargs)
+
+    # Check custom provider registry
+    if clean_name in CUSTOM_PROVIDER_REGISTRY:
+        return CUSTOM_PROVIDER_REGISTRY[clean_name](model_name=model_name, api_key=api_key, base_url=base_url, **kwargs)
+    for prefix, prov_cls in CUSTOM_PROVIDER_REGISTRY.items():
+        if clean_name.startswith(prefix):
+            return prov_cls(model_name=model_name, api_key=api_key, base_url=base_url, **kwargs)
 
     # Gemini
     if clean_name.startswith("gemini") or "google" in clean_name:

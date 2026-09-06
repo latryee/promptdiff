@@ -36,7 +36,13 @@ from promptdiff.cli.formatters import console, print_init_success, print_pricing
 from promptdiff.cli.history import track_git_history
 from promptdiff.core.cache import DiskCache
 from promptdiff.core.config import load_dataset, load_prompt_file
-from promptdiff.core.models import PromptVersion
+from promptdiff.core.exit_codes import (
+    EXIT_CONFIG_ERROR,
+    EXIT_INTERNAL_ERROR,
+    EXIT_PROVIDER_ERROR,
+    EXIT_REGRESSION,
+)
+from promptdiff.core.models import ErrorCategory, PromptVersion
 from promptdiff.core.runner import ArenaRunner, PromptDiffRunner
 from promptdiff.evaluators.answer_relevance import AnswerRelevanceEvaluator
 from promptdiff.evaluators.faithfulness import FaithfulnessEvaluator
@@ -131,6 +137,11 @@ def _run_test_suite(
     forecast: str | None,
     estimate: bool = False,
     db_retention_days: int | None = None,
+    tags: list[str] | None = None,
+    limit: int | None = None,
+    timeout: float | None = None,
+    redact: bool = False,
+    experiment_id: str | None = None,
 ) -> None:
     """Core test execution logic shared between `promptdiff test` and `promptdiff run`."""
     m1 = model_v1 or model
@@ -148,10 +159,10 @@ def _run_test_suite(
         v2_prompt.system_prompt = sys_text
 
     try:
-        test_cases = load_dataset(inputs)
+        test_cases = load_dataset(inputs, tags=tags, limit=limit)
     except Exception as e:
-        console.print(f"[bold red]Error loading dataset:[/bold red] {e}")
-        raise typer.Exit(code=1)
+        console.print(f"[bold red]Configuration / Dataset Error:[/bold red] {e}")
+        raise typer.Exit(code=EXIT_CONFIG_ERROR)
 
     if estimate:
         from promptdiff.pricing import calculate_cost
@@ -222,6 +233,8 @@ def _run_test_suite(
         assertions=assertions,
         cache=cache,
         concurrency=concurrency,
+        timeout=timeout,
+        experiment_id=experiment_id,
     )
 
     with Progress(
@@ -239,20 +252,24 @@ def _run_test_suite(
         def on_step(current: int, total: int) -> None:
             progress.update(task, completed=current)
 
-        report = asyncio.run(runner.run(test_cases, progress_cb=on_step))
+        try:
+            report = asyncio.run(runner.run(test_cases, progress_cb=on_step))
+        except Exception as err:
+            console.print(f"[bold red]Internal Runner Failure:[/bold red] {err}")
+            raise typer.Exit(code=EXIT_INTERNAL_ERROR)
 
-    render_terminal_report(report, console=console, forecast=forecast)
+    render_terminal_report(report, console=console, forecast=forecast, redact=redact)
 
     if export_html:
-        path = generate_html_report(report, export_html)
+        path = generate_html_report(report, export_html, redact=redact)
         console.print(f"[bold green][+] HTML Report generated:[/bold green] [cyan]{path}[/cyan]")
 
     if export_markdown:
-        generate_markdown_report(report, export_markdown)
+        generate_markdown_report(report, export_markdown, redact=redact)
         console.print(f"[bold green][+] Markdown Report generated:[/bold green] [cyan]{export_markdown}[/cyan]")
 
     if export_json:
-        generate_json_report(report, export_json)
+        generate_json_report(report, export_json, redact=redact)
         console.print(f"[bold green][+] JSON Report generated:[/bold green] [cyan]{export_json}[/cyan]")
 
     if export_bundle:
@@ -295,11 +312,23 @@ def _run_test_suite(
     except Exception:
         pass
 
+    # Check for upstream provider failure across all test cases
+    has_provider_error = any(
+        (c.v1_result.error_category in (ErrorCategory.AUTHENTICATION, ErrorCategory.PROVIDER_ERROR) and not mock)
+        or (c.v2_result.error_category in (ErrorCategory.AUTHENTICATION, ErrorCategory.PROVIDER_ERROR) and not mock)
+        for c in report.comparisons
+    )
+    if has_provider_error:
+        console.print(
+            f"[bold red][!] Upstream Provider Failure detected. Exiting with code {EXIT_PROVIDER_ERROR}.[/bold red]"
+        )
+        raise typer.Exit(code=EXIT_PROVIDER_ERROR)
+
     if fail_on_regression and not report.verdict.passed:
         console.print(
-            "[bold red][!] CI/CD Quality Gate: Regression threshold violated. Exiting with code 1.[/bold red]"
+            f"[bold red][!] CI/CD Quality Gate: Regression threshold violated. Exiting with code {EXIT_REGRESSION}.[/bold red]"
         )
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=EXIT_REGRESSION)
 
 
 @app.command(name="test")
@@ -352,6 +381,11 @@ def test_cmd(
     db_retention_days: int | None = typer.Option(
         None, "--db-retention-days", help="Automatically prune telemetry database runs older than N days"
     ),
+    tags: list[str] | None = typer.Option(None, "--tags", help="Filter dataset by tags"),
+    limit: int | None = typer.Option(None, "--limit", help="Limit maximum number of test cases to run"),
+    timeout: float | None = typer.Option(None, "--timeout", help="Per-request execution timeout in seconds"),
+    redact: bool = typer.Option(False, "--redact/--no-redact", help="Mask API keys, secrets, and PII in reports"),
+    experiment_id: str | None = typer.Option(None, "--experiment-id", help="Explicit experiment identifier"),
 ) -> None:
     """Run regression comparison between two prompt versions across test cases."""
     _run_test_suite(
@@ -384,6 +418,11 @@ def test_cmd(
         forecast=forecast,
         estimate=estimate,
         db_retention_days=db_retention_days,
+        tags=tags,
+        limit=limit,
+        timeout=timeout,
+        redact=redact,
+        experiment_id=experiment_id,
     )
 
 
@@ -428,6 +467,11 @@ def run_cmd(
     estimate: bool = typer.Option(
         False, "--estimate", help="Pre-execution local token and cost estimation with confirmation prompt"
     ),
+    tags: list[str] | None = typer.Option(None, "--tags", help="Filter dataset by tags"),
+    limit: int | None = typer.Option(None, "--limit", help="Limit maximum number of test cases to run"),
+    timeout: float | None = typer.Option(None, "--timeout", help="Per-request execution timeout in seconds"),
+    redact: bool = typer.Option(False, "--redact/--no-redact", help="Mask API keys, secrets, and PII in reports"),
+    experiment_id: str | None = typer.Option(None, "--experiment-id", help="Explicit experiment identifier"),
 ) -> None:
     """Run regression comparison between prompt versions (alias for `promptdiff test`)."""
     _run_test_suite(
@@ -459,6 +503,11 @@ def run_cmd(
         rubric=rubric,
         forecast=forecast,
         estimate=estimate,
+        tags=tags,
+        limit=limit,
+        timeout=timeout,
+        redact=redact,
+        experiment_id=experiment_id,
     )
 
 
@@ -477,7 +526,7 @@ def fuzz_cmd(
         payloads_path = Path(payloads)
         if not payloads_path.is_file():
             console.print(f"[bold red]Payloads file not found: {payloads}[/bold red]")
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=EXIT_CONFIG_ERROR)
         raw = payloads_path.read_text(encoding="utf-8")
         if payloads_path.suffix.lower() in (".yaml", ".yml"):
             data = yaml.safe_load(raw)
@@ -575,6 +624,7 @@ def fuzz_cmd(
 @app.command(name="cache-sim")
 def cache_sim_cmd(
     prompt: str = typer.Argument(..., help="Path to prompt template file to analyze"),
+    inputs: str | None = typer.Option(None, "--inputs", "-i", help="Optional path to test dataset (.jsonl)"),
     model: str = typer.Option("claude-3-5-sonnet", "--model", "-m", help="Target LLM provider engine"),
     volume: str = typer.Option("1M", "--volume", "-v", help="Projected daily request volume"),
 ) -> None:
@@ -582,9 +632,21 @@ def cache_sim_cmd(
     from promptdiff.pricing import parse_volume_string
 
     vol = parse_volume_string(volume)
-    prompt_obj = load_prompt_file(prompt, version_name="cache_target", model=model)
+    try:
+        prompt_obj = load_prompt_file(prompt, version_name="cache_target", model=model)
+    except Exception as e:
+        console.print(f"[bold red]Configuration Error:[/bold red] {e}")
+        raise typer.Exit(code=EXIT_CONFIG_ERROR)
 
-    sim = PromptCacheSimulator(prompt_version=prompt_obj, model_name=model, daily_volume=vol)
+    test_cases = None
+    if inputs:
+        try:
+            test_cases = load_dataset(inputs)
+        except Exception as e:
+            console.print(f"[bold red]Configuration / Dataset Error:[/bold red] {e}")
+            raise typer.Exit(code=EXIT_CONFIG_ERROR)
+
+    sim = PromptCacheSimulator(prompt_version=prompt_obj, test_cases=test_cases, model_name=model, daily_volume=vol)
     rep = sim.analyze_and_optimize()
 
     table = Table(
@@ -1135,7 +1197,7 @@ def diff_cmd(
 
     if not p1.is_file() or not p2.is_file():
         console.print("[bold red]Both arguments must be valid files.[/bold red]")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=EXIT_CONFIG_ERROR)
 
     t1 = p1.read_text(encoding="utf-8")
     t2 = p2.read_text(encoding="utf-8")
@@ -1357,8 +1419,12 @@ def mcts_cmd(
     from promptdiff.core.config import load_dataset, load_prompt_file
     from promptdiff.optimizer.mcts import MCTSPromptOptimizer
 
-    pv = load_prompt_file(prompt, version_name="initial")
-    dataset = load_dataset(inputs)
+    try:
+        pv = load_prompt_file(prompt, version_name="initial")
+        dataset = load_dataset(inputs)
+    except Exception as e:
+        console.print(f"[bold red]Configuration / Dataset Error:[/bold red] {e}")
+        raise typer.Exit(code=EXIT_CONFIG_ERROR)
 
     console.print(f"[bold cyan]⚡ Running MCTS Active Prompt Optimization ({iterations} iterations)...[/bold cyan]")
     optimizer = MCTSPromptOptimizer(
@@ -1396,7 +1462,11 @@ def redteam_cmd(
     from promptdiff.core.config import load_prompt_file
     from promptdiff.security.attack_tree import MultiTurnAttackTreeFuzzer
 
-    pv = load_prompt_file(prompt, version_name="target")
+    try:
+        pv = load_prompt_file(prompt, version_name="target")
+    except Exception as e:
+        console.print(f"[bold red]Configuration Error:[/bold red] {e}")
+        raise typer.Exit(code=EXIT_CONFIG_ERROR)
     console.print("[bold red]⚡ Launching Multi-Turn TAP Attack Tree against target prompt...[/bold red]")
 
     fuzzer = MultiTurnAttackTreeFuzzer(target_prompt=pv.template, model_name=model, max_turns=turns, force_mock=mock)
@@ -1489,7 +1559,12 @@ def hard_negatives_cmd(
     from promptdiff.core.config import load_prompt_file
     from promptdiff.generators.hard_negatives import HardNegativeGenerator
 
-    pv = load_prompt_file(prompt, version_name="target")
+    try:
+        pv = load_prompt_file(prompt, version_name="target")
+    except Exception as e:
+        console.print(f"[bold red]Configuration Error:[/bold red] {e}")
+        raise typer.Exit(code=EXIT_CONFIG_ERROR)
+
     gen = HardNegativeGenerator()
     suite = gen.generate(pv.template)
 
@@ -1518,10 +1593,14 @@ def executive_cmd(
     from promptdiff.providers.registry import get_provider
     from promptdiff.reporters.executive import ExecutiveReportExporter
 
-    cfg = load_project_config(config)
-    v1_pv = load_prompt_file(cfg.v1_prompt or "prompts/system_v1.txt", version_name="v1")
-    v2_pv = load_prompt_file(cfg.v2_prompt or "prompts/system_v2.txt", version_name="v2")
-    cases = load_dataset(cfg.dataset or "testcases.jsonl")
+    try:
+        cfg = load_project_config(config)
+        v1_pv = load_prompt_file(cfg.v1_prompt or "prompts/system_v1.txt", version_name="v1")
+        v2_pv = load_prompt_file(cfg.v2_prompt or "prompts/system_v2.txt", version_name="v2")
+        cases = load_dataset(cfg.dataset or "testcases.jsonl")
+    except Exception as e:
+        console.print(f"[bold red]Configuration / Dataset Error:[/bold red] {e}")
+        raise typer.Exit(code=EXIT_CONFIG_ERROR)
     provider = get_provider(cfg.model, force_mock=True)
 
     runner = PromptDiffRunner(
@@ -1640,8 +1719,12 @@ def cache_impact_cmd(
     """Analyze KV-cache prefix divergence and calculate financial cache invalidation impact."""
     from promptdiff.optimizer.cache_impact import analyze_cache_impact
 
-    p1 = load_prompt_file(v1, version_name="v1").template
-    p2 = load_prompt_file(v2, version_name="v2").template
+    try:
+        p1 = load_prompt_file(v1, version_name="v1").template
+        p2 = load_prompt_file(v2, version_name="v2").template
+    except Exception as e:
+        console.print(f"[bold red]Configuration Error:[/bold red] {e}")
+        raise typer.Exit(code=EXIT_CONFIG_ERROR)
 
     res = analyze_cache_impact(p1, p2, model=model, daily_volume=daily_volume)
 
@@ -1688,8 +1771,12 @@ def replay_traces_cmd(
     """Replay production OpenTelemetry / Langfuse traces as regression test cases."""
     from promptdiff.production.trace_replay import ProductionTraceReplayer
 
-    p1 = load_prompt_file(v1, version_name="v1").template
-    p2 = load_prompt_file(v2, version_name="v2").template
+    try:
+        p1 = load_prompt_file(v1, version_name="v1").template
+        p2 = load_prompt_file(v2, version_name="v2").template
+    except Exception as e:
+        console.print(f"[bold red]Configuration Error:[/bold red] {e}")
+        raise typer.Exit(code=EXIT_CONFIG_ERROR)
 
     replayer = ProductionTraceReplayer(mask_pii=True)
     report = replayer.ingest_traces(traces, limit=limit)

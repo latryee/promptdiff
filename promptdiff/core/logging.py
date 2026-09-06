@@ -117,6 +117,7 @@ def setup_logging(
     level: str = "INFO",
     logger_name: str | None = None,
     stream: Any = None,
+    redact: bool = True,
 ) -> logging.Logger:
     """Configure logger with structured JSON or human-friendly text format.
 
@@ -125,6 +126,7 @@ def setup_logging(
         level: Logging level string (DEBUG, INFO, WARNING, ERROR, CRITICAL).
         logger_name: Name of target logger (None for root logger).
         stream: Output stream (defaults to sys.stderr).
+        redact: Whether to automatically redact secrets and credentials from logs.
 
     Returns:
         The configured logger instance.
@@ -140,6 +142,11 @@ def setup_logging(
 
     handler = logging.StreamHandler(stream or sys.stderr)
     handler.setLevel(numeric_level)
+
+    if redact:
+        from promptdiff.security.redaction import SecretRedactingFilter
+
+        handler.addFilter(SecretRedactingFilter())
 
     if log_format.lower() == "json":
         handler.setFormatter(JSONLogFormatter())

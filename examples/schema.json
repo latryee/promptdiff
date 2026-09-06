@@ -83,6 +83,21 @@
       "title": "DiffChunk",
       "type": "object"
     },
+    "ErrorCategory": {
+      "description": "Normalized category of LLM execution or evaluation errors.",
+      "enum": [
+        "success",
+        "timeout",
+        "rate_limit",
+        "authentication",
+        "invalid_request",
+        "provider_error",
+        "evaluator_failure",
+        "infrastructure"
+      ],
+      "title": "ErrorCategory",
+      "type": "string"
+    },
     "EvaluatorScore": {
       "description": "Result of an evaluation metric comparison.",
       "properties": {
@@ -208,6 +223,117 @@
       "title": "RegressionVerdict",
       "type": "object"
     },
+    "RunProvenance": {
+      "description": "Environment and system provenance metadata for reproducible evaluation runs.",
+      "properties": {
+        "framework_version": {
+          "default": "3.5.0",
+          "title": "Framework Version",
+          "type": "string"
+        },
+        "runner_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Runner Version"
+        },
+        "python_version": {
+          "default": "",
+          "title": "Python Version",
+          "type": "string"
+        },
+        "platform": {
+          "default": "",
+          "title": "Platform",
+          "type": "string"
+        },
+        "pricing_version": {
+          "default": "2025.03",
+          "title": "Pricing Version",
+          "type": "string"
+        },
+        "git_commit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Git Commit"
+        },
+        "git_branch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Git Branch"
+        },
+        "git_dirty": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Git Dirty"
+        },
+        "timestamp_utc": {
+          "default": "",
+          "title": "Timestamp Utc",
+          "type": "string"
+        },
+        "timestamp": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timestamp"
+        },
+        "environment": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Environment",
+          "type": "object"
+        },
+        "command": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Command"
+        }
+      },
+      "title": "RunProvenance",
+      "type": "object"
+    },
     "RunResult": {
       "description": "Output and performance telemetry from an LLM run.",
       "properties": {
@@ -267,6 +393,56 @@
           ],
           "default": null,
           "title": "Error"
+        },
+        "error_category": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ErrorCategory"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "finish_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finish Reason"
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
+        "cost_status": {
+          "default": "known",
+          "enum": [
+            "known",
+            "estimated",
+            "unavailable"
+          ],
+          "title": "Cost Status",
+          "type": "string"
+        },
+        "raw_cost_details": {
+          "additionalProperties": true,
+          "title": "Raw Cost Details",
+          "type": "object"
         },
         "timestamp": {
           "title": "Timestamp",
@@ -340,6 +516,45 @@
       },
       "title": "TestCase",
       "type": "object"
+    },
+    "VarianceStats": {
+      "description": "Statistical variance across repeated evaluation runs.",
+      "properties": {
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "samples": {
+          "title": "Samples",
+          "type": "integer"
+        },
+        "mean": {
+          "title": "Mean",
+          "type": "number"
+        },
+        "std_dev": {
+          "title": "Std Dev",
+          "type": "number"
+        },
+        "min_value": {
+          "title": "Min Value",
+          "type": "number"
+        },
+        "max_value": {
+          "title": "Max Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "metric",
+        "samples",
+        "mean",
+        "std_dev",
+        "min_value",
+        "max_value"
+      ],
+      "title": "VarianceStats",
+      "type": "object"
     }
   },
   "description": "Complete serialized evaluation and regression report.",
@@ -352,6 +567,42 @@
     "run_id": {
       "title": "Run Id",
       "type": "string"
+    },
+    "experiment_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Experiment Id"
+    },
+    "baseline_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Baseline Id"
+    },
+    "candidate_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Candidate Id"
     },
     "timestamp": {
       "default": "",
@@ -373,6 +624,81 @@
     "model_v2": {
       "title": "Model V2",
       "type": "string"
+    },
+    "v1_prompt_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "V1 Prompt Hash"
+    },
+    "v2_prompt_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "V2 Prompt Hash"
+    },
+    "dataset_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Dataset Hash"
+    },
+    "provenance": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RunProvenance"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "config_snapshot": {
+      "anyOf": [
+        {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Config Snapshot"
+    },
+    "variance_stats": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/VarianceStats"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Variance Stats"
     },
     "comparisons": {
       "items": {

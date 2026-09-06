@@ -9,9 +9,12 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from typing import Union
+from typing import Any, Union
 
 logger = logging.getLogger("promptdiff.pricing")
+
+
+PRICING_TABLE_VERSION: str = "2025.03"
 
 
 @dataclass(frozen=True)
@@ -20,6 +23,8 @@ class ModelPrice:
 
     input_per_million: float
     output_per_million: float
+    cached_input_per_million: float | None = None
+    reasoning_per_million: float | None = None
     description: str = ""
 
     @property
@@ -29,6 +34,33 @@ class ModelPrice:
     @property
     def output_per_token(self) -> float:
         return self.output_per_million / 1_000_000.0
+
+    @property
+    def cached_input_per_token(self) -> float:
+        if self.cached_input_per_million is not None:
+            return self.cached_input_per_million / 1_000_000.0
+        return self.input_per_token
+
+    @property
+    def reasoning_per_token(self) -> float:
+        if self.reasoning_per_million is not None:
+            return self.reasoning_per_million / 1_000_000.0
+        return self.output_per_token
+
+
+@dataclass(frozen=True)
+class CostCalculationResult:
+    """Detailed financial provenance and token calculation breakdown."""
+
+    total_cost: float
+    input_cost: float
+    output_cost: float
+    cached_input_cost: float
+    reasoning_cost: float
+    status: str  # "known", "estimated", "unavailable"
+    pricing_version: str
+    model: str
+    explanation: str
 
 
 @dataclass(frozen=True)
@@ -52,61 +84,158 @@ class CostForecast:
 # Pricing Registry (Per 1 Million Tokens in USD)
 MODEL_PRICING_TABLE: dict[str, ModelPrice] = {
     # OpenAI Models
-    "gpt-4.5-preview": ModelPrice(75.00, 150.00, "OpenAI GPT-4.5 preview"),
-    "gpt-4.5": ModelPrice(75.00, 150.00, "OpenAI GPT-4.5"),
-    "gpt-4o": ModelPrice(2.50, 10.00, "OpenAI GPT-4o flagship multimodal"),
-    "gpt-4o-2024-08-06": ModelPrice(2.50, 10.00, "OpenAI GPT-4o checkpoint"),
-    "gpt-4o-mini": ModelPrice(0.15, 0.60, "OpenAI GPT-4o-mini fast & affordable"),
-    "gpt-4-turbo": ModelPrice(10.00, 30.00, "OpenAI GPT-4 Turbo"),
-    "gpt-4": ModelPrice(30.00, 60.00, "OpenAI GPT-4 legacy"),
-    "gpt-3.5-turbo": ModelPrice(0.50, 1.50, "OpenAI GPT-3.5 Turbo"),
-    "o1": ModelPrice(15.00, 60.00, "OpenAI o1 reasoning flagship"),
-    "o1-preview": ModelPrice(15.00, 60.00, "OpenAI o1 reasoning preview"),
-    "o1-mini": ModelPrice(3.00, 12.00, "OpenAI o1-mini fast reasoning"),
-    "o3-mini": ModelPrice(1.10, 4.40, "OpenAI o3-mini efficient reasoning"),
+    "gpt-4.5-preview": ModelPrice(75.00, 150.00, description="OpenAI GPT-4.5 preview"),
+    "gpt-4.5": ModelPrice(75.00, 150.00, description="OpenAI GPT-4.5"),
+    "gpt-4o": ModelPrice(2.50, 10.00, cached_input_per_million=1.25, description="OpenAI GPT-4o flagship multimodal"),
+    "gpt-4o-2024-08-06": ModelPrice(2.50, 10.00, cached_input_per_million=1.25, description="OpenAI GPT-4o checkpoint"),
+    "gpt-4o-mini": ModelPrice(
+        0.15, 0.60, cached_input_per_million=0.075, description="OpenAI GPT-4o-mini fast & affordable"
+    ),
+    "gpt-4-turbo": ModelPrice(10.00, 30.00, description="OpenAI GPT-4 Turbo"),
+    "gpt-4": ModelPrice(30.00, 60.00, description="OpenAI GPT-4 legacy"),
+    "gpt-3.5-turbo": ModelPrice(0.50, 1.50, description="OpenAI GPT-3.5 Turbo"),
+    "o1": ModelPrice(
+        15.00,
+        60.00,
+        cached_input_per_million=7.50,
+        reasoning_per_million=60.00,
+        description="OpenAI o1 reasoning flagship",
+    ),
+    "o1-preview": ModelPrice(
+        15.00,
+        60.00,
+        cached_input_per_million=7.50,
+        reasoning_per_million=60.00,
+        description="OpenAI o1 reasoning preview",
+    ),
+    "o1-mini": ModelPrice(
+        3.00,
+        12.00,
+        cached_input_per_million=1.50,
+        reasoning_per_million=12.00,
+        description="OpenAI o1-mini fast reasoning",
+    ),
+    "o3-mini": ModelPrice(
+        1.10,
+        4.40,
+        cached_input_per_million=0.55,
+        reasoning_per_million=4.40,
+        description="OpenAI o3-mini efficient reasoning",
+    ),
     # Anthropic Claude Models
-    "claude-3-7-sonnet-latest": ModelPrice(3.00, 15.00, "Anthropic Claude 3.7 Sonnet hybrid reasoning"),
-    "claude-3-7-sonnet": ModelPrice(3.00, 15.00, "Anthropic Claude 3.7 Sonnet"),
-    "claude-3-5-sonnet-20241022": ModelPrice(3.00, 15.00, "Anthropic Claude 3.5 Sonnet v2"),
-    "claude-3-5-sonnet-latest": ModelPrice(3.00, 15.00, "Anthropic Claude 3.5 Sonnet"),
-    "claude-3-5-haiku-latest": ModelPrice(0.80, 4.00, "Anthropic Claude 3.5 Haiku"),
-    "claude-3-5-haiku-20241022": ModelPrice(0.80, 4.00, "Anthropic Claude 3.5 Haiku"),
-    "claude-3-opus-latest": ModelPrice(15.00, 75.00, "Anthropic Claude 3 Opus"),
-    "claude-3-haiku-20240307": ModelPrice(0.25, 1.25, "Anthropic Claude 3 Haiku legacy"),
+    "claude-3-7-sonnet-latest": ModelPrice(
+        3.00, 15.00, cached_input_per_million=0.30, description="Anthropic Claude 3.7 Sonnet hybrid reasoning"
+    ),
+    "claude-3-7-sonnet": ModelPrice(
+        3.00, 15.00, cached_input_per_million=0.30, description="Anthropic Claude 3.7 Sonnet"
+    ),
+    "claude-3-5-sonnet-20241022": ModelPrice(
+        3.00, 15.00, cached_input_per_million=0.30, description="Anthropic Claude 3.5 Sonnet v2"
+    ),
+    "claude-3-5-sonnet-latest": ModelPrice(
+        3.00, 15.00, cached_input_per_million=0.30, description="Anthropic Claude 3.5 Sonnet"
+    ),
+    "claude-3-5-haiku-latest": ModelPrice(
+        0.80, 4.00, cached_input_per_million=0.08, description="Anthropic Claude 3.5 Haiku"
+    ),
+    "claude-3-5-haiku-20241022": ModelPrice(
+        0.80, 4.00, cached_input_per_million=0.08, description="Anthropic Claude 3.5 Haiku"
+    ),
+    "claude-3-opus-latest": ModelPrice(
+        15.00, 75.00, cached_input_per_million=1.50, description="Anthropic Claude 3 Opus"
+    ),
+    "claude-3-haiku-20240307": ModelPrice(0.25, 1.25, description="Anthropic Claude 3 Haiku legacy"),
     # Google Gemini Models
-    "gemini-2.5-pro": ModelPrice(1.25, 5.00, "Google Gemini 2.5 Pro advanced thinking"),
-    "gemini-2.0-flash": ModelPrice(0.10, 0.40, "Google Gemini 2.0 Flash next-gen"),
-    "gemini-2.0-flash-exp": ModelPrice(0.00, 0.00, "Google Gemini 2.0 Flash Exp (Free)"),
-    "gemini-1.5-pro": ModelPrice(1.25, 5.00, "Google Gemini 1.5 Pro"),
-    "gemini-1.5-pro-latest": ModelPrice(1.25, 5.00, "Google Gemini 1.5 Pro Latest"),
-    "gemini-1.5-flash": ModelPrice(0.075, 0.30, "Google Gemini 1.5 Flash"),
-    "gemini-1.5-flash-latest": ModelPrice(0.075, 0.30, "Google Gemini 1.5 Flash Latest"),
+    "gemini-2.5-pro": ModelPrice(
+        1.25, 5.00, cached_input_per_million=0.3125, description="Google Gemini 2.5 Pro advanced thinking"
+    ),
+    "gemini-2.0-flash": ModelPrice(
+        0.10, 0.40, cached_input_per_million=0.025, description="Google Gemini 2.0 Flash next-gen"
+    ),
+    "gemini-2.0-flash-exp": ModelPrice(0.00, 0.00, description="Google Gemini 2.0 Flash Exp (Free)"),
+    "gemini-1.5-pro": ModelPrice(1.25, 5.00, cached_input_per_million=0.3125, description="Google Gemini 1.5 Pro"),
+    "gemini-1.5-pro-latest": ModelPrice(
+        1.25, 5.00, cached_input_per_million=0.3125, description="Google Gemini 1.5 Pro Latest"
+    ),
+    "gemini-1.5-flash": ModelPrice(
+        0.075, 0.30, cached_input_per_million=0.01875, description="Google Gemini 1.5 Flash"
+    ),
+    "gemini-1.5-flash-latest": ModelPrice(
+        0.075, 0.30, cached_input_per_million=0.01875, description="Google Gemini 1.5 Flash Latest"
+    ),
     # DeepSeek Models
-    "deepseek-chat": ModelPrice(0.14, 0.28, "DeepSeek-V3"),
-    "deepseek-v3": ModelPrice(0.14, 0.28, "DeepSeek-V3"),
-    "deepseek-reasoner": ModelPrice(0.55, 2.19, "DeepSeek-R1 reasoning"),
-    "deepseek-r1": ModelPrice(0.55, 2.19, "DeepSeek-R1 reasoning"),
+    "deepseek-chat": ModelPrice(0.14, 0.28, cached_input_per_million=0.014, description="DeepSeek-V3"),
+    "deepseek-v3": ModelPrice(0.14, 0.28, cached_input_per_million=0.014, description="DeepSeek-V3"),
+    "deepseek-reasoner": ModelPrice(
+        0.55, 2.19, cached_input_per_million=0.14, reasoning_per_million=2.19, description="DeepSeek-R1 reasoning"
+    ),
+    "deepseek-r1": ModelPrice(
+        0.55, 2.19, cached_input_per_million=0.14, reasoning_per_million=2.19, description="DeepSeek-R1 reasoning"
+    ),
     # Meta Llama (via Together/Groq/OpenRouter pricing benchmark)
-    "llama-3.3-70b": ModelPrice(0.59, 0.79, "Meta Llama 3.3 70B Instruct"),
-    "llama-3.1-70b": ModelPrice(0.59, 0.79, "Meta Llama 3.1 70B Instruct"),
-    "llama-3.1-8b": ModelPrice(0.05, 0.08, "Meta Llama 3.1 8B Instruct"),
-    "llama-3.1-405b": ModelPrice(2.50, 3.50, "Meta Llama 3.1 405B Instruct"),
+    "llama-3.3-70b": ModelPrice(0.59, 0.79, description="Meta Llama 3.3 70B Instruct"),
+    "llama-3.1-70b": ModelPrice(0.59, 0.79, description="Meta Llama 3.1 70B Instruct"),
+    "llama-3.1-8b": ModelPrice(0.05, 0.08, description="Meta Llama 3.1 8B Instruct"),
+    "llama-3.1-405b": ModelPrice(2.50, 3.50, description="Meta Llama 3.1 405B Instruct"),
     # Mistral AI
-    "mistral-large-latest": ModelPrice(2.00, 6.00, "Mistral Large 2"),
-    "mistral-small-latest": ModelPrice(0.20, 0.60, "Mistral Small"),
-    "codestral-latest": ModelPrice(0.30, 0.90, "Mistral Codestral"),
+    "mistral-large-latest": ModelPrice(2.00, 6.00, description="Mistral Large 2"),
+    "mistral-small-latest": ModelPrice(0.20, 0.60, description="Mistral Small"),
+    "codestral-latest": ModelPrice(0.30, 0.90, description="Mistral Codestral"),
     # Local / Mock / Free
-    "mock": ModelPrice(0.50, 1.50, "Deterministic Mock Model (Simulated Pricing)"),
-    "ollama": ModelPrice(0.00, 0.00, "Local Ollama (Self-Hosted / Free)"),
-    "local": ModelPrice(0.00, 0.00, "Local Self-Hosted LLM (Free)"),
+    "mock": ModelPrice(0.50, 1.50, description="Deterministic Mock Model (Simulated Pricing)"),
+    "ollama": ModelPrice(0.00, 0.00, description="Local Ollama (Self-Hosted / Free)"),
+    "local": ModelPrice(0.00, 0.00, description="Local Self-Hosted LLM (Free)"),
 }
 
-DEFAULT_PRICE = ModelPrice(1.00, 3.00, "Generic default pricing")
+DEFAULT_PRICE = ModelPrice(1.00, 3.00, description="Generic default pricing")
 
 
 def normalize_model_name(model_name: str) -> str:
     """Normalize model identifier strings for case-insensitive lookup."""
     return model_name.strip().lower()
+
+
+def is_known_model(model_name: str) -> bool:
+    """Return True if model has explicit or vendor-matched pricing in the registry."""
+    clean_name = normalize_model_name(model_name)
+    if clean_name in MODEL_PRICING_TABLE:
+        return True
+    if "/" in clean_name and clean_name.split("/")[-1] in MODEL_PRICING_TABLE:
+        return True
+    if any(k in clean_name or clean_name in k for k in MODEL_PRICING_TABLE):
+        return True
+    return False
+
+
+def register_model_pricing(model_name: str, price: ModelPrice) -> None:
+    """Register or override pricing for a specific model."""
+    clean_name = normalize_model_name(model_name)
+    MODEL_PRICING_TABLE[clean_name] = price
+    logger.debug("Registered custom pricing for model '%s': %s", clean_name, price)
+
+
+def load_pricing_overrides(overrides: dict[str, Any]) -> int:
+    """Load and apply multiple model pricing overrides from dictionary."""
+    count = 0
+    for name, spec in overrides.items():
+        if isinstance(spec, ModelPrice):
+            register_model_pricing(name, spec)
+            count += 1
+        elif isinstance(spec, dict):
+            price = ModelPrice(
+                input_per_million=float(spec.get("input_per_million", 1.0)),
+                output_per_million=float(spec.get("output_per_million", 3.0)),
+                cached_input_per_million=(
+                    float(spec["cached_input_per_million"]) if "cached_input_per_million" in spec else None
+                ),
+                reasoning_per_million=(
+                    float(spec["reasoning_per_million"]) if "reasoning_per_million" in spec else None
+                ),
+                description=str(spec.get("description", "Custom override pricing")),
+            )
+            register_model_pricing(name, price)
+            count += 1
+    return count
 
 
 def get_model_pricing(model_name: str) -> ModelPrice:
@@ -131,17 +260,74 @@ def get_model_pricing(model_name: str) -> ModelPrice:
     return DEFAULT_PRICE
 
 
+def calculate_detailed_cost(
+    model_name: str,
+    prompt_tokens: int,
+    completion_tokens: int,
+    cached_tokens: int = 0,
+    reasoning_tokens: int = 0,
+) -> CostCalculationResult:
+    """Calculate exact cost breakdown with status provenance (known, estimated, unavailable)."""
+    clean_name = normalize_model_name(model_name)
+    known = is_known_model(clean_name)
+    pricing = get_model_pricing(clean_name)
+
+    # Determine status
+    if (
+        prompt_tokens == 0
+        and completion_tokens == 0
+        and not clean_name.startswith("mock")
+        and "ollama" not in clean_name
+    ):
+        status = "unavailable"
+        explanation = "Token usage unavailable; reported cost is 0.0"
+    elif not known and "ollama" not in clean_name and "local" not in clean_name:
+        status = "estimated"
+        explanation = f"Model '{model_name}' not in registry; using default estimate ($1.00 / $3.00 per 1M tokens)"
+    else:
+        status = "known"
+        explanation = f"Exact calculation using pricing v{PRICING_TABLE_VERSION} for {model_name}"
+
+    cached = min(cached_tokens, prompt_tokens)
+    regular_input = max(0, prompt_tokens - cached)
+    cached_input_cost = cached * pricing.cached_input_per_token
+    input_cost = regular_input * pricing.input_per_token
+
+    reasoning = min(reasoning_tokens, completion_tokens)
+    regular_output = max(0, completion_tokens - reasoning)
+    reasoning_cost = reasoning * pricing.reasoning_per_token
+    output_cost = regular_output * pricing.output_per_token
+
+    total = input_cost + cached_input_cost + output_cost + reasoning_cost
+    return CostCalculationResult(
+        total_cost=round(total, 6),
+        input_cost=round(input_cost, 6),
+        output_cost=round(output_cost, 6),
+        cached_input_cost=round(cached_input_cost, 6),
+        reasoning_cost=round(reasoning_cost, 6),
+        status=status,
+        pricing_version=PRICING_TABLE_VERSION,
+        model=model_name,
+        explanation=explanation,
+    )
+
+
 def calculate_cost(
     model_name: str,
     prompt_tokens: int,
     completion_tokens: int,
+    cached_tokens: int = 0,
+    reasoning_tokens: int = 0,
 ) -> float:
-    """Calculate exact total cost in USD given model and token counts."""
-    pricing = get_model_pricing(model_name)
-    input_cost = prompt_tokens * pricing.input_per_token
-    output_cost = completion_tokens * pricing.output_per_token
-    total = input_cost + output_cost
-    return round(total, 6)
+    """Calculate total cost in USD given model and token counts (backward-compatible)."""
+    result = calculate_detailed_cost(
+        model_name=model_name,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        cached_tokens=cached_tokens,
+        reasoning_tokens=reasoning_tokens,
+    )
+    return result.total_cost
 
 
 _TIKTOKEN_WARNED = False

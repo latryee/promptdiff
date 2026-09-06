@@ -38,24 +38,33 @@ from promptdiff.security.fuzzer import FuzzReport, JailbreakFuzzer
 from promptdiff.security.watermark import PromptWatermarker, WatermarkInspectionResult
 
 
-def _resolve_testcases(dataset: Optional[Union[str, list[TestCase], list[dict]]] = None) -> list[TestCase]:
+def _resolve_testcases(
+    dataset: Optional[Union[str, list[TestCase], list[dict]]] = None,
+    tags: Optional[list[str]] = None,
+    limit: Optional[int] = None,
+) -> list[TestCase]:
     if dataset is None or isinstance(dataset, str):
-        return load_dataset(dataset)
+        return load_dataset(dataset, tags=tags, limit=limit)
     elif isinstance(dataset, list):
-        cases = []
+        cases: list[TestCase] = []
         for item in dataset:
             if isinstance(item, TestCase):
-                cases.append(item)
+                tc = item
             elif isinstance(item, dict):
-                cases.append(
-                    TestCase(
-                        id=str(item.get("id", f"tc_{len(cases) + 1}")),
-                        description=str(item.get("description", "")),
-                        vars=item.get("vars", {}),
-                        expected_output=item.get("expected_output"),
-                        tags=item.get("tags", []),
-                    )
+                tc = TestCase(
+                    id=str(item.get("id", f"tc_{len(cases) + 1}")),
+                    description=str(item.get("description", "")),
+                    vars=item.get("vars", {}),
+                    expected_output=item.get("expected_output"),
+                    tags=item.get("tags", []),
                 )
+            else:
+                continue
+            if tags and not any(t in tc.tags for t in tags):
+                continue
+            cases.append(tc)
+            if limit and len(cases) >= limit:
+                break
         return cases
     return []
 
@@ -71,6 +80,11 @@ async def async_compare(
     assertions: Optional[list[str]] = None,
     mock: bool = False,
     concurrency: int = 4,
+    tags: Optional[list[str]] = None,
+    limit: Optional[int] = None,
+    timeout: Optional[float] = None,
+    redact: bool = False,
+    experiment_id: Optional[str] = None,
 ) -> DiffReport:
     """Asynchronously compare two prompt versions across test cases."""
     m1 = model_v1 or model
@@ -78,7 +92,7 @@ async def async_compare(
 
     p1 = load_prompt_file(v1, version_name="v1", model=m1)
     p2 = load_prompt_file(v2, version_name="v2", model=m2)
-    test_cases = _resolve_testcases(dataset)
+    test_cases = _resolve_testcases(dataset, tags=tags, limit=limit)
 
     prov1 = get_provider(model_name=m1, force_mock=mock)
     prov2 = get_provider(model_name=m2, force_mock=mock)
@@ -92,9 +106,16 @@ async def async_compare(
         evaluators=eval_list,
         assertions=assertions,
         concurrency=concurrency,
+        timeout=timeout,
+        experiment_id=experiment_id,
     )
 
-    return await runner.run(test_cases)
+    report = await runner.run(test_cases)
+    if redact:
+        from promptdiff.security.redaction import redact_diff_report
+
+        return redact_diff_report(report)
+    return report
 
 
 def compare(
@@ -108,6 +129,11 @@ def compare(
     assertions: Optional[list[str]] = None,
     mock: bool = False,
     concurrency: int = 4,
+    tags: Optional[list[str]] = None,
+    limit: Optional[int] = None,
+    timeout: Optional[float] = None,
+    redact: bool = False,
+    experiment_id: Optional[str] = None,
 ) -> DiffReport:
     """Synchronously compare two prompt versions across test cases."""
     return asyncio.run(
@@ -122,6 +148,11 @@ def compare(
             assertions=assertions,
             mock=mock,
             concurrency=concurrency,
+            tags=tags,
+            limit=limit,
+            timeout=timeout,
+            redact=redact,
+            experiment_id=experiment_id,
         )
     )
 

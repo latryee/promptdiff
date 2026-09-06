@@ -29,3 +29,14 @@ PromptDiff operates under an absolute **local-first** policy:
 - Zero prompt contents, LLM responses, or user inputs are transmitted to external servers.
 - Use `--db-path ":memory:"` for completely ephemeral in-memory evaluation runs with zero disk writes.
 - To prune telemetry data: `promptdiff db prune --days 14` or configure `--db-retention-days <N>`.
+
+---
+
+## 4. Automated Secret & PII Redaction
+
+To prevent sensitive operational data or credentials from leaking into test reports, CI logs, or shared storage:
+- **API Key Pattern Masking**: Automatically detects and masks API keys for OpenAI (`sk-proj-...`), Anthropic (`sk-ant-...`), Google Gemini (`AIzaSy...`), Hugging Face (`hf_...`), and AWS (`AKIA...`).
+- **Bearer & JWT Tokens**: Masks `Bearer <token>` and JSON Web Tokens.
+- **PII Scrubbing**: Masks email addresses, Social Security Numbers, and Credit Card numbers.
+- **CLI Flag**: Run with `--redact` to scrub all exported HTML, Markdown, and JSON reports.
+- **SDK & Logging Integration**: Use `promptdiff.security.redaction.redact_diff_report(report)` or attach `SecretRedactingFilter` to standard Python logging handlers.
