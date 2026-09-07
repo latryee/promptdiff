@@ -1,0 +1,14 @@
+Model                          | Local (In/Out)       | Remote (In/Out)      | Status
+-------------------------------------------------------------------------------------
+o1-mini                        | $3.00 / $12.00       | $1.21 / $4.84        | MODIFIED
+claude-3-7-sonnet-latest       | $3.00 / $15.00       | $3.30 / $16.50       | MODIFIED
+gemini-2.5-pro                 | $1.25 / $5.00        | $1.25 / $10.00       | MODIFIED
+gemini-1.5-flash               | $0.07 / $0.30        | $0.07 / $0.00        | MODIFIED
+deepseek-chat                  | $0.14 / $0.28        | $0.28 / $0.42        | MODIFIED
+deepseek-v3                    | $0.14 / $0.28        | $1.14 / $4.56        | MODIFIED
+deepseek-reasoner              | $0.55 / $2.19        | $0.28 / $0.42        | MODIFIED
+deepseek-r1                    | $0.55 / $2.19        | $1.35 / $5.40        | MODIFIED
+llama-3.3-70b                  | $0.59 / $0.79        | $0.85 / $1.20        | MODIFIED
+llama-3.1-70b                  | $0.59 / $0.79        | $0.72 / $0.72        | MODIFIED
+mistral-large-latest           | $2.00 / $6.00        | $8.00 / $24.00       | MODIFIED
+mistral-small-latest           | $0.20 / $0.60        | $0.15 / $0.60        | MODIFIED
